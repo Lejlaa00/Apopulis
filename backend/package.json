@@ -1,0 +1,22 @@
+{
+  "name": "apopulis",
+  "version": "1.0.0",
+  "main": "backend/app.js",
+  "scripts": {
+    "start": "node app.js",
+    "server": "nodemon app.js",
+    "client": "npm start --prefix frontend",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "mongoose": "^8.14.1",
+    "nodemon": "^3.1.10",
+    "uuid": "^11.1.0"
+  }
+}
