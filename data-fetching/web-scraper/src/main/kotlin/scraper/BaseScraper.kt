@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 
 abstract class BaseScraper(
     protected val baseUrl: String,
-    protected val sourceName: String
+    val sourceName: String
 ) {
     /**
      * Fetches the HTML document from the given URL

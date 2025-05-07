@@ -7,10 +7,12 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import scraper.BaseScraper
+import java.util.Locale
 
-class U24urScraper : BaseScraper(
-    baseUrl = "https://www.24ur.com/novice/slovenija",
-    sourceName = "24ur"
+class N1infoScraper : BaseScraper(
+    baseUrl = "https://n1info.si/novice/",
+    sourceName = "n1info"
 ) {
     override suspend fun scrape(): List<NewsItem> {
         val document = fetchDocument(baseUrl)
@@ -18,17 +20,16 @@ class U24urScraper : BaseScraper(
         println("Found ${links.size} news links")
         val newsItems = mutableListOf<NewsItem>()
         for (url in links) {
-            println("Scraping: $url")
-            val news = scrapeDetailedNews(url)
-            if (news != null) newsItems.add(news)
-            else println("Failed to scrape: $url")
+          println("Scraping: $url")
+          val news = scrapeDetailedNews(url)
+          if (news != null) newsItems.add(news)
+          else println("Failed to scrape: $url")
         }
         return newsItems
     }
 
     private fun extractNewsLinks(document: Document): List<String> {
-        // Extract all unique news links from the main page
-        return document.select("a[href^='/novice/slovenija/']")
+        return document.select("h3[data-testid='article-title'] a")
             .map { it.absUrl("href") }
             .distinct()
     }
@@ -40,15 +41,18 @@ class U24urScraper : BaseScraper(
                 .timeout(10000)
                 .get()
 
-            val heading = doc.selectFirst("h1")?.text() ?: return@withContext null
-            var content = doc.select("div.contextual p").joinToString("\n") { it.text() }
+            val heading = doc.selectFirst("h1.title[data-testid='article-main-title']")?.text() ?: return@withContext null
+            var content = doc.select("div.rich-text-block p").joinToString("\n") { it.text() }
             if (content.isBlank()) {
-                content = doc.selectFirst("p.text-article-summary")?.text() ?: ""
+                content = doc.selectFirst("article p[data-testid='article-lead-text']")?.text() ?: ""
             }
-            val author = doc.selectFirst("div.flex-col.justify-center div[class*='text-black/80']")?.text()?.takeIf { it.isNotBlank() && it != "icon-user" }
-            val publishedAtText = doc.selectFirst(".leading-caption")?.text()?.substringBefore("|")?.trim()?.split(",")?.getOrNull(1)?.trim() ?: ""
+            val author = doc.selectFirst("span.author-name")?.text()?.takeIf { it.isNotBlank()}
+            val publishedAtText = doc.selectFirst("div[data-testid='article-published-time']")?.text()?.substringBefore("|")?.trim()?.split(",")?.getOrNull(1)?.trim() ?: ""
             val publishedAt = parseDate(publishedAtText)
-            val imageUrl = doc.selectFirst("figure img")?.absUrl("src")
+            val imgElement = doc.selectFirst("figure img")
+            val imageUrl = imgElement?.absUrl("data-src").takeIf { it?.isNotBlank() == true }
+                ?: imgElement?.absUrl("src")
+            val category = doc.selectFirst("a.category")?.text()
             NewsItem(
                 heading = cleanText(heading),
                 content = cleanText(content),
@@ -57,6 +61,7 @@ class U24urScraper : BaseScraper(
                 url = url,
                 publishedAt = publishedAt,
                 imageUrl = imageUrl,
+                category = category,
                 tags = emptyList()
             )
         } catch (e: Exception) {
@@ -66,17 +71,11 @@ class U24urScraper : BaseScraper(
     }
 
     override fun parseDate(dateStr: String): LocalDateTime {
-        // Example: "07. 05. 2025 15.27"
         return try {
-            val formatter = DateTimeFormatter.ofPattern("dd. MM. yyyy HH.mm")
+            val formatter = DateTimeFormatter.ofPattern("d. MMM yyyy. HH:mm", Locale("sl"))
             LocalDateTime.parse(dateStr, formatter)
         } catch (e: Exception) {
-            try {
-                val formatter = DateTimeFormatter.ofPattern("dd. MM. yyyy")
-                LocalDateTime.parse(dateStr, formatter)
-            } catch (e: Exception) {
-                LocalDateTime.now()
-            }
+            LocalDateTime.now()
         }
     }
-} 
+}
