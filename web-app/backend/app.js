@@ -3,7 +3,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const app = express();
 require('dotenv').config(); //Loads .env file
-const authMiddleware = require('./authMiddleware');
+const authMiddleware = require('./middleware/authMiddleware');
 
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
