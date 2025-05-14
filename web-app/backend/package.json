@@ -4,9 +4,8 @@
   "main": "backend/app.js",
   "scripts": {
     "start": "node app.js",
-    "server": "nodemon app.js",
-    "client": "npm start --prefix frontend",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
+    "dev": "nodemon app.js",
+    "client": "npm start --prefix frontend"
   },
   "keywords": [],
   "author": "",
