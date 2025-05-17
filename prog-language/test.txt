@@ -1,0 +1,164 @@
+city "MYCity" {
+            road "MainStreet" {
+                line((0.0, 100.0) , (0.0 ,100.0));
+            }
+            building "TownHall" {
+                box((50.50, 0.0), (150.150, 0.0));
+            }
+            building "Library" {
+                circ((250.250, 0.0), 20);
+            }
+            lake "BlueLake" {
+                circ((250.250, 0.0), 50);
+            }
+            park "CentralPark" {
+                 box((50.50, 0.0), (150.150, 0.0));
+            }
+            news "Novica" unknown;
+            news "Novica1" (10.10, 100.100) {
+            set( "nekistring", 7+7);
+            }
+            junction (10.10, 100.100);
+            marker "Vhod" (10.10, 100.100);
+            let i = (3 +(1+1));
+        }
+
+city "Murska Sobota" {
+    news "Prometno porocilo" (46.66, 16.16) {
+        set("type", 0.0);
+        set("type", "promet");
+    };
+}
+
+region "Gorenjska" {
+    city "Kranj" {
+        let trg = (46.24, 14.36);
+        building "Obcina" {
+            translate trg {
+                box((0, 0), (0.01, 0.01));
+            }
+        }
+        news "Sestanek obcinskega sveta" trg {
+            set("type", "politika");
+        };
+    }
+}
+
+region "Primorska" {
+    city "Piran" {
+        let tocke = [(45.525, 13.57), (45.527, 13.573)];
+        foreach p in tocke {
+            marker "Pogled" p;
+        }
+        lake "Morje" {
+            circ((45.528, 13.574), 0.6);
+        }
+        news "Turisticni dan v Piranu" (45.528, 13.574);
+    }
+}
+
+city "Murska Sobota" {
+    let p1 = (46.66, 16.16);
+    let p2 = (46.67, 16.17);
+    let p3 = nil;
+    let x = fst(p1);
+    let y = snd(p2);
+    if x > 46 {
+        marker "Pogoj izpolnjen" (46.66, 16.16);
+        news "Lokacija je ustrezna" (46.66, 16.16) {
+            set("status", "OK");
+        }
+    } else {
+        marker "Pogoj ni izpolnjen" (46.66, 16.16);
+        news "Lokacija ni ustrezna" (46.66, 16.16) {
+            set("status", "napaka");
+        }
+    }
+    news "Posodobitev prometnih podatkov" (x, y);
+}
+
+city "Maribor" {
+    validate {
+        check(cestaA);
+        check(zgradbaB);
+    }
+    news "Preverjanje infrastrukture" (46.56, 15.65);
+}
+
+region "Savinjska" {
+    procedure dodajPark(p) {
+        translate p {
+            circ((0, 0), 0.2);
+            marker "Park" (0.1, 0);
+        }
+    }
+    city "Celje" {
+        let lokacija = (46.23, 15.26);
+        dodajPark(lokacija);
+        news "Nova ureditev parka" lokacija;
+    }
+}
+
+city "Ljubljana" {
+    for i = 0 to 2 {
+        marker "Tocka" (46.05 + i * 0.01, 14.5);
+    }
+    news "Postavitev novih tock" (46.06, 14.51);
+}
+
+city "Koper" {
+    park "Tito park" {
+        line((45.55, 13.73), (45.56, 13.74));
+        circ((45.555, 13.735), 0.05);
+    }
+    news "Prireditev v parku Tito" (45.555, 13.735);
+}
+
+region "Dolenjska" {
+    city "Novo mesto" {
+        road "Glavna cesta" {
+            let p1 = (45.8, 15.2);
+            let p2 = (45.81, 15.21);
+            line(p1 , p2);
+        }
+        news "Obnova glavne ceste" (45.805, 15.205);
+    }
+}
+
+city "Trbovlje" {
+    building "Stavba X" {
+        box((46.15, 15.05), (46.152, 15.055));
+    }
+    marker "Vhod" (46.151, 15.053);
+    junction (46.151, 15.053);
+    news "Otvoritev nove stavbe" (46.151, 15.053);
+}
+
+city "Nova Gorica" {
+    let tocka = (46.05, 13.65);
+    let rezultat = neigh(tocka, 3);
+    highlight rezultat;
+    news "Porocilo o obmocu" tocka;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

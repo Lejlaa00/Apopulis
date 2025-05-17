@@ -50,6 +50,8 @@ class Token(
                     "snd" -> "snd"
                     "nil" -> "nil"
                     "set" -> "set"
+                    "highlight" -> "highlight"
+                    "neigh" -> "neigh"
                     else -> "identifier"
                 }
             }
@@ -60,6 +62,8 @@ class Token(
                     "-" -> "minus"
                     "*" -> "times"
                     "/" -> "divide"
+                    "<" -> "lessthan"
+                    ">" -> "greaterthan"
                     else -> "operator"
                 }
             }
@@ -68,6 +72,8 @@ class Token(
             TokenType.RBRACE.ordinal -> "rbrace"
             TokenType.LPAREN.ordinal -> "lparen"
             TokenType.RPAREN.ordinal -> "rparen"
+            TokenType.LBRACKET.ordinal -> "lbracket"
+            TokenType.RBRACKET.ordinal -> "rbracket"
             TokenType.COMMA.ordinal -> "comma"
             TokenType.SEMI.ordinal -> "semi"
             TokenType.EQUALS.ordinal -> "equals"

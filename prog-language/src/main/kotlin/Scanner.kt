@@ -1,10 +1,9 @@
 import java.io.InputStream
 
 class Scanner(private val input: InputStream) {
-    private var row = 1
-    private var column = 0
+     var row = 1
+     var column = 0
     private val automat = Automat()
-
 
     fun peek(): Int {
         input.mark(1)
@@ -27,6 +26,12 @@ class Scanner(private val input: InputStream) {
         return peek() == -1
     }
 
+    fun getPosition(): Pair<Int, Int> = Pair(row, column)
+    fun setPosition(row: Int, column: Int) {
+        this.row = row
+        this.column = column
+    }
+
     fun nextToken(): Token {
         var currentState = Automat.START_STATE
         val lexem = StringBuilder()
@@ -35,6 +40,22 @@ class Scanner(private val input: InputStream) {
 
         while (true) {
             val nextChar = peek()
+
+            // Handling EOF
+            if (nextChar == -1) {
+                if (lexem.isEmpty()) {
+                    // The end with no lexeme -> retuning EOF
+                    return Token(
+                        lexem = "",
+                        column = startColumn,
+                        row = startRow,
+                        token = TokenType.EOF.ordinal,
+                        tokenType = TokenType.EOF.ordinal,
+                        eof = true
+                    )
+                }
+            }
+
             val tempState = automat.getNextState(currentState, nextChar)
 
             if (tempState != Automat.NO_EDGE) {
@@ -58,14 +79,27 @@ class Scanner(private val input: InputStream) {
                         return token
                     }
                 } else {
-                    return Token(
-                        lexem = "",
-                        column = startColumn,
-                        row = startRow,
-                        token = TokenType.ERROR.ordinal,
-                        tokenType = TokenType.ERROR.ordinal,
-                        eof = eof()
-                    )
+                    // Only return ERROR if it is not an EOF
+                    if (!eof()) {
+                        return Token(
+                            lexem = lexem.toString(),
+                            column = startColumn,
+                            row = startRow,
+                            token = TokenType.ERROR.ordinal,
+                            tokenType = TokenType.ERROR.ordinal,
+                            eof = false
+                        )
+                    } else {
+                        // At EOF with no valid token -> return EOF
+                        return Token(
+                            lexem = "",
+                            column = startColumn,
+                            row = startRow,
+                            token = TokenType.EOF.ordinal,
+                            tokenType = TokenType.EOF.ordinal,
+                            eof = true
+                        )
+                    }
                 }
             }
         }

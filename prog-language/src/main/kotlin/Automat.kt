@@ -31,6 +31,8 @@ class Automat {
         private const val SND_STATE = 23
         private const val NIL_STATE = 24
         private const val SET_STATE = 25
+        private const val HIGHLIGHT_STATE = 26
+        private const val NEIGH_STATE = 27
 
         // States for commands
         private const val LINE_STATE = 30
@@ -46,12 +48,16 @@ class Automat {
         private const val COMMA_STATE = 44
         private const val SEMI_STATE = 45
         private const val EQUALS_STATE = 46
+        private const val LBRACKET_STATE = 47
+        private const val RBRACKET_STATE = 48
 
         // States for operators
         private const val PLUS_STATE = 50
         private const val MINUS_STATE = 51
         private const val MULTIPLY_STATE = 52
         private const val DIVIDE_STATE = 53
+        private const val LESSTHAN_STATE = 54
+        private const val GREATERTHAN_STATE = 55
 
         // States for literals
         private const val NUMBER_STATE = 60
@@ -106,6 +112,8 @@ class Automat {
         addKeyword("snd", TokenType.SND, SND_STATE)
         addKeyword("nil", TokenType.NIL, NIL_STATE)
         addKeyword("set", TokenType.SET, SET_STATE)
+        addKeyword("highlight", TokenType.SET, HIGHLIGHT_STATE)
+        addKeyword("neigh", TokenType.SET, NEIGH_STATE)
     }
 
     private fun initializeCommands() {
@@ -121,6 +129,12 @@ class Automat {
 
         automata[START_STATE]['}'.code] = RBRACE_STATE
         finite[RBRACE_STATE] = TokenType.RBRACE.ordinal
+
+        automata[START_STATE]['['.code] = LBRACKET_STATE
+        finite[LBRACKET_STATE] = TokenType.LBRACKET.ordinal
+
+        automata[START_STATE][']'.code] = RBRACKET_STATE
+        finite[RBRACKET_STATE] = TokenType.RBRACKET.ordinal
 
         automata[START_STATE]['('.code] = LPAREN_STATE
         finite[LPAREN_STATE] = TokenType.LPAREN.ordinal
@@ -150,6 +164,12 @@ class Automat {
 
         automata[START_STATE]['/'.code] = DIVIDE_STATE
         finite[DIVIDE_STATE] = TokenType.OPERATOR.ordinal
+
+        automata[START_STATE]['<'.code] = LESSTHAN_STATE
+        finite[LESSTHAN_STATE] = TokenType.OPERATOR.ordinal
+
+        automata[START_STATE]['>'.code] = GREATERTHAN_STATE
+        finite[GREATERTHAN_STATE] = TokenType.OPERATOR.ordinal
     }
 
     private fun initializeNumbers() {
@@ -188,11 +208,13 @@ class Automat {
         for (c in 'A'..'Z') automata[START_STATE][c.code] = IDENTIFIER_STATE
         automata[START_STATE]['_'.code] = IDENTIFIER_STATE
 
+
         // Subsequent characters
         for (c in 'a'..'z') automata[IDENTIFIER_STATE][c.code] = IDENTIFIER_STATE
         for (c in 'A'..'Z') automata[IDENTIFIER_STATE][c.code] = IDENTIFIER_STATE
         for (c in '0'..'9') automata[IDENTIFIER_STATE][c.code] = IDENTIFIER_STATE
         automata[IDENTIFIER_STATE]['_'.code] = IDENTIFIER_STATE
+
 
         finite[IDENTIFIER_STATE] = TokenType.IDENTIFIER.ordinal
     }
