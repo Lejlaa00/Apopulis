@@ -14,7 +14,7 @@ exports.getNews = async (req, res) => {
 
         const news = await NewsItem.find(query)
             .populate('sourceId', 'name url')
-            .populate('locationId', 'name region')
+            .populate('locationId', 'name')
             .populate('categoryId', 'name')
             .sort({ publishedAt: -1 })
             .skip(skip)
@@ -39,7 +39,7 @@ exports.getNewsById = async (req, res) => {
     try {
         const newsItem = await NewsItem.findById(req.params.id)
             .populate('sourceId', 'name url')
-            .populate('locationId', 'name region')
+            .populate('locationId', 'name')
             .populate('categoryId', 'name');
 
         if (!newsItem) {
@@ -133,7 +133,7 @@ exports.getNewsByLocation = async (req, res) => {
 
         const news = await NewsItem.find({ locationId })
             .populate('sourceId', 'name url')
-            .populate('locationId', 'name region')
+            .populate('locationId', 'name')
             .populate('categoryId', 'name')
             .sort({ publishedAt: -1 })
             .skip(skip)

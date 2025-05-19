@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { 
     getLocations, 
-    getLocationsByRegion,
     getLocationById, 
     createLocation, 
     updateLocation, 
@@ -11,9 +10,6 @@ const {
 
 // Get all locations
 router.get('/', getLocations);
-
-// Get locations by region
-router.get('/region/:region', getLocationsByRegion);
 
 // Get a single location
 router.get('/:id', getLocationById);

@@ -14,7 +14,6 @@ const locationSchema = new Schema({
         type: Number,
         required: true
     },
-    region: String,
     province: {
         type: Schema.Types.ObjectId,
         ref: 'Province',

@@ -96,7 +96,7 @@ exports.register = async (req, res) => {
             email: normalizedEmail,
             password: hashedPassword,
             verificationToken,
-            isVerified: false // Po defaultu nije verificiran
+            isVerified: true // TEMPORARY: Set to true for development
         });
 
         console.log('Saving user...');
@@ -105,24 +105,25 @@ exports.register = async (req, res) => {
 
         // sendVerificationEmail(user.email, verificationToken);
 
-        // Generiranje JWT tokena
+        // Generate JWT token
         const token = jwt.sign(
             {
                 id: user._id,
-                isVerified: false
+                isVerified: true, // TEMPORARY: Set to true for development
+                role: 'user'
             },
             ACCESS_TOKEN_SECRET,
             { expiresIn: JWT_EXPIRES_IN }
-        ); 
+        );
 
         res.status(201).json({
-            msg: 'User registered successfully. Please check your email to verify your account.',
+            msg: 'User registered successfully.',
             token,
             user: {
                 id: user._id,
                 username: user.username,
                 email: user.email,
-                isVerified: false
+                isVerified: true // TEMPORARY: Set to true for development
             }
         });
 
@@ -165,7 +166,7 @@ exports.login = async (req, res) => {
         const token = jwt.sign(
             {
                 id: user._id,
-                isVerified: true,
+                isVerified: true, // TEMPORARY: Set to true for development
                 role: user.role || 'user'
             },
             ACCESS_TOKEN_SECRET,
