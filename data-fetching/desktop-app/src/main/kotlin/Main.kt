@@ -17,7 +17,7 @@ import ui.controller.Scraper
 @Preview
 fun App() {
     var currentScreen by remember { mutableStateOf("home") }
-    var allNews by remember { mutableStateOf(listOf<NewsItem>()) }
+    var allNews by remember { mutableStateOf(util.Storage.load()) }
     var editingItem by remember { mutableStateOf<NewsItem?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -31,11 +31,16 @@ fun App() {
                         editingItem = it
                         currentScreen = "editNews"
                     },
+                    onDelete = { toDelete ->
+                        allNews = allNews.filter { it.url != toDelete.url }
+                        util.Storage.save(allNews)
+                    },
                     onBack = { currentScreen = "home" }
                 )
                 "addNews" -> AddNewsScreen(
                     onSave = {
                         allNews = allNews + it
+                        util.Storage.save(allNews)
                         currentScreen = "newsList"
                     },
                     onBack = { currentScreen = "home" }
@@ -58,13 +63,22 @@ fun App() {
                                 else -> listOf(scraper.U24urScraper(), scraper.N1infoScraper())
                             }.flatMap { it.scrape() }
 
-                            val newItems = scraped.filter { scrapedItem ->
+                            val enrichedNews = scraped.map { item ->
+                                item.copy(
+                                    category = nlp.Categorizer.categorizeByText(item)
+                                )
+                            }
+
+                            val newItems = enrichedNews.filter { scrapedItem ->
                                 allNews.none { it.url == scrapedItem.url }
                             }
+
                             allNews = allNews + newItems
+                            util.Storage.save(allNews)
                             currentScreen = "newsList"
                         }
-                    },
+                    }
+                    ,
                     onBack = { currentScreen = "home" }
                 )
                 "generator" -> DataGeneratorScreen(
@@ -80,6 +94,7 @@ fun App() {
                             )
                         }
                         allNews = allNews + generated
+                        util.Storage.save(allNews)
                         currentScreen = "newsList"
                     },
                     onBack = { currentScreen = "home" }

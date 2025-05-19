@@ -25,7 +25,6 @@ fun ScraperScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        // Dropdown za izvor
         var expanded by remember { mutableStateOf(false) }
         Box {
             OutlinedButton(onClick = { expanded = true }) {

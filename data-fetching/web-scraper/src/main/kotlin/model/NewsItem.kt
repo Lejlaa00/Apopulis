@@ -12,4 +12,4 @@ data class NewsItem(
     val imageUrl: String? = null,
     val category: String? = null,
     val tags: List<String> = emptyList()
-) 
+)

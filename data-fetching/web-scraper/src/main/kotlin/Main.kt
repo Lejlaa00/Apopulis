@@ -10,7 +10,7 @@ import model.NewsItem
 fun main() = runBlocking {
     val scrapers = listOf(
         U24urScraper(),
-        // N1infoScraper()
+        N1infoScraper()
     )
 
     while (true) {
@@ -37,9 +37,11 @@ fun main() = runBlocking {
                     println("Category: ${item.category ?: "unknown"}")
                     println("Tags: ${item.tags.joinToString(", ")}")
                     println("URL: ${item.url}")
+                    println("Image URL: ${item.imageUrl}")
                     println("Published At: ${item.publishedAt}")
                     println("Source: ${item.source}")
                     println("Author: ${item.author}")
+
                 }
 
                 println("\n────────────────────────────────────────────")

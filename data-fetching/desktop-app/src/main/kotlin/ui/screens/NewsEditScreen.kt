@@ -1,6 +1,8 @@
 package ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -16,36 +18,55 @@ fun NewsEditScreen(
 ) {
     var heading by remember { mutableStateOf(item?.heading ?: "") }
     var content by remember { mutableStateOf(item?.content ?: "") }
+    var author by remember { mutableStateOf(item?.author ?: "") }
+    var source by remember { mutableStateOf(item?.source ?: "") }
+    var url by remember { mutableStateOf(item?.url ?: "") }
+    var imageUrl by remember { mutableStateOf(item?.imageUrl ?: "") }
+    var category by remember { mutableStateOf(item?.category ?: "") }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Button(onClick = onBack, modifier = Modifier.padding(16.dp)) {
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .verticalScroll(scrollState)
+    ) {
+        Button(onClick = onBack, modifier = Modifier.padding(8.dp)) {
             Text("← Back to Home")
         }
 
-        OutlinedTextField(
-            value = heading,
-            onValueChange = { heading = it },
-            label = { Text("Title") }
-        )
+        OutlinedTextField(value = heading, onValueChange = { heading = it }, label = { Text("Title") })
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = content,
-            onValueChange = { content = it },
-            label = { Text("Content") }
-        )
-        Spacer(Modifier.height(16.dp))
+
+        OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("Content") })
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("Author") })
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(value = source, onValueChange = { source = it }, label = { Text("Source") })
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(value = url, onValueChange = { url = it }, label = { Text("URL") })
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("Image URL") })
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") })
+        Spacer(Modifier.height(8.dp))
+
         Button(onClick = {
             onSave(
                 NewsItem(
                     heading = heading,
                     content = content,
-                    author = item?.author,
-                    source = item?.source ?: "Manual Entry",
-                    url = item?.url ?: "",
-                    publishedAt = LocalDateTime.now(),
-                    imageUrl = item?.imageUrl,
-                    category = item?.category,
-                    tags = item?.tags ?: emptyList()
+                    author = author.ifBlank { null },
+                    source = source,
+                    url = url,
+                    publishedAt = item?.publishedAt ?: LocalDateTime.now(),
+                    imageUrl = imageUrl.ifBlank { null },
+                    category = category.ifBlank { null },
                 )
             )
         }) {
