@@ -4,7 +4,9 @@ const mongoose = require('mongoose');
 const app = express();
 const authMiddleware = require('./middleware/authMiddleware');
 
-mongoose.connect('mongodb://127.0.0.1:27017/apopulis')
+require('dotenv').config();
+
+mongoose.connect('mongodb+srv://<username>:<geslo>@cluster0.iemfweq.mongodb.net/Apopulis')
     .then(() => console.log("MongoDB connected"))
     .catch(err => console.error("MongoDB connection error:", err));
 

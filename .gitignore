@@ -5,8 +5,8 @@
 .pnp.js
 
 # Environment files (all environments)
-.env
-.env.*
+#.env
+#.env.*
 !.env.example  # Keep example files
 
 # Build/compiled files
@@ -33,5 +33,5 @@ yarn-error.log*
 =======
 node_modules
 .DS_Store
-.env
+#.env
 >>>>>>> 20acdcfde5419b660545c9f6bb6ca6984fddb44f
