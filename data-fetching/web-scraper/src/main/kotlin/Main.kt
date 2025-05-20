@@ -41,6 +41,7 @@ fun main() = runBlocking {
                     println("Published At: ${item.publishedAt}")
                     println("Source: ${item.source}")
                     println("Author: ${item.author}")
+                    println("Content: ${item.content ?: "Unknown"}")
 
                 }
 

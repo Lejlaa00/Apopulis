@@ -4,6 +4,14 @@ import androidx.compose.runtime.Composable
 import model.NewsItem
 
 @Composable
-fun AddNewsScreen(onSave: (NewsItem) -> Unit, onBack: () -> Unit) {
-    NewsEditScreen(item = null, onSave = onSave, onBack = onBack)
+fun AddNewsScreen(
+    onSave: (NewsItem) -> Unit,
+    onNavigate: (String) -> Unit
+) {
+    NewsEditScreen(
+        item = null,
+        onSave = onSave,
+        onNavigate = onNavigate,
+        showBackButton = false
+    )
 }

@@ -35,7 +35,7 @@ fun App() {
                         allNews = allNews.filter { it.url != toDelete.url }
                         util.Storage.save(allNews)
                     },
-                    onBack = { currentScreen = "home" }
+                    onNavigate = { currentScreen = it }
                 )
                 "addNews" -> AddNewsScreen(
                     onSave = {
@@ -43,7 +43,7 @@ fun App() {
                         util.Storage.save(allNews)
                         currentScreen = "newsList"
                     },
-                    onBack = { currentScreen = "home" }
+                    onNavigate = { currentScreen = it }
                 )
                 "editNews" -> NewsEditScreen(
                     item = editingItem,
@@ -51,7 +51,7 @@ fun App() {
                         allNews = allNews.map { n -> if (n.url == it.url) it else n }
                         currentScreen = "newsList"
                     },
-                    onBack = { currentScreen = "home" }
+                    onNavigate = { currentScreen = it }
                 )
                 "scraper" -> ScraperScreen(
                     news = allNews,
@@ -79,25 +79,15 @@ fun App() {
                         }
                     }
                     ,
-                    onBack = { currentScreen = "home" }
+                    onNavigate = { currentScreen = it }
                 )
                 "generator" -> DataGeneratorScreen(
-                    onGenerate = { count ->
-                        val generated = (1..count).map {
-                            NewsItem(
-                                heading = "Generated $it",
-                                content = "This is fake content #$it",
-                                author = "Generator",
-                                source = "generator.si",
-                                url = "http://generator.si/$it",
-                                publishedAt = java.time.LocalDateTime.now()
-                            )
-                        }
-                        allNews = allNews + generated
+                    onGenerate = { generatedItems ->
+                        allNews = allNews + generatedItems
                         util.Storage.save(allNews)
                         currentScreen = "newsList"
                     },
-                    onBack = { currentScreen = "home" }
+                    onNavigate = { currentScreen = it }
                 )
             }
         }

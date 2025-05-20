@@ -14,63 +14,68 @@ import java.time.LocalDateTime
 fun NewsEditScreen(
     item: NewsItem?,
     onSave: (NewsItem) -> Unit,
-    onBack: () -> Unit
+    onNavigate: (String) -> Unit,
+    showBackButton: Boolean = true
 ) {
-    var heading by remember { mutableStateOf(item?.heading ?: "") }
-    var content by remember { mutableStateOf(item?.content ?: "") }
-    var author by remember { mutableStateOf(item?.author ?: "") }
-    var source by remember { mutableStateOf(item?.source ?: "") }
-    var url by remember { mutableStateOf(item?.url ?: "") }
-    var imageUrl by remember { mutableStateOf(item?.imageUrl ?: "") }
-    var category by remember { mutableStateOf(item?.category ?: "") }
+    SidebarWrapper(currentScreen = "editNews", onNavigate = onNavigate) {
+        val scrollState = rememberScrollState()
 
-    val scrollState = rememberScrollState()
+        var heading by remember { mutableStateOf(item?.heading ?: "") }
+        var content by remember { mutableStateOf(item?.content ?: "") }
+        var author by remember { mutableStateOf(item?.author ?: "") }
+        var source by remember { mutableStateOf(item?.source ?: "") }
+        var url by remember { mutableStateOf(item?.url ?: "") }
+        var imageUrl by remember { mutableStateOf(item?.imageUrl ?: "") }
+        var category by remember { mutableStateOf(item?.category ?: "") }
 
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .verticalScroll(scrollState)
-    ) {
-        Button(onClick = onBack, modifier = Modifier.padding(8.dp)) {
-            Text("← Back to Home")
-        }
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .verticalScroll(scrollState)
+        ) {
+            if (showBackButton) {
+                Button(onClick = { onNavigate("newsList") }, modifier = Modifier.padding(8.dp)) {
+                    Text("← Back")
+                }
+            }
 
-        OutlinedTextField(value = heading, onValueChange = { heading = it }, label = { Text("Title") })
-        Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = heading, onValueChange = { heading = it }, label = { Text("Title") })
+            Spacer(Modifier.height(8.dp))
 
-        OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("Content") })
-        Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("Content") })
+            Spacer(Modifier.height(8.dp))
 
-        OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("Author") })
-        Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("Author") })
+            Spacer(Modifier.height(8.dp))
 
-        OutlinedTextField(value = source, onValueChange = { source = it }, label = { Text("Source") })
-        Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = source, onValueChange = { source = it }, label = { Text("Source") })
+            Spacer(Modifier.height(8.dp))
 
-        OutlinedTextField(value = url, onValueChange = { url = it }, label = { Text("URL") })
-        Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = url, onValueChange = { url = it }, label = { Text("URL") })
+            Spacer(Modifier.height(8.dp))
 
-        OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("Image URL") })
-        Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("Image URL") })
+            Spacer(Modifier.height(8.dp))
 
-        OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") })
-        Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") })
+            Spacer(Modifier.height(16.dp))
 
-        Button(onClick = {
-            onSave(
-                NewsItem(
-                    heading = heading,
-                    content = content,
-                    author = author.ifBlank { null },
-                    source = source,
-                    url = url,
-                    publishedAt = item?.publishedAt ?: LocalDateTime.now(),
-                    imageUrl = imageUrl.ifBlank { null },
-                    category = category.ifBlank { null },
+            Button(onClick = {
+                onSave(
+                    NewsItem(
+                        heading = heading,
+                        content = content,
+                        author = author.ifBlank { null },
+                        source = source,
+                        url = url,
+                        publishedAt = item?.publishedAt ?: LocalDateTime.now(),
+                        imageUrl = imageUrl.ifBlank { null },
+                        category = category.ifBlank { null },
+                    )
                 )
-            )
-        }) {
-            Text("Save")
+            }) {
+                Text("Save")
+            }
         }
     }
 }

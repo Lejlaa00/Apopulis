@@ -2,61 +2,91 @@ package ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.*
-
 import model.NewsItem
 
 @Composable
 fun ScraperScreen(
     news: List<NewsItem>,
     onRefresh: (String) -> Unit,
-    onBack: () -> Unit
+    onNavigate: (String) -> Unit
 ) {
-    var selected by remember { mutableStateOf("All") }
-    val options = listOf("All", "24ur", "N1info")
+    SidebarWrapper(currentScreen = "scraper", onNavigate = onNavigate) {
+        var selected by remember { mutableStateOf("All") }
+        var expanded by remember { mutableStateOf(false) }
+        var isLoading by remember { mutableStateOf(false) }
+        var parsedCount by remember { mutableStateOf(0) }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Button(onClick = onBack) {
-            Text("← Back to Home")
+        val options = listOf("All", "24ur", "N1info")
+
+        // Resetiraj broj kada počne skrejpanje
+        LaunchedEffect(news) {
+            if (isLoading) {
+                parsedCount = news.size
+                isLoading = false
+            }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Spacer(Modifier.height(8.dp))
 
-        var expanded by remember { mutableStateOf(false) }
-        Box {
-            OutlinedButton(onClick = { expanded = true }) {
-                Text("Selected: $selected ⌄")
-            }
+            // Dropdown za izbor izvora
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = selected,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Source") },
+                    trailingIcon = {
+                        IconButton(onClick = { expanded = true }) {
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Open source menu")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier
-                    .width(150.dp)
-            ) {
-                options.forEach { option ->
-                    DropdownMenuItem(onClick = {
-                        selected = option
-                        expanded = false
-                    }) {
-                        Text(option)
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    options.forEach { option ->
+                        DropdownMenuItem(onClick = {
+                            selected = option
+                            expanded = false
+                        }) {
+                            Text(option)
+                        }
                     }
                 }
             }
+
+            Spacer(Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    isLoading = true
+                    parsedCount = 0
+                    onRefresh(selected)
+                },
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Text("Get Latest News")
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            if (isLoading) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text("Scraping in progress...")
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+            }
         }
-
-
-        Spacer(Modifier.height(16.dp))
-
-        Button(onClick = { onRefresh(selected) }) {
-            Text("Run Scraper Manually")
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Text("Parsed items: ${news.size}")
     }
 }
-

@@ -4,85 +4,133 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import model.NewsItem
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.res.loadImageBitmap
-import java.net.URL
-import javax.imageio.ImageIO
-
 
 @Composable
 fun NewsListScreen(
     news: List<NewsItem>,
     onEdit: (NewsItem) -> Unit,
     onDelete: (NewsItem) -> Unit,
-    onBack: () -> Unit
+    onNavigate: (String) -> Unit
 ) {
-    var selectedCategory by remember { mutableStateOf("All") }
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
-    var toDeleteItem by remember { mutableStateOf<NewsItem?>(null) }
+    SidebarWrapper(currentScreen = "newsList", onNavigate = onNavigate) {
+        var selectedCategory by remember { mutableStateOf("All") }
+        var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+        var toDeleteItem by remember { mutableStateOf<NewsItem?>(null) }
+        var expandedId by remember { mutableStateOf<String?>(null) }
 
-    val categories = listOf("All") + news.mapNotNull { it.category }.distinct()
+        val categories = listOf("All") + news.mapNotNull { it.category }.distinct()
 
-    val filteredNews = news.filter { item ->
-        (selectedCategory == "All" || item.category == selectedCategory) &&
-                (selectedDate == null || item.publishedAt.toLocalDate() == selectedDate)
-    }
-
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Button(onClick = onBack, modifier = Modifier.padding(bottom = 16.dp)) {
-            Text("← Back to Home")
+        val filteredNews = news.filter { item ->
+            (selectedCategory == "All" || item.category == selectedCategory) &&
+                    (selectedDate == null || item.publishedAt.toLocalDate() == selectedDate)
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            DropdownMenuBox("Category: $selectedCategory", categories, selectedCategory) {
-                selectedCategory = it
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    DateInputField(
+                        value = selectedDate,
+                        onChange = { selectedDate = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                    CategoryDropdownField(
+                        categories = categories,
+                        selected = selectedCategory,
+                        onSelect = { selectedCategory = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
-            DatePickerBox(
-                selectedDate = selectedDate,
-                onDateSelected = { selectedDate = it }
-            )
-        }
+            Spacer(Modifier.height(16.dp))
 
-        Spacer(Modifier.height(16.dp))
+            if (filteredNews.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No news items match the selected filters.")
+                }
+            } else {
+                LazyColumn {
+                    items(filteredNews) { item ->
+                        val isExpanded = expandedId == item.url
 
-        if (filteredNews.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No news items match the selected filters.")
-            }
-        } else {
-            LazyColumn {
-                items(filteredNews) { item ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        elevation = 4.dp
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Heading: ${item.heading}", style = MaterialTheme.typography.h6)
-                            item.category?.let { Text("Category: $it") }
-                            Text("Published At: ${item.publishedAt.toLocalDate()}")
-                            Text("Source: ${item.source}")
-                            item.author?.let { Text("Author: $it") }
-                            Text("URL: ${item.url}")
-                            item.imageUrl?.let { Text("Imagae URL: $it")}
-                            Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                                Button(onClick = { onEdit(item) }) {
-                                    Text("Edit")
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .clickable { expandedId = if (isExpanded) null else item.url },
+                            elevation = 6.dp
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                // Naslov
+                                Text(item.heading, style = MaterialTheme.typography.h6)
+
+                                Spacer(Modifier.height(4.dp))
+
+                                // Osnovne informacije
+                                item.category?.let {
+                                    Text("Category: $it", style = MaterialTheme.typography.body2, color = Color.Gray)
                                 }
-                                Spacer(Modifier.width(8.dp))
-                                Button(onClick = { toDeleteItem = item }) {
-                                    Text("Delete")
+                                Text("Published at: ${item.publishedAt.toLocalDate()}", style = MaterialTheme.typography.body2, color = Color.Gray)
+                                Text("Source: ${item.source}", style = MaterialTheme.typography.body2, color = Color.Gray)
+
+                                if (isExpanded) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Divider()
+                                    Spacer(Modifier.height(8.dp))
+
+                                    // Content
+                                    item.content?.let {
+                                        Text(it, style = MaterialTheme.typography.body2)
+                                        Spacer(Modifier.height(8.dp))
+                                    }
+
+                                    item.author?.let {
+                                        InfoRow(label = "Author:", value = it)
+                                    }
+
+                                    InfoRow(label = "URL:", value = item.url)
+
+                                    item.imageUrl?.let {
+                                        InfoRow(label = "Image URL:", value = it)
+                                    }
+
+                                    if (!item.tags.isNullOrEmpty()) {
+                                        InfoRow(label = "Tags:", value = item.tags.joinToString(", "))
+                                    }
+                                }
+
+                                Spacer(Modifier.height(8.dp))
+
+                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                                    TextButton(onClick = { onEdit(item) }) {
+                                        Text("Edit")
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    TextButton(onClick = { toDeleteItem = item }) {
+                                        Text("Delete")
+                                    }
                                 }
                             }
                         }
@@ -90,93 +138,118 @@ fun NewsListScreen(
                 }
             }
         }
-    }
 
-    if (toDeleteItem != null) {
-        AlertDialog(
-            onDismissRequest = { toDeleteItem = null },
-            title = { Text("Confirm Deletion") },
-            text = { Text("Are you sure you want to delete this news item?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    toDeleteItem?.let { onDelete(it) }
-                    toDeleteItem = null
-                }) {
-                    Text("Yes")
+        if (toDeleteItem != null) {
+            AlertDialog(
+                onDismissRequest = { toDeleteItem = null },
+                title = { Text("Confirm Deletion") },
+                text = { Text("Are you sure you want to delete this news item?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        toDeleteItem?.let { onDelete(it) }
+                        toDeleteItem = null
+                    }) {
+                        Text("Yes")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { toDeleteItem = null }) {
+                        Text("Cancel")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { toDeleteItem = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
+            )
+        }
     }
 }
 
 @Composable
-fun DropdownMenuBox(
-    label: String,
-    options: List<String>,
+fun DateInputField(
+    value: LocalDate?,
+    onChange: (LocalDate?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    var text by remember { mutableStateOf(value?.format(formatter) ?: "") }
+
+    OutlinedTextField(
+        value = text,
+        onValueChange = {
+            text = it
+            onChange(it.toLocalDateOrNull())
+        },
+        label = { Text("Search by date") },
+        singleLine = true,
+        trailingIcon = {
+            if (text.isNotEmpty()) {
+                IconButton(onClick = {
+                    text = ""
+                    onChange(null)
+                }) {
+                    Icon(Icons.Default.Close, contentDescription = "Clear date")
+                }
+            }
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun CategoryDropdownField(
+    categories: List<String>,
     selected: String,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Box {
-        OutlinedButton(onClick = { expanded = true }) {
-            Text(label)
-        }
+    Box(modifier = modifier) {
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Category") },
+            trailingIcon = {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Open category menu")
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
 
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { option ->
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            categories.forEach {
                 DropdownMenuItem(onClick = {
-                    onSelect(option)
+                    onSelect(it)
                     expanded = false
                 }) {
-                    Text(option)
+                    Text(it)
                 }
             }
         }
     }
 }
 
+fun String.toLocalDateOrNull(): LocalDate? =
+    try {
+        LocalDate.parse(this)
+    } catch (e: Exception) {
+        null
+    }
+
 @Composable
-fun DatePickerBox(
-    selectedDate: LocalDate?,
-    onDateSelected: (LocalDate?) -> Unit
-) {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    var inputText by remember { mutableStateOf("") }
-
-    Column {
-        OutlinedTextField(
-            value = inputText,
-            onValueChange = { inputText = it },
-            label = { Text("Date (yyyy-MM-dd)") },
-            modifier = Modifier.width(200.dp)
+fun InfoRow(label: String, value: String) {
+    Row(modifier = Modifier.padding(vertical = 2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.body2.copy(fontWeight = FontWeight.Bold)
         )
-
-        Row {
-            Button(onClick = {
-                try {
-                    val parsed = LocalDate.parse(inputText, formatter)
-                    onDateSelected(parsed)
-                } catch (_: Exception) {
-                    onDateSelected(null)
-                }
-            }) {
-                Text("Set Date")
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            Button(onClick = {
-                onDateSelected(null)
-                inputText = ""
-            }) {
-                Text("Clear")
-            }
-        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.body2
+        )
     }
 }
