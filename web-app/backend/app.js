@@ -6,7 +6,7 @@ const authMiddleware = require('./middleware/authMiddleware');
 
 require('dotenv').config();
 
-mongoose.connect('mongodb+srv://<username>:<geslo>@cluster0.iemfweq.mongodb.net/Apopulis')
+mongoose.connect('mongodb+srv://ivanaailic:malodete167@cluster0.iemfweq.mongodb.net/Apopulis')
     .then(() => console.log("MongoDB connected"))
     .catch(err => console.error("MongoDB connection error:", err));
 
