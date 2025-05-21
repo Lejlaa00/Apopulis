@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserContext } from "../userContext";
 import { authFetch } from './authFetch';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -14,7 +15,7 @@ function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch('http://localhost:5001/api/users/login', {
+            const res = await fetch(`${API_URL}/users/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
