@@ -6,13 +6,13 @@ const {
     vote 
 } = require('../controllers/voteController');
 
-// Get all votes for a news item
+const authMiddleware = require('../middleware/authMiddleware');
+
+// All users can see a number of votes
 router.get('/news/:newsItemId', getVotes);
 
-// Get user's vote for a news item
-router.get('/news/:newsItemId/user', getUserVote);
-
-// Vote on a news item
-router.post('/news/:newsItemId', vote);
+// Only logged users can vote
+router.get('/news/:newsItemId/user', authMiddleware, getUserVote);
+router.post('/news/:newsItemId', authMiddleware, vote);
 
 module.exports = router;

@@ -39,6 +39,11 @@ exports.vote = async (req, res) => {
     try {
         const { newsItemId } = req.params;
         const { type } = req.body; // 'UP' or 'DOWN'
+
+        if (!req.user) {
+            return res.status(401).json({ msg: 'Only logged-in users can vote' });
+        }
+
         const userId = req.user.id; // Assuming user info is added by auth middleware
 
         if (!['UP', 'DOWN'].includes(type)) {
@@ -51,7 +56,7 @@ exports.vote = async (req, res) => {
         if (vote) {
             if (vote.type === type) {
                 // Remove vote if same type (toggle off)
-                await vote.remove();
+                await Vote.deleteOne({ _id: vote._id });
                 res.json({ msg: 'Vote removed', type: null });
             } else {
                 // Update vote type if different

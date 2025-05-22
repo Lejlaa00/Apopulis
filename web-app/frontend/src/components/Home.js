@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { UserContext } from '../userContext';
 import { authFetch } from './authFetch';
+import { Link } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -12,6 +13,7 @@ function Home() {
   const [userVotes, setUserVotes] = useState({});
   const [commentsMap, setCommentsMap] = useState({});
   const [newComments, setNewComments] = useState({});
+  const [voteCounts, setVoteCounts] = useState({});
 
   // Store bookmarked news IDs in a Set for easy lookup
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
@@ -39,7 +41,10 @@ function Home() {
   // Fetch user votes
   useEffect(() => {
     async function fetchUserVotes() {
-      if (!user) return;
+      if (!user){
+          setUserVotes({});
+        return;
+        }
       try {
         const votesMap = {};
         for (const news of newsList) {
@@ -54,6 +59,39 @@ function Home() {
     }
     fetchUserVotes();
   }, [user, newsList]);
+
+//Fetch number of votes
+  useEffect(() => {
+    async function fetchVoteCounts() {
+      try {
+        const map = {};
+        for (const news of newsList) {
+          const res = user
+            ? await authFetch(`${API_URL}/votes/news/${news._id}`)
+            : await fetch(`${API_URL}/votes/news/${news._id}`);
+
+          if (res.ok) {
+            const data = await res.json();
+            map[news._id] = {
+              up: data.upvotes,
+              down: data.downvotes,
+            };
+          } else {
+            console.warn('Vote fetch failed for', news._id);
+            map[news._id] = { up: 0, down: 0 };
+          }
+        }
+        setVoteCounts(map);
+      } catch (err) {
+        console.error('Error loading vote counts', err);
+      }
+    }
+
+    if (newsList.length > 0) {
+      fetchVoteCounts();
+    }
+  }, [newsList, user]); // <- user MORA biti ovde
+
 
   // Fetch comments
   useEffect(() => {
@@ -101,14 +139,27 @@ function Home() {
       return;
     }
     try {
-      const res = await authFetch(`${API_URL}/votes/${newsId}`, {
+      const res = await authFetch(`${API_URL}/votes/news/${newsId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        //headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: voteType }),
       });
       if (res.ok) {
         const data = await res.json();
         setUserVotes(prev => ({ ...prev, [newsId]: data.type }));
+
+        const countRes = await authFetch(`${API_URL}/votes/news/${newsId}`);
+        if (countRes.ok) {
+          const countData = await countRes.json();
+          setVoteCounts(prev => ({
+            ...prev,
+            [newsId]: {
+              up: countData.upvotes,
+              down: countData.downvotes
+            }
+          }));
+        }
+
       } else {
         const data = await res.json();
         alert(data.msg || 'Vote failed');
@@ -200,14 +251,13 @@ function Home() {
           const isBookmarked = bookmarkedIds.has(news._id);
           return (
             <li key={news._id} style={{ borderBottom: '1px solid #ddd', padding: '10px 0' }}>
-              <a
-                href={news.url || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontWeight: 'bold', fontSize: '18px' }}
+              <Link
+                to={`/news/${news._id}`}
+                style={{ fontWeight: 'bold', fontSize: '18px', textDecoration: 'none', color: 'black' }}
               >
                 {news.title}
-              </a>
+              </Link>
+
               <p style={{ fontSize: '12px', color: '#666' }}>
                 Category: {news.categoryId?.name || 'Unknown'} | Published: {new Date(news.publishedAt).toLocaleString()}
               </p>
@@ -223,7 +273,7 @@ function Home() {
                     marginRight: '8px',
                   }}
                 >
-                  👍
+                  👍 {voteCounts[news._id]?.up || 0}
                 </button>
                 <button
                   onClick={() => handleVote(news._id, 'DOWN')}
@@ -232,7 +282,7 @@ function Home() {
                     color: userVotes[news._id] === 'DOWN' ? 'white' : 'black',
                   }}
                 >
-                  👎
+                  👎 {voteCounts[news._id]?.down || 0}
                 </button>
 
                 {/* Bookmark toggle */}

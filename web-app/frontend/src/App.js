@@ -5,6 +5,8 @@ import Header from "./components/Header";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Home from "./components/Home";
+import NewsDetail from './components/NewsDetail';
+
 
 function App() {
   const [user, setUser] = useState(localStorage.user ? JSON.parse(localStorage.user) : null);
@@ -23,6 +25,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/news/:id" element={<NewsDetail />} />
           </Routes>
         </div>
       </UserContext.Provider>

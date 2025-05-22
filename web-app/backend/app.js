@@ -33,7 +33,8 @@ app.get('/', (req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/comments', authMiddleware, commentRoutes); // Comments require authentication
-app.use('/api/votes', authMiddleware, voteRoutes); // Votes require authentication
+//app.use('/api/votes', authMiddleware, voteRoutes); // Votes require authentication
+app.use('/api/votes', voteRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/sources', sourceRoutes);
