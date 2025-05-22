@@ -4,7 +4,6 @@ import { useContext } from 'react';
 import { UserContext } from '../userContext';
 import { authFetch } from './authFetch';
 
-
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 function NewsDetail() {
@@ -16,6 +15,7 @@ function NewsDetail() {
     const [voteCount, setVoteCount] = useState({ up: 0, down: 0 });
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
+    const [isBookmarked, setIsBookmarked] = useState(false);
 
 
     useEffect(() => {
@@ -48,6 +48,17 @@ function NewsDetail() {
                         setComments(commentsData.comments);
                     }
 
+                    // Fetch bookmarks for this user and check if this news is bookmarked
+                    if (user) {
+                        const bookmarksRes = await authFetch(`${API_URL}/users/bookmarks`);
+                        if (bookmarksRes.ok) {
+                            const bookmarksData = await bookmarksRes.json();
+                            const ids = bookmarksData.bookmarks.map(b => b._id);
+                            setIsBookmarked(ids.includes(id));
+                        }
+                    }
+  
+
                 } else {
                     console.error('Failed to fetch news item:', data.msg);
                 }
@@ -60,6 +71,12 @@ function NewsDetail() {
 
         fetchNewsItem();
     }, [id]);
+
+    useEffect(() => {
+        if (!user) {
+            setIsBookmarked(false);
+        }
+    }, [user]);      
 
 
     const handleVote = async (type) => {
@@ -83,6 +100,29 @@ function NewsDetail() {
             }
         }
     };
+
+    const handleToggleBookmark = async () => {
+        if (!user) {
+            alert('You must be logged in to bookmark.');
+            return;
+        }
+
+        try {
+            const res = await authFetch(`${API_URL}/users/bookmarks/${id}`, {
+                method: isBookmarked ? 'DELETE' : 'POST',
+            });
+            if (res.ok) {
+                setIsBookmarked(prev => !prev);
+            } else {
+                const data = await res.json();
+                alert(data.msg || 'Failed to update bookmark');
+            }
+        } catch (err) {
+            console.error('Error updating bookmark', err);
+            alert('Error updating bookmark');
+        }
+    };
+      
 
 
     const handleSubmitComment = async () => {
@@ -147,6 +187,22 @@ function NewsDetail() {
                 >
                     👎 {voteCount.down}
                 </button>
+
+                <button
+                    onClick={handleToggleBookmark}
+                    style={{
+                        marginLeft: '16px',
+                        backgroundColor: isBookmarked ? '#007bff' : 'lightgray',
+                        color: isBookmarked ? 'white' : 'black',
+                        borderRadius: '4px',
+                        padding: '4px 10px',
+                        cursor: 'pointer',
+                    }}
+                    title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                >
+                    {isBookmarked ? '🔖 Bookmarked' : '🔖 Bookmark'}
+                </button>
+
             </div>
 
             {/* Comments */}

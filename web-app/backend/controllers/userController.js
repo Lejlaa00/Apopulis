@@ -204,8 +204,54 @@ exports.login = async (req, res) => {
     }
 };
 
-
+//Logout
 exports.logout = (req, res) => {
     res.clearCookie('refreshToken');
     res.json({ msg: 'Logout successful' });
 };
+
+//Bookmarking newsItem
+exports.addBookmark = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const { newsId } = req.params;
+
+        if (!user.bookmarks.includes(newsId)) {
+            user.bookmarks.push(newsId);
+            await user.save();
+        }
+
+        res.json({ msg: 'News bookmarked' });
+    } catch (err) {
+        console.error('Error bookmarking news:', err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+//Removing bookmar
+exports.removeBookmark = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const { newsId } = req.params;
+
+        user.bookmarks = user.bookmarks.filter(id => id.toString() !== newsId);
+        await user.save();
+
+        res.json({ msg: 'Bookmark removed' });
+    } catch (err) {
+        console.error('Error removing bookmark:', err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+//Ger all bookmarks for user
+exports.getBookmarks = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).populate('bookmarks');
+        res.json({ bookmarks: user.bookmarks });
+    } catch (err) {
+        console.error('Error getting bookmarks:', err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+

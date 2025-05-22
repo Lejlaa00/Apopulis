@@ -14,8 +14,6 @@ function Home() {
   const [commentsMap, setCommentsMap] = useState({});
   const [newComments, setNewComments] = useState({});
   const [voteCounts, setVoteCounts] = useState({});
-
-  // Store bookmarked news IDs in a Set for easy lookup
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
 
   useEffect(() => {
@@ -90,7 +88,7 @@ function Home() {
     if (newsList.length > 0) {
       fetchVoteCounts();
     }
-  }, [newsList, user]); // <- user MORA biti ovde
+  }, [newsList, user]);
 
 
   // Fetch comments
@@ -120,10 +118,11 @@ function Home() {
     async function fetchBookmarks() {
       if (!user) return;
       try {
-        const res = await authFetch(`${API_URL}/bookmarks`);
+        const res = await authFetch(`${API_URL}/users/bookmarks`);
         if (res.ok) {
-          const data = await res.json(); // assuming { bookmarks: [newsId, ...] }
-          setBookmarkedIds(new Set(data.bookmarks));
+          const data = await res.json(); 
+          const ids = data.bookmarks.map(b => b._id);
+          setBookmarkedIds(new Set(ids));
         }
       } catch (err) {
         console.error('Error fetching bookmarks', err);
@@ -132,7 +131,15 @@ function Home() {
     fetchBookmarks();
   }, [user]);
 
-  // Vote handler (same as before)
+  // Bookmarks reset if user logs out
+  useEffect(() => {
+    if (!user) {
+      setBookmarkedIds(new Set());
+    }
+  }, [user]);
+
+
+  // Vote handler 
   const handleVote = async (newsId, voteType) => {
     if (!user) {
       alert('You must be logged in to vote.');
@@ -178,7 +185,7 @@ function Home() {
     }
     const isBookmarked = bookmarkedIds.has(newsId);
     try {
-      const res = await authFetch(`${API_URL}/bookmarks/${newsId}`, {
+      const res = await authFetch(`${API_URL}/users/bookmarks/${newsId}`, {
         method: isBookmarked ? 'DELETE' : 'POST',
       });
       if (res.ok) {
@@ -206,7 +213,7 @@ function Home() {
     setNewComments(prev => ({ ...prev, [newsId]: value }));
   };
 
-  // Submit new comment (same as before)
+  // Submit new comment 
   const handleSubmitComment = async (newsId) => {
     if (!user) {
       alert('You must be logged in to comment.');
