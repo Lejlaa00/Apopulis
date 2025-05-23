@@ -3,9 +3,19 @@ import { UserContext } from '../userContext';
 import { authFetch } from './authFetch';
 import { Link } from 'react-router-dom';
 
+import MapSection from './MapSection';
+import LatestNews from './LatestNews';
+import SortedNews from './SortedNews';
+import Graphs from './Graphs';
+import '../css/dashboard.css';
+import '../css/mapSection.css';
+import '../css/latestNews.css';
+import '../css/sortedNews.css';
+import '../css/graphs.css';
+
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
-function Home() {
+export default function Home() {
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useContext(UserContext);
@@ -36,13 +46,12 @@ function Home() {
     fetchNews();
   }, []);
 
-  // Fetch user votes
   useEffect(() => {
     async function fetchUserVotes() {
-      if (!user){
-          setUserVotes({});
+      if (!user) {
+        setUserVotes({});
         return;
-        }
+      }
       try {
         const votesMap = {};
         for (const news of newsList) {
@@ -58,7 +67,6 @@ function Home() {
     fetchUserVotes();
   }, [user, newsList]);
 
-//Fetch number of votes
   useEffect(() => {
     async function fetchVoteCounts() {
       try {
@@ -75,7 +83,6 @@ function Home() {
               down: data.downvotes,
             };
           } else {
-            console.warn('Vote fetch failed for', news._id);
             map[news._id] = { up: 0, down: 0 };
           }
         }
@@ -84,14 +91,9 @@ function Home() {
         console.error('Error loading vote counts', err);
       }
     }
-
-    if (newsList.length > 0) {
-      fetchVoteCounts();
-    }
+    if (newsList.length > 0) fetchVoteCounts();
   }, [newsList, user]);
 
-
-  // Fetch comments
   useEffect(() => {
     async function fetchComments() {
       try {
@@ -113,14 +115,13 @@ function Home() {
     fetchComments();
   }, [newsList]);
 
-  // Fetch bookmarked news IDs
   useEffect(() => {
     async function fetchBookmarks() {
       if (!user) return;
       try {
         const res = await authFetch(`${API_URL}/users/bookmarks`);
         if (res.ok) {
-          const data = await res.json(); 
+          const data = await res.json();
           const ids = data.bookmarks.map(b => b._id);
           setBookmarkedIds(new Set(ids));
         }
@@ -131,24 +132,15 @@ function Home() {
     fetchBookmarks();
   }, [user]);
 
-  // Bookmarks reset if user logs out
   useEffect(() => {
-    if (!user) {
-      setBookmarkedIds(new Set());
-    }
+    if (!user) setBookmarkedIds(new Set());
   }, [user]);
 
-
-  // Vote handler 
   const handleVote = async (newsId, voteType) => {
-    if (!user) {
-      alert('You must be logged in to vote.');
-      return;
-    }
+    if (!user) return alert('You must be logged in to vote.');
     try {
       const res = await authFetch(`${API_URL}/votes/news/${newsId}`, {
         method: 'POST',
-        //headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: voteType }),
       });
       if (res.ok) {
@@ -162,11 +154,10 @@ function Home() {
             ...prev,
             [newsId]: {
               up: countData.upvotes,
-              down: countData.downvotes
+              down: countData.downvotes,
             }
           }));
         }
-
       } else {
         const data = await res.json();
         alert(data.msg || 'Vote failed');
@@ -177,12 +168,8 @@ function Home() {
     }
   };
 
-  // Bookmark toggle handler
   const handleToggleBookmark = async (newsId) => {
-    if (!user) {
-      alert('You must be logged in to bookmark.');
-      return;
-    }
+    if (!user) return alert('You must be logged in to bookmark.');
     const isBookmarked = bookmarkedIds.has(newsId);
     try {
       const res = await authFetch(`${API_URL}/users/bookmarks/${newsId}`, {
@@ -191,11 +178,7 @@ function Home() {
       if (res.ok) {
         setBookmarkedIds(prev => {
           const newSet = new Set(prev);
-          if (isBookmarked) {
-            newSet.delete(newsId);
-          } else {
-            newSet.add(newsId);
-          }
+          isBookmarked ? newSet.delete(newsId) : newSet.add(newsId);
           return newSet;
         });
       } else {
@@ -208,22 +191,14 @@ function Home() {
     }
   };
 
-  // New comment input change handler
   const handleNewCommentChange = (newsId, value) => {
     setNewComments(prev => ({ ...prev, [newsId]: value }));
   };
 
-  // Submit new comment 
   const handleSubmitComment = async (newsId) => {
-    if (!user) {
-      alert('You must be logged in to comment.');
-      return;
-    }
+    if (!user) return alert('You must be logged in to comment.');
     const content = newComments[newsId];
-    if (!content || content.trim() === '') {
-      alert('Comment cannot be empty.');
-      return;
-    }
+    if (!content || content.trim() === '') return alert('Comment cannot be empty.');
     try {
       const res = await authFetch(`${API_URL}/comments/${newsId}`, {
         method: 'POST',
@@ -250,103 +225,19 @@ function Home() {
   if (loading) return <p>Loading news...</p>;
 
   return (
-    <div>
-      <h2>Latest News</h2>
-      {newsList.length === 0 && <p>No news available.</p>}
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {newsList.map(news => {
-          const isBookmarked = bookmarkedIds.has(news._id);
-          return (
-            <li key={news._id} style={{ borderBottom: '1px solid #ddd', padding: '10px 0' }}>
-              <Link
-                to={`/news/${news._id}`}
-                style={{ fontWeight: 'bold', fontSize: '18px', textDecoration: 'none', color: 'black' }}
-              >
-                {news.title}
-              </Link>
-
-              <p style={{ fontSize: '12px', color: '#666' }}>
-                Category: {news.categoryId?.name || 'Unknown'} | Published: {new Date(news.publishedAt).toLocaleString()}
-              </p>
-              <p>{news.summary || (news.content?.substring(0, 150) + '...')}</p>
-
-              {/* Voting buttons */}
-              <div>
-                <button
-                  onClick={() => handleVote(news._id, 'UP')}
-                  style={{
-                    backgroundColor: userVotes[news._id] === 'UP' ? 'green' : 'lightgray',
-                    color: userVotes[news._id] === 'UP' ? 'white' : 'black',
-                    marginRight: '8px',
-                  }}
-                >
-                  👍 {voteCounts[news._id]?.up || 0}
-                </button>
-                <button
-                  onClick={() => handleVote(news._id, 'DOWN')}
-                  style={{
-                    backgroundColor: userVotes[news._id] === 'DOWN' ? 'red' : 'lightgray',
-                    color: userVotes[news._id] === 'DOWN' ? 'white' : 'black',
-                  }}
-                >
-                  👎 {voteCounts[news._id]?.down || 0}
-                </button>
-
-                {/* Bookmark toggle */}
-                <button
-                  onClick={() => handleToggleBookmark(news._id)}
-                  style={{
-                    marginLeft: '16px',
-                    backgroundColor: isBookmarked ? '#007bff' : 'lightgray',
-                    color: isBookmarked ? 'white' : 'black',
-                    borderRadius: '4px',
-                    padding: '4px 10px',
-                    cursor: 'pointer',
-                  }}
-                  title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-                >
-                  {isBookmarked ? '🔖 Bookmarked' : '🔖 Bookmark'}
-                </button>
-              </div>
-
-              {/* Comments Section */}
-              <div style={{ marginTop: '15px' }}>
-                <h4>Comments</h4>
-                {(commentsMap[news._id] && commentsMap[news._id].length > 0) ? (
-                  <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-                    {commentsMap[news._id].map(comment => (
-                      <li key={comment._id} style={{ marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>
-                        <strong>{comment.userId?.username || 'Anonymous'}</strong>: {comment.content}
-                        <br />
-                        <small style={{ color: '#999' }}>{new Date(comment.createdAt).toLocaleString()}</small>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No comments yet.</p>
-                )}
-
-                {user ? (
-                  <div>
-                    <textarea
-                      placeholder="Write a comment..."
-                      value={newComments[news._id] || ''}
-                      onChange={(e) => handleNewCommentChange(news._id, e.target.value)}
-                      rows={3}
-                      style={{ width: '100%', marginBottom: '5px' }}
-                    />
-                    <button onClick={() => handleSubmitComment(news._id)}>Submit Comment</button>
-                  </div>
-                ) : (
-                  <p><em>Login to comment</em></p>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+    <div className="dashboard-grid">
+      <div className="map-area">
+        <MapSection />
+      </div>
+      <div className="latest-news">
+        <LatestNews />
+      </div>
+      <div className="sorted-news">
+        <SortedNews />
+      </div>
+      <div className="graphs-area">
+        <Graphs />
+      </div>
     </div>
   );
 }
-
-export default Home;

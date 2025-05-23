@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { UserContext } from "./userContext";
-import Header from "./components/Header";
+import Layout from "./components/Layout";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Home from "./components/Home";
@@ -11,23 +11,22 @@ import NewsDetail from './components/NewsDetail';
 function App() {
   const [user, setUser] = useState(localStorage.user ? JSON.parse(localStorage.user) : null);
 
-  const updateUserData = (userInfo) => {
+  const setUserContext = (userInfo) => {
     localStorage.setItem("user", JSON.stringify(userInfo));
     setUser(userInfo);
-  }
+  };
 
   return (
     <BrowserRouter>
-      <UserContext.Provider value={{ user: user, setUserContext: updateUserData }}>
-        <div className="App">
-          <Header />
+      <UserContext.Provider value={{ user, setUserContext }}>
+        <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/news/:id" element={<NewsDetail />} />
           </Routes>
-        </div>
+        </Layout>
       </UserContext.Provider>
     </BrowserRouter>
   );

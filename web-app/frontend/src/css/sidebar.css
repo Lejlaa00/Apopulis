@@ -1,0 +1,212 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 150px;
+  height: 100vh;
+  background-color: var(--color-bg-darker);
+  color: var(--color-text-light);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  border-right: 1px solid var(--color-divider);
+  overflow-y: hidden;
+  z-index: 10;
+}
+
+.sidebar-header {
+  width: 100%;
+  text-align: center;
+  margin: 0;
+  padding: 0.5rem 0;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  padding: 0;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--color-text-light);
+}
+
+/* Divider line */
+.sidebar-divider {
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--color-divider);
+}
+
+/* Navigation */
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0 0;
+  width: 100%;
+}
+
+.nav-list li {
+  margin-bottom: 0.5rem;
+}
+
+.nav-list li a:hover {
+  background-color: var(--color-hover-bg);
+}
+
+/* Profile section */
+.profile-section {
+  margin-top: auto;
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.profile-button {
+  background: none;
+  border: none;
+  color: var(--color-text-light);
+  cursor: pointer;
+  padding: 0;
+}
+
+.profile-button:hover {
+  color: var(--color-accent);
+}
+
+/* Custom feeds, resources */
+.sidebar-section {
+  width: 100%;
+  margin-top: 2rem;
+}
+
+.section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.section-item {
+  background: none;
+  border: none;
+  color: var(--color-text-light);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 6px 0;
+  text-align: left;
+  width: 100%;
+}
+
+.section-item:hover {
+  color: var(--color-accent-red);
+}
+
+.resource-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.resource-list li {
+  margin-bottom: 0.6rem;
+}
+
+.resource-list li a {
+  color: var(--color-text-light);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.resource-list li a:hover {
+  color: var(--color-accent-red);
+}
+
+.beta-tag {
+  color: var(--color-accent-red);
+  font-weight: 700;
+  font-size: 0.75rem;
+  margin-left: 4px;
+}
+
+.profile-container {
+  position: relative;
+}
+
+.nav-list li a,
+.profile-nav {
+    display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 16px;
+  margin: 0 8px;              
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--color-text-light);
+  cursor: pointer;
+  width: calc(100% - 16px);  
+  box-sizing: border-box;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+}
+
+.nav-list li a:hover,
+.profile-nav:hover {
+  background-color: var(--color-hover-bg);
+  color: var(--color-text-light);
+}
+
+.active-link {
+  background-color: var(--color-active-bg);
+  font-weight: 600;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background-color: var(--color-bg-darker);
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 120px;
+  max-width: 90%;
+  padding: 0.25rem 0;
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+.dropdown-item {
+  padding: 6px 12px;
+  color: var(--color-text-light);
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.85rem;
+  display: block;
+  background-color: transparent;
+  border: none;
+  text-align: left;
+  white-space: nowrap;
+  width: 100%;
+  transition: color 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background-color: transparent !important;   /* ❗️uklanja bilo koju naslijeđenu pozadinu */
+  color: var(--color-text-muted) !important;  /* ❗️postaje siviji tekst */
+}
+
+.profile-hover-area {
+  position: relative;
+  width: 100%;
+}

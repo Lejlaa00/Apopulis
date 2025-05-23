@@ -1,0 +1,32 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;      /* cijela visina prozora */
+  width: 100vw;
+}
+
+.content-area {
+  display: flex;
+  flex-grow: 1;       /* zauzima sav preostali prostor između headera i footera */
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 150px;
+  background-color: var(--color-bg-darker);
+  height: 100%;
+  overflow-y: hidden;
+  flex-shrink: 0;
+}
+
+.main-content {
+  margin-left: 150px;         /* prostor za sidebar */
+  flex-grow: 1;               /* zauzima ostatak prostora */
+  overflow-y: auto;           /* dozvoli vertikalni scroll ako treba */
+  background-color: var(--color-bg-darkest);
+  padding: 1rem;
+  box-sizing: border-box;
+  min-height: 0;              /* ključno za flex da ne rastegne previše */
+  height: auto;               /* ukloni fiksni 100vh */
+}
+

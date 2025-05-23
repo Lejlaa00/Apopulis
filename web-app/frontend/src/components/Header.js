@@ -1,35 +1,36 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useContext } from "react";
-import { UserContext } from "../userContext";
+import React, { useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { UserContext } from '../userContext';
 
-function Header() {
-    const { user, setUserContext } = useContext(UserContext);
-    const navigate = useNavigate();
+export default function Header() {
+  const { user, setUserContext } = useContext(UserContext);
+  const navigate = useNavigate();
 
-    const handleLogout = (e) => {
-        e.preventDefault();
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-        setUserContext(null);
-        navigate("/"); 
-    };
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUserContext(null);
+    navigate('/login');
+  };
 
-    return (
-        <header>
-            <h1>Apopulis</h1>
-            <nav>
-                {user ? (
-                    <> 
-                    <Link to="/" onClick={handleLogout}>Logout</Link>
-                    </>
-                ) : (
-                    <>
-                            <Link to="/login">Login</Link> | <Link to="/register">Register</Link> | <Link to="/">Homepage</Link>
-                    </>
-                )}
-            </nav>
-        </header>
-    );
+  return (
+    <header className="header">
+      <div className="header-content">
+        <h1 className="logo"><Link to="/" style={{ color: 'inherit', textDecoration: 'none' }}>Apopulis</Link></h1>
+        <nav className="nav-links">
+          {user ? (
+            <>
+              <span>Welcome, {user.username}</span>
+              <button onClick={handleLogout} className="btn-logout">Logout</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login">Login</Link>
+              <Link to="/register" style={{ marginLeft: '1rem' }}>Register</Link>
+            </>
+          )}
+        </nav>
+      </div>
+    </header>
+  );
 }
-
-export default Header;

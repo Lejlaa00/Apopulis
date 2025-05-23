@@ -1,0 +1,14 @@
+:root {
+  --color-bg-darkest: #161618;     
+  --color-bg-darker: #161618;      
+  --color-bg-light: #1a1b1e;   
+
+  --color-text-light: #ffffff;  
+  --color-text-muted: #878A8C;    
+
+  --color-accent: #B6BBC4;        
+  --color-accent-red: #FF4500;    
+  --color-hover-bg: #2A2A2B;
+  --color-active-bg: #343536;
+  --color-divider: rgba(255, 255, 255, 0.1);
+}

@@ -1,0 +1,6 @@
+.latest-news{
+  background-color: var(--color-bg-light);
+  overflow: hidden;
+  padding: 1rem;
+  box-sizing: border-box;
+}
