@@ -71,7 +71,7 @@ function CommentItem({ comment, user, onReply, onDelete, onEdit, childComments =
                             onReply={onReply}
                             onDelete={onDelete}
                             onEdit={onEdit}
-                            childComments={[]} // No recursion allowed
+                            childComments={[]}
                         />
                     ))}
                 </div>

@@ -9,7 +9,8 @@ const newsItemSchema = new Schema({
     sourceId: { type: Schema.Types.ObjectId, ref: 'Source' },
     locationId: { type: Schema.Types.ObjectId, ref: 'Location' },
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category' },
-    url: String
+    url: String,
+    views: { type: Number, default: 0 }
 }, { timestamps: true }); // default createdAt i updatedAt
 
 module.exports = mongoose.model('NewsItem', newsItemSchema);

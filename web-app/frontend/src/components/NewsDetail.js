@@ -43,7 +43,6 @@ function NewsDetail() {
                             setUserVote(userVoteData.vote);
                         }
                     }
-
                     // Fetch bookmarks for this user and check if this news is bookmarked
                     if (user) {
                         const bookmarksRes = await authFetch(`${API_URL}/users/bookmarks`);
@@ -72,7 +71,12 @@ function NewsDetail() {
         if (!user) {
             setIsBookmarked(false);
         }
-    }, [user]);   
+    }, [user]); 
+
+    //View
+    useEffect(() => {
+        fetch(`${API_URL}/news/${id}/view`, { method: 'POST' });
+    }, [id]);
     
     useEffect(() => {
         fetchComments();
@@ -90,14 +94,12 @@ function NewsDetail() {
                 const data = await commentsRes.json();
                 const allComments = data.comments;
 
-                // Step 1: Kreiraj mapu komentara po ID
                 const commentMap = {};
                 allComments.forEach(comment => {
                     comment.replies = [];
                     commentMap[comment._id.toString()] = comment;
                 });
 
-                // Step 2: Grupisi po parentCommentId
                 const rootComments = [];
                 allComments.forEach(comment => {
                     if (comment.parentCommentId && commentMap[comment.parentCommentId]) {
@@ -107,7 +109,7 @@ function NewsDetail() {
                     }
                 });
 
-                setComments(rootComments); // Samo root komentari, a odgovori su u .replies
+                setComments(rootComments); 
             } else {
                 console.warn('Could not load comments:', commentsRes.status);
             }

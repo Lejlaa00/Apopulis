@@ -6,8 +6,11 @@ const {
     createNews, 
     updateNews, 
     deleteNews,
-    getNewsByLocation
+    getNewsByLocation,
+    trackView
 } = require('../controllers/newsController');
+router.post('/:id/view', trackView);
+
 
 // Get all news with optional filtering
 router.get('/', getNews);
@@ -17,6 +20,9 @@ router.get('/location/:locationId', getNewsByLocation);
 
 // Get a single news item
 router.get('/:id', getNewsById);
+
+// Create a view
+router.post('/:id/view', trackView);
 
 // Create a new news item
 router.post('/', createNews);

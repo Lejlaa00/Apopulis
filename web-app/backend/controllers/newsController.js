@@ -152,3 +152,22 @@ exports.getNewsByLocation = async (req, res) => {
         res.status(500).json({ msg: 'Error fetching news by location', error: err.message });
     }
 };
+
+// Track a view for a specific news item
+exports.trackView = async (req, res) => {
+    try {
+        const newsItem = await NewsItem.findById(req.params.id);
+        if (!newsItem) {
+            return res.status(404).json({ msg: 'News item not found' });
+        }
+
+        newsItem.views = (newsItem.views || 0) + 1;
+        await newsItem.save();
+
+        res.json({ views: newsItem.views });
+    } catch (err) {
+        console.error('Error tracking view:', err);
+        res.status(500).json({ msg: 'Error tracking view', error: err.message });
+    }
+};
+
