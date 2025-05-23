@@ -4,46 +4,66 @@ const Comment = require('../models/commentModel');
 exports.getComments = async (req, res) => {
     try {
         const { newsItemId } = req.params;
-        const { page = 1, limit = 10 } = req.query;
-        const skip = (page - 1) * limit;
 
-        const comments = await Comment.find({ newsItemId })
+        // Fetch all comments for the news item
+        const allComments = await Comment.find({ newsItemId })
             .populate('userId', 'username')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(parseInt(limit));
+            .sort({ createdAt: -1 }); // newest first
 
-        const total = await Comment.countDocuments({ newsItemId });
-
-        res.json({
-            comments,
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(total / limit),
-            totalItems: total
+        // Create a map: commentId -> comment
+        const commentMap = {};
+        allComments.forEach(comment => {
+            comment = comment.toObject(); // convert to plain object to allow mutation
+            comment.replies = []; // initialize replies array
+            commentMap[comment._id] = comment;
         });
+
+        // Build the hierarchy
+        const rootComments = [];
+        allComments.forEach(comment => {
+            if (comment.parentCommentId) {
+                const parent = commentMap[comment.parentCommentId];
+                if (parent) {
+                    parent.replies.push(commentMap[comment._id]);
+                }
+            } else {
+                rootComments.push(commentMap[comment._id]);
+            }
+        });
+
+        res.json({ comments: rootComments });
+
     } catch (err) {
         console.error('Error fetching comments:', err);
         res.status(500).json({ msg: 'Error fetching comments', error: err.message });
     }
 };
 
+
 // Create a new comment
 exports.createComment = async (req, res) => {
     try {
-        const { content } = req.body;
+        const { content, parentCommentId } = req.body;
         const { newsItemId } = req.params;
-        const userId = req.user.id; // Assuming user info is added by auth middleware
+        const userId = req.user.id;
 
         const comment = new Comment({
             userId,
             newsItemId,
-            content
+            content,
+            parentCommentId: parentCommentId || null
         });
 
         await comment.save();
 
-        const populatedComment = await Comment.findById(comment._id)
-            .populate('userId', 'username');
+        console.log("Kreira se komentar:", {
+            content,
+            parentCommentId,
+            newsItemId,
+            userId
+        });
+          
+        const populatedComment = await Comment.findById(comment._id).populate('userId', 'username');
 
         res.status(201).json(populatedComment);
     } catch (err) {

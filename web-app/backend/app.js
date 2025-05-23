@@ -32,8 +32,9 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/api/users', userRoutes);
 app.use('/api/news', newsRoutes);
-app.use('/api/comments', authMiddleware, commentRoutes); // Comments require authentication
+//app.use('/api/comments', authMiddleware, commentRoutes); // Comments require authentication
 //app.use('/api/votes', authMiddleware, voteRoutes); // Votes require authentication
+app.use('/api/comments', commentRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/locations', locationRoutes);

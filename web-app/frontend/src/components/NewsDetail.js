@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useContext } from 'react';
 import { UserContext } from '../userContext';
 import { authFetch } from './authFetch';
+import CommentItem from './CommentItem';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -16,6 +17,8 @@ function NewsDetail() {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [isBookmarked, setIsBookmarked] = useState(false);
+    const [editingCommentId, setEditingCommentId] = useState(null);
+    const [editedContent, setEditedContent] = useState('');
 
 
     useEffect(() => {
@@ -34,18 +37,11 @@ function NewsDetail() {
 
                     // Fetch user's vote
                     if (user) {
-                        const userVoteRes = await authFetch(`${API_URL}/votes/${id}/user`);
+                        const userVoteRes = await authFetch(`${API_URL}/votes/news/${id}/user`);
                         if (userVoteRes.ok) {
                             const userVoteData = await userVoteRes.json();
                             setUserVote(userVoteData.vote);
                         }
-                    }
-
-                    // Fetch comments
-                    const commentsRes = await fetch(`${API_URL}/comments/${id}?limit=3&page=1`);
-                    if (commentsRes.ok) {
-                        const commentsData = await commentsRes.json();
-                        setComments(commentsData.comments);
                     }
 
                     // Fetch bookmarks for this user and check if this news is bookmarked
@@ -76,9 +72,52 @@ function NewsDetail() {
         if (!user) {
             setIsBookmarked(false);
         }
-    }, [user]);      
+    }, [user]);   
+    
+    useEffect(() => {
+        fetchComments();
+    }, [id, user]);
 
+    const fetchComments = async () => {
+        try {
+            const url = `${API_URL}/comments/news/${id}?limit=100&page=1`;
+            let commentsRes = await fetch(url);
+            if (commentsRes.status === 401 && user) {
+                commentsRes = await authFetch(url);
+            }
 
+            if (commentsRes.ok) {
+                const data = await commentsRes.json();
+                const allComments = data.comments;
+
+                // Step 1: Kreiraj mapu komentara po ID
+                const commentMap = {};
+                allComments.forEach(comment => {
+                    comment.replies = [];
+                    commentMap[comment._id.toString()] = comment;
+                });
+
+                // Step 2: Grupisi po parentCommentId
+                const rootComments = [];
+                allComments.forEach(comment => {
+                    if (comment.parentCommentId && commentMap[comment.parentCommentId]) {
+                        commentMap[comment.parentCommentId].replies.push(comment);
+                    } else {
+                        rootComments.push(comment);
+                    }
+                });
+
+                setComments(rootComments); // Samo root komentari, a odgovori su u .replies
+            } else {
+                console.warn('Could not load comments:', commentsRes.status);
+            }
+        } catch (err) {
+            console.error('Error loading comments:', err);
+        }
+    };
+    
+      
+    //Upvoting or downvoting newsItem
     const handleVote = async (type) => {
         if (!user) {
             alert('You must be logged in to vote.');
@@ -101,6 +140,7 @@ function NewsDetail() {
         }
     };
 
+    //Bookmarking newsItem
     const handleToggleBookmark = async () => {
         if (!user) {
             alert('You must be logged in to bookmark.');
@@ -123,8 +163,7 @@ function NewsDetail() {
         }
     };
       
-
-
+    //Adding comment
     const handleSubmitComment = async () => {
         if (!user) {
             alert('You must be logged in to comment.');
@@ -134,19 +173,90 @@ function NewsDetail() {
             alert('Comment cannot be empty.');
             return;
         }
-        const res = await authFetch(`${API_URL}/comments/${id}`, {
+        const res = await authFetch(`${API_URL}/comments/news/${id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content: newComment }),
         });
         if (res.ok) {
-            const newCom = await res.json();
-            setComments(prev => [newCom, ...prev].slice(0, 3));
+            await fetchComments();
             setNewComment('');
+        }
+    };
+
+    //Deleting comment
+    const handleDeleteComment = async (commentId) => {
+        if (!window.confirm("Are you sure you want to delete this comment?")) return;
+        try {
+            const res = await authFetch(`${API_URL}/comments/${commentId}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                const commentsRes = user
+                    ? await authFetch(`${API_URL}/comments/news/${id}?limit=3&page=1`)
+                    : await fetch(`${API_URL}/comments/news/${id}?limit=3&page=1`);
+                if (commentsRes.ok) {
+                    const data = await commentsRes.json();
+                    setComments(data.comments);
+                }
+            } else {
+                const data = await res.json();
+                alert(data.msg || 'Failed to delete comment');
+            }
+        } catch (err) {
+            console.error('Error deleting comment:', err);
+            alert('Error deleting comment');
+        }
+    };
+    
+    //Editing comment
+    const handleEditComment = async (commentId) => {
+        if (!editedContent.trim()) {
+            alert('Comment cannot be empty.');
+            return;
+        }
+
+        try {
+            const res = await authFetch(`${API_URL}/comments/${commentId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: editedContent }),
+            });
+
+            if (res.ok) {
+                await fetchComments(); 
+                setEditingCommentId(null);
+                setEditedContent('');
+            } else {
+                const data = await res.json();
+                alert(data.msg || 'Failed to update comment');
+            }
+        } catch (err) {
+            console.error('Error updating comment:', err);
+        }
+    };    
+
+    //Replying to comment
+    const handleReply = async (parentId, replyContent) => {
+        if (!user) return alert('Login required');
+        if (!replyContent.trim()) return alert('Comment cannot be empty');
+
+        const res = await authFetch(`${API_URL}/comments/news/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: replyContent, parentCommentId: parentId })
+        });
+
+        if (res.ok) {
+            fetchComments(); 
+        } else {
+            const data = await res.json();
+            alert(data.msg || 'Failed to post reply');
         }
     };
       
     
+          
     if (loading) return <p>Loading...</p>;
     if (!news) return <p>News not found</p>;
 
@@ -208,17 +318,41 @@ function NewsDetail() {
             {/* Comments */}
             <div style={{ marginTop: '30px' }}>
                 <h4>Comments</h4>
+
                 {comments.length === 0 ? (
                     <p>No comments yet.</p>
                 ) : (
                     <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-                        {comments.map(comment => (
-                            <li key={comment._id} style={{ marginBottom: '10px' }}>
-                                <strong>{comment.userId?.username || 'Anonymous'}</strong>: {comment.content}
-                                <br />
-                                <small style={{ color: '#777' }}>{new Date(comment.createdAt).toLocaleString()}</small>
-                            </li>
-                        ))}
+                        {comments
+                            .filter(comment => !comment.parentCommentId)
+                            .map(parent => (
+                                <li key={parent._id} style={{ marginBottom: '10px' }}>
+                                    <CommentItem
+                                        comment={parent}
+                                        user={user}
+                                        onReply={handleReply}
+                                        onDelete={handleDeleteComment}
+                                        onEdit={handleEditComment}
+                                    />
+
+                                    {/* Comment replays */}
+                                    <ul style={{ listStyle: 'none', paddingLeft: '20px', marginTop: '5px' }}>
+                                        {comments
+                                            .filter(reply => reply.parentCommentId === parent._id)
+                                            .map(reply => (
+                                                <li key={reply._id}>
+                                                    <CommentItem
+                                                        comment={reply}
+                                                        user={user}
+                                                        onReply={handleReply}
+                                                        onDelete={handleDeleteComment}
+                                                        onEdit={handleEditComment}
+                                                    />
+                                                </li>
+                                            ))}
+                                    </ul>
+                                </li>
+                            ))}
                     </ul>
                 )}
 
@@ -239,9 +373,9 @@ function NewsDetail() {
                     <p><em>Login to comment.</em></p>
                 )}
             </div>
-        </div>
-    );
-      
+
+        </div>   
+     );
 }
 
 export default NewsDetail;
