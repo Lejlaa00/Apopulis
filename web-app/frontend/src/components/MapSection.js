@@ -1,3 +1,11 @@
 export default function MapSection() {
-  return <div style={{ padding: '1rem', color: 'white' }}>Map Section</div>;
+  return (
+     <div className="map-container">
+      <img
+        src="/slovenia-map.png"
+        alt="Map of Slovenia"
+        className="map-image"
+      />
+    </div>
+  );
 }

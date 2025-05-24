@@ -20,12 +20,21 @@ async function updateNewsMetrics(newsItemId) {
 // Get all news items with optional filtering
 exports.getNews = async (req, res) => {
     try {
-        const { category, location, source, page = 1, limit = 10 } = req.query;
+        const { category, location, source, page = 1, limit = 10, search } = req.query;
         const query = {};
 
         if (category) query.categoryId = category;
         if (location) query.locationId = location;
         if (source) query.sourceId = source;
+
+        if (search) {
+        query.$or = [
+            { title: { $regex: search, $options: 'i' } },
+            { summary: { $regex: search, $options: 'i' } },
+            { content: { $regex: search, $options: 'i' } },
+            { keywords: { $regex: search, $options: 'i' } }
+        ];
+    }
 
         const skip = (page - 1) * limit;
 
@@ -35,7 +44,6 @@ exports.getNews = async (req, res) => {
             .populate('categoryId', 'name')
             .sort({ publishedAt: -1 })
             .skip(skip)
-            .limit(parseInt(limit));
 
         const total = await NewsItem.countDocuments(query);
 
@@ -73,7 +81,13 @@ exports.getNewsById = async (req, res) => {
 // Create a new news item
 exports.createNews = async (req, res) => {
     try {
-        const { title, summary, content, publishedAt, sourceId, locationId, categoryId, url } = req.body;
+        const { title, summary, content, publishedAt, sourceId, locationId, category, url } = req.body;
+
+        const categoryDoc = await Category.findOne({ name: category });
+
+        if (!categoryDoc) {
+            return res.status(400).json({ msg: `Category '${category}' does not exist.` });
+        }
 
         const newsItem = new NewsItem({
             title,
@@ -82,7 +96,7 @@ exports.createNews = async (req, res) => {
             publishedAt: publishedAt || new Date(),
             sourceId,
             locationId,
-            categoryId,
+            categoryId: categoryDoc._id,
             url
         });
 

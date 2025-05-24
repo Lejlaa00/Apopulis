@@ -1,6 +1,8 @@
 .graphs-area {
+   grid-area: graphs;
+  margin-top: 3rem; /* 👈 spušta cijeli blok dolje */
+  overflow-y: auto;
   background-color: var(--color-bg-light);
-  overflow: hidden;
   padding: 1rem;
   box-sizing: border-box;
 }
