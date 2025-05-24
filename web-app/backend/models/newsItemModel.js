@@ -10,7 +10,12 @@ const newsItemSchema = new Schema({
     locationId: { type: Schema.Types.ObjectId, ref: 'Location' },
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category' },
     url: String,
-    views: { type: Number, default: 0 }
+    views: { type: Number, default: 0 },
+    likes: { type: Number, default: 0 },
+    dislikes: { type: Number, default: 0 },
+    commentsCount: { type: Number, default: 0 },
+    bookmarks: { type: Number, default: 0 },
+    cachedPopularityScore: { type: Number, default: null }
 }, { timestamps: true }); // default createdAt i updatedAt
 
 module.exports = mongoose.model('NewsItem', newsItemSchema);

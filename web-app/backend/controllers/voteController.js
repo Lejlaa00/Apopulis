@@ -1,4 +1,5 @@
 const Vote = require('../models/voteModel');
+const { updateNewsMetrics } = require('./newsController');
 
 // Get votes for a news item
 exports.getVotes = async (req, res) => {
@@ -72,6 +73,7 @@ exports.vote = async (req, res) => {
                 type
             });
             await vote.save();
+            await updateNewsMetrics(newsItemId);
             res.json({ msg: 'Vote recorded', type });
         }
     } catch (err) {

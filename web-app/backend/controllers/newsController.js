@@ -1,4 +1,21 @@
 const NewsItem = require('../models/newsItemModel');
+const Comment = require('../models/commentModel');
+const Vote = require('../models/voteModel');
+const { calculatePopularity } = require('../utils/popularity');
+
+
+async function updateNewsMetrics(newsItemId) {
+    const likes = await Vote.countDocuments({ newsItemId, type: 'UP' });
+    const dislikes = await Vote.countDocuments({ newsItemId, type: 'DOWN' });
+    const commentsCount = await Comment.countDocuments({ newsItemId });
+
+    await NewsItem.findByIdAndUpdate(newsItemId, {
+        likes,
+        dislikes,
+        commentsCount
+    });
+}
+
 
 // Get all news items with optional filtering
 exports.getNews = async (req, res) => {
@@ -163,6 +180,7 @@ exports.trackView = async (req, res) => {
 
         newsItem.views = (newsItem.views || 0) + 1;
         await newsItem.save();
+        await updateNewsMetrics(newsItem._id); 
 
         res.json({ views: newsItem.views });
     } catch (err) {
@@ -171,3 +189,34 @@ exports.trackView = async (req, res) => {
     }
 };
 
+exports.getPopularityScore = async (req, res) => {
+    try {
+        const article = await NewsItem.findById(req.params.id);
+        if (!article) return res.status(404).json({ msg: 'News not found' });
+
+        // NewsItem old 2 days
+        const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+        if (article.publishedAt < twoDaysAgo) {
+            return res.json({ popularityScore: null, msg: 'Article is older than 2 days' });
+        }
+
+        // Max vlaue from all news
+        const maxValues = {
+            views: await NewsItem.find().sort({ views: -1 }).limit(1).then(d => d[0]?.views || 1),
+            likes: await NewsItem.find().sort({ likes: -1 }).limit(1).then(d => d[0]?.likes || 1),
+            comments: await NewsItem.find().sort({ commentsCount: -1 }).limit(1).then(d => d[0]?.commentsCount || 1),
+            bookmarks: await NewsItem.find().sort({ bookmarks: -1 }).limit(1).then(d => d[0]?.bookmarks || 1),
+        };
+
+        const score = calculatePopularity(article, maxValues);
+        res.json({ popularityScore: score });
+
+    } catch (err) {
+        console.error('Error calculating popularity:', err);
+        res.status(500).json({ msg: 'Internal server error' });
+    }
+};
+
+
+
+exports.updateNewsMetrics = updateNewsMetrics;

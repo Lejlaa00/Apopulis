@@ -3,8 +3,12 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const app = express();
 const authMiddleware = require('./middleware/authMiddleware');
-
 require('dotenv').config();
+
+//Trending news
+const cron = require('node-cron');
+const recalculateAndCachePopularity = require('./cron/popularityCron');
+
 
 mongoose.connect('mongodb+srv://ivanaailic:malodete167@cluster0.iemfweq.mongodb.net/Apopulis')
     .then(() => console.log("MongoDB connected"))
@@ -50,4 +54,8 @@ app.get('/api/me', authMiddleware, (req, res) => {
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
+});
+
+cron.schedule('* * * * *', async () => {   //testing every one minute->'* * * * *'
+    await recalculateAndCachePopularity(); //every hour ->'0 * * * *'
 });

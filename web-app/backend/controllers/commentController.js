@@ -1,4 +1,5 @@
 const Comment = require('../models/commentModel');
+const { updateNewsMetrics } = require('./newsController');
 
 // Get all comments for a news item
 exports.getComments = async (req, res) => {
@@ -55,6 +56,7 @@ exports.createComment = async (req, res) => {
         });
 
         await comment.save();
+        await updateNewsMetrics(newsItemId);
 
         console.log("Kreira se komentar:", {
             content,
@@ -104,11 +106,14 @@ exports.deleteComment = async (req, res) => {
         const { id } = req.params;
         const userId = req.user.id; // Assuming user info is added by auth middleware
 
-        const comment = await Comment.findOneAndDelete({ _id: id, userId });
+        const comment = await Comment.findOne({ _id: id, userId });
 
         if (!comment) {
             return res.status(404).json({ msg: 'Comment not found or unauthorized' });
         }
+
+        await Comment.deleteOne({ _id: id });
+        await updateNewsMetrics(comment.newsItemId);
 
         res.json({ msg: 'Comment deleted successfully' });
     } catch (err) {
