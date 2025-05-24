@@ -1,8 +1,8 @@
 .latest-news {
   grid-area: latest;
   overflow-y: auto;
-  height: 100%; /* osiguraj da zauzima cijelu visinu svog grid polja */
-  padding-right: 0.5rem; /* opcionalno, da izbjegneš prikrivanje sadržaja scrollbarom */
+  height: 100%; 
+  padding-right: 0.5rem; 
 }
 
 .news-card {

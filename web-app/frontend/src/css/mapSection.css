@@ -8,9 +8,9 @@
 }
 
 .map-image {
-  width: 90%;          /* zauzmi punu širinu roditelja */
-  max-width: 1100px;    /* ograničenje da ne pređe previše */
-  height: auto;         /* automatska visina prema širini */
-  object-fit: contain;  /* NE reži rubove */
+  width: 90%;          
+  max-width: 1100px;   
+  height: auto;        
+  object-fit: contain;  
   border-radius: 8px;
 }

@@ -7,6 +7,7 @@ import MapSection from './MapSection';
 import LatestNews from './LatestNews';
 import SortedNews from './SortedNews';
 import Graphs from './Graphs';
+import NewsDetail from './NewsDetail';
 import '../css/dashboard.css';
 import '../css/mapSection.css';
 import '../css/latestNews.css';
@@ -25,6 +26,7 @@ export default function Home() {
   const [newComments, setNewComments] = useState({});
   const [voteCounts, setVoteCounts] = useState({});
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
+  const [selectedNewsId, setSelectedNewsId] = useState(null);
 
   useEffect(() => {
     async function fetchNews() {
@@ -230,7 +232,7 @@ export default function Home() {
         <MapSection />
       </div>
       <div className="latest-news">
-        <LatestNews />
+        <LatestNews onSelect={(id) => setSelectedNewsId(id)} />
       </div>
       <div className="sorted-news">
         <SortedNews />
@@ -238,6 +240,14 @@ export default function Home() {
       <div className="graphs-area">
         <Graphs />
       </div>
+    
+      {selectedNewsId && (
+        <div className="news-popup-overlay" onClick={() => setSelectedNewsId(null)}>
+          <div className="news-popup-window" onClick={(e) => e.stopPropagation()}>
+            <NewsDetail id={selectedNewsId} embedded={true} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

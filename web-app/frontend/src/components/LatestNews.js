@@ -3,7 +3,7 @@ import '../css/latestNews.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
-export default function LatestNews() {
+export default function LatestNews({ onSelect }) {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,21 +44,23 @@ export default function LatestNews() {
     )}
 
     {news.map((item) => (
-      <a key={item._id} href={`/news/${item._id}`} className="news-card">
+      <div key={item._id} className="news-card" onClick={() => onSelect(item._id)}>
         <span className="news-time">{timeAgo(item.publishedAt)}</span>
         <span className="news-title">{item.title}</span>
         {item.url && item.sourceId?.name && (
-          <a
-            href={item.url}
-            className="news-source"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span className="icon">🔗</span> {item.sourceId.name}
-          </a>
+          <div className="news-source-wrapper">
+            <a
+              href={item.url}
+              className="news-source"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="icon">🔗</span> {item.sourceId.name}
+            </a>
+          </div>
         )}
-      </a>
+      </div>
     ))}
   </div>
 );
