@@ -19,6 +19,7 @@ function NewsDetail() {
     const [isBookmarked, setIsBookmarked] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editedContent, setEditedContent] = useState('');
+    const [recommendedNews, setRecommendedNews] = useState([]);
 
 
     useEffect(() => {
@@ -73,14 +74,24 @@ function NewsDetail() {
         }
     }, [user]); 
 
-    //View
+    // Track view — sa tokenom ako postoji
     useEffect(() => {
-        fetch(`${API_URL}/news/${id}/view`, { method: 'POST' });
+        const token = localStorage.getItem('token'); // ili user?.token ako ga imaš u kontekstu
+        fetch(`${API_URL}/news/${id}/view`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).catch(err => {
+            console.warn('Failed to track view:', err);
+        });
     }, [id]);
     
     useEffect(() => {
         fetchComments();
     }, [id, user]);
+
+    useEffect(() => {
+        fetchRecommendedNews();
+    }, []);      
 
     const fetchComments = async () => {
         try {
@@ -117,8 +128,23 @@ function NewsDetail() {
             console.error('Error loading comments:', err);
         }
     };
-    
+
+    const fetchRecommendedNews = async () => {
+        try {
+            const res = await authFetch(`${API_URL}/news/recommended`);
+            const data = await res.json();
+            if (res.ok) {
+                const filtered = (data.news || []).filter(n => n._id !== id);
+                setRecommendedNews(filtered);
+            } else {
+                console.error('Failed to fetch recommendations:', data.msg);
+            }
+        } catch (err) {
+            console.error('Error fetching recommended news:', err);
+        }
+    };
       
+        
     //Upvoting or downvoting newsItem
     const handleVote = async (type) => {
         if (!user) {
@@ -164,6 +190,21 @@ function NewsDetail() {
             alert('Error updating bookmark');
         }
     };
+
+    const handleEditStart = (comment) => {
+        if (user && comment.userId === user.id) {
+            setEditedContent(comment.content);
+            setEditingCommentId(comment._id);
+        } else {
+            alert("You can only edit your own comments.");
+        }
+    };
+
+    const handleEditCancel = () => {
+        setEditingCommentId(null);
+        setEditedContent('');
+    };
+
       
     //Adding comment
     const handleSubmitComment = async () => {
@@ -226,7 +267,7 @@ function NewsDetail() {
             });
 
             if (res.ok) {
-                await fetchComments(); 
+                await fetchComments();
                 setEditingCommentId(null);
                 setEditedContent('');
             } else {
@@ -236,7 +277,8 @@ function NewsDetail() {
         } catch (err) {
             console.error('Error updating comment:', err);
         }
-    };    
+    };
+    
 
     //Replying to comment
     const handleReply = async (parentId, replyContent) => {
@@ -335,6 +377,11 @@ function NewsDetail() {
                                         onReply={handleReply}
                                         onDelete={handleDeleteComment}
                                         onEdit={handleEditComment}
+                                        onEditStart={handleEditStart}
+                                        onEditCancel={handleEditCancel}
+                                        isEditing={editingCommentId === parent._id}
+                                        editedContent={editedContent}
+                                         setEditedContent={setEditedContent}
                                     />
 
                                     {/* Comment replays */}
@@ -349,6 +396,11 @@ function NewsDetail() {
                                                         onReply={handleReply}
                                                         onDelete={handleDeleteComment}
                                                         onEdit={handleEditComment}
+                                                        onEditStart={handleEditStart}
+                                                        onEditCancel={handleEditCancel}
+                                                        isEditing={editingCommentId === reply._id}
+                                                        editedContent={editedContent}
+                                                        setEditedContent={setEditedContent}
                                                     />
                                                 </li>
                                             ))}
@@ -375,6 +427,22 @@ function NewsDetail() {
                     <p><em>Login to comment.</em></p>
                 )}
             </div>
+
+
+            {recommendedNews.length > 0 && (
+                <div style={{ marginTop: '40px' }}>
+                    <h3>Recommended News</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                        {recommendedNews.slice(0, 6).map(item => (
+                            <div key={item._id} style={{ backgroundColor: '#f4f4f4', padding: '10px', borderRadius: '5px', cursor: 'pointer' }} onClick={() => window.location.href = `/news/${item._id}`}>
+                                <h5>{item.title}</h5>
+                                <p style={{ fontSize: '0.85rem', color: '#555' }}>{new Date(item.publishedAt).toLocaleDateString()}</p>
+                                <p style={{ fontSize: '0.85rem', color: '#777' }}>{item.sourceId?.name}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
         </div>   
      );

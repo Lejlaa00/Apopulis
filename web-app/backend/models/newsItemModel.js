@@ -17,6 +17,9 @@ const newsItemSchema = new Schema({
     bookmarks: { type: Number, default: 0 },    
     cachedPopularityScore: { type: Number, default: null },
     keywords: [String],
+    likedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    viewedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    commentedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true }); // default createdAt i updatedAt
 
 module.exports = mongoose.model('NewsItem', newsItemSchema);

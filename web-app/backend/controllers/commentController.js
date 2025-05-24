@@ -1,5 +1,6 @@
 const Comment = require('../models/commentModel');
 const { updateNewsMetrics } = require('./newsController');
+const NewsItem = require('../models/newsItemModel');
 
 // Get all comments for a news item
 exports.getComments = async (req, res) => {
@@ -56,6 +57,13 @@ exports.createComment = async (req, res) => {
         });
 
         await comment.save();
+
+        const newsItem = await NewsItem.findById(newsItemId);
+        if (newsItem && !newsItem.commentedBy.includes(userId)) {
+            newsItem.commentedBy.push(userId);
+            await newsItem.save();
+        }
+        
         await updateNewsMetrics(newsItemId);
 
         console.log("Kreira se komentar:", {
@@ -104,7 +112,7 @@ exports.updateComment = async (req, res) => {
 exports.deleteComment = async (req, res) => {
     try {
         const { id } = req.params;
-        const userId = req.user.id; // Assuming user info is added by auth middleware
+        const userId = req.user.id;
 
         const comment = await Comment.findOne({ _id: id, userId });
 
@@ -115,9 +123,25 @@ exports.deleteComment = async (req, res) => {
         await Comment.deleteOne({ _id: id });
         await updateNewsMetrics(comment.newsItemId);
 
+        const remainingComments = await Comment.countDocuments({
+            newsItemId: comment.newsItemId,
+            userId,
+        });
+
+        if (remainingComments === 0) {
+            const newsItem = await NewsItem.findById(comment.newsItemId);
+            if (newsItem) {
+                newsItem.commentedBy = newsItem.commentedBy.filter(
+                    (id) => id.toString() !== userId
+                );
+                await newsItem.save();
+            }
+        }
+
         res.json({ msg: 'Comment deleted successfully' });
     } catch (err) {
         console.error('Error deleting comment:', err);
         res.status(500).json({ msg: 'Error deleting comment', error: err.message });
     }
 };
+  

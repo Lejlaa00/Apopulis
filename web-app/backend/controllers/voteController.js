@@ -1,5 +1,7 @@
 const Vote = require('../models/voteModel');
 const { updateNewsMetrics } = require('./newsController');
+const NewsItem = require('../models/newsItemModel');
+
 
 // Get votes for a news item
 exports.getVotes = async (req, res) => {
@@ -39,45 +41,75 @@ exports.getUserVote = async (req, res) => {
 exports.vote = async (req, res) => {
     try {
         const { newsItemId } = req.params;
-        const { type } = req.body; // 'UP' or 'DOWN'
+        const { type } = req.body;
 
         if (!req.user) {
             return res.status(401).json({ msg: 'Only logged-in users can vote' });
         }
 
-        const userId = req.user.id; // Assuming user info is added by auth middleware
+        const userId = req.user.id;
 
         if (!['UP', 'DOWN'].includes(type)) {
             return res.status(400).json({ msg: 'Invalid vote type' });
         }
 
-        // Find existing vote
         let vote = await Vote.findOne({ newsItemId, userId });
+        const newsItem = await NewsItem.findById(newsItemId);
+
+        if (!newsItem) {
+            return res.status(404).json({ msg: 'News item not found' });
+        }
 
         if (vote) {
             if (vote.type === type) {
-                // Remove vote if same type (toggle off)
+                // Toggle off: remove vote
                 await Vote.deleteOne({ _id: vote._id });
-                res.json({ msg: 'Vote removed', type: null });
+
+                // Ako je bio UP, ukloni korisnika iz likedBy
+                if (type === 'UP') {
+                    newsItem.likedBy = newsItem.likedBy.filter(id => id.toString() !== userId);
+                    await newsItem.save();
+                }
+
+                await updateNewsMetrics(newsItemId);
+                return res.json({ msg: 'Vote removed', type: null });
             } else {
-                // Update vote type if different
+                // Change vote type
+                const oldType = vote.type;
                 vote.type = type;
                 await vote.save();
-                res.json({ msg: 'Vote updated', type });
+
+                // Ako prelazimo sa DOWN na UP, dodaj korisnika u likedBy
+                if (type === 'UP' && !newsItem.likedBy.includes(userId)) {
+                    newsItem.likedBy.push(userId);
+                    await newsItem.save();
+                }
+
+                // Ako prelazimo sa UP na DOWN, ukloni korisnika iz likedBy
+                if (oldType === 'UP') {
+                    newsItem.likedBy = newsItem.likedBy.filter(id => id.toString() !== userId);
+                    await newsItem.save();
+                }
+
+                await updateNewsMetrics(newsItemId);
+                return res.json({ msg: 'Vote updated', type });
             }
         } else {
-            // Create new vote
-            vote = new Vote({
-                userId,
-                newsItemId,
-                type
-            });
+            // New vote
+            vote = new Vote({ userId, newsItemId, type });
             await vote.save();
+
+            if (type === 'UP' && !newsItem.likedBy.includes(userId)) {
+                newsItem.likedBy.push(userId);
+                await newsItem.save();
+            }
+
             await updateNewsMetrics(newsItemId);
-            res.json({ msg: 'Vote recorded', type });
+            return res.json({ msg: 'Vote recorded', type });
         }
     } catch (err) {
         console.error('Error processing vote:', err);
         res.status(500).json({ msg: 'Error processing vote', error: err.message });
     }
 };
+  

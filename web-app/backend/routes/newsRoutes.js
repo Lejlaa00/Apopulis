@@ -11,8 +11,12 @@ const {
     getPopularityScore
 } = require('../controllers/newsController');
 const NewsItem = require('../models/newsItemModel'); 
+const { getRecommendedNews } = require('../controllers/newsController');
 const authMiddleware = require('../middleware/authMiddleware');
 
+
+
+router.get('/recommended', authMiddleware, getRecommendedNews);
 
 //Trending route
 router.get('/trending', async (req, res) => {

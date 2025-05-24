@@ -1,8 +1,11 @@
 const NewsItem = require('../models/newsItemModel');
 const Comment = require('../models/commentModel');
 const Vote = require('../models/voteModel');
+const { getUserTopInterests } = require('../helpers/userRecommendations');
 const { calculatePopularity } = require('../utils/popularity');
+const jwt = require('jsonwebtoken');
 
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'default_access_secret';
 
 async function updateNewsMetrics(newsItemId) {
     const likes = await Vote.countDocuments({ newsItemId, type: 'UP' });
@@ -191,16 +194,37 @@ exports.trackView = async (req, res) => {
             return res.status(404).json({ msg: 'News item not found' });
         }
 
+        const authHeader = req.headers.authorization;
+        console.log("authHeader =", authHeader);
+        let userId = null;
+
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            try {
+                const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET);
+                userId = decoded.id;
+
+                console.log("Tracking view, userId =", userId);
+            } catch (err) {
+                console.warn('Invalid token in view (non-fatal):', err.message);
+            }
+        }
+
         newsItem.views = (newsItem.views || 0) + 1;
+
+        if (userId && !newsItem.viewedBy.includes(userId)) {
+            newsItem.viewedBy.push(userId);
+        }
+
         await newsItem.save();
-        await updateNewsMetrics(newsItem._id); 
+        await updateNewsMetrics(newsItem._id);
 
         res.json({ views: newsItem.views });
     } catch (err) {
         console.error('Error tracking view:', err);
         res.status(500).json({ msg: 'Error tracking view', error: err.message });
     }
-};
+  };
 
 exports.getPopularityScore = async (req, res) => {
     try {
@@ -230,5 +254,33 @@ exports.getPopularityScore = async (req, res) => {
     }
 };
 
+
+exports.getRecommendedNews = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { topKeywords, topCategories } = await getUserTopInterests(userId);
+
+        if (topKeywords.length === 0 && topCategories.length === 0) {
+            return res.json({ news: [] });
+        }
+
+        const query = {
+            $or: [
+                { keywords: { $in: topKeywords } },
+                { categoryId: { $in: topCategories } }
+            ]
+        };
+
+        const recommended = await NewsItem.find(query)
+            .sort({ cachedPopularityScore: -1, publishedAt: -1 })
+            .limit(5)
+            .populate('sourceId');
+
+        res.json({ news: recommended });
+    } catch (err) {
+        console.error('Error fetching recommended news:', err);
+        res.status(500).json({ msg: 'Error fetching recommended news' });
+    }
+  };
 
 exports.updateNewsMetrics = updateNewsMetrics;
