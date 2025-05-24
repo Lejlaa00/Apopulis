@@ -16,7 +16,6 @@ async function updateNewsMetrics(newsItemId) {
     });
 }
 
-
 // Get all news items with optional filtering
 exports.getNews = async (req, res) => {
     try {
@@ -230,7 +229,6 @@ exports.getPopularityScore = async (req, res) => {
         res.status(500).json({ msg: 'Internal server error' });
     }
 };
-
 
 
 exports.updateNewsMetrics = updateNewsMetrics;

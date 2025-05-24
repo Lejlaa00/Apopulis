@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SortedNewsHeader from './SortedNewsHeader';
+import { authFetch } from './authFetch';
 import '../css/sortedNews.css'; // koristi isti stil
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
@@ -30,39 +31,32 @@ export default function SortedNews() {
 
         if (filter === 'trending') {
           url = `${API_URL}/news/trending`;
-          console.log("Fetching trending news from:", url);
-
-          if (selectedCategory !== 'all') {
-            const categoryObj = categories.find(c => c._id === selectedCategory || c.name === selectedCategory);
-            if (categoryObj) {
-              params.push(`category=${categoryObj._id}`);
-            }
-          }
-
-          if (params.length > 0) {
-            url += '?' + params.join('&');
-          }
-        } else {
+        } else if (filter === 'bookmark') {
+          url = `${API_URL}/users/bookmarks`;
+        } else if (filter === 'category') {
           url = `${API_URL}/news?limit=0`;
-
           if (selectedCategory !== 'all') {
             const categoryObj = categories.find(c => c._id === selectedCategory || c.name === selectedCategory);
             if (categoryObj) {
               params.push(`category=${categoryObj._id}`);
             }
-          }
-
-          if (searchTerm.trim() !== '') {
-            params.push(`search=${searchTerm}`);
-          }
-
-          if (params.length > 0) {
-            url += '&' + params.join('&');
           }
         }
 
-        const res = await fetch(url);
+        // Allow search in all except bookmark
+        if (filter !== 'bookmark' && searchTerm.trim() !== '') {
+          params.push(`search=${searchTerm}`);
+        }
+
+        if (params.length > 0) {
+          url += (url.includes('?') ? '&' : '?') + params.join('&');
+        }
+
+        console.log("Fetching news from:", url);
+
+        const res = await authFetch(url, { method: 'GET' });
         const data = await res.json();
+
         if (res.ok) {
           setNews(data.news || data);
         } else {
@@ -77,7 +71,7 @@ export default function SortedNews() {
     }
 
     fetchNews();
-  }, [selectedCategory, searchTerm, filter, categories]); // ← DODAJ `filter`
+  }, [selectedCategory, searchTerm, filter, categories]);
 
 
   function timeAgo(dateString) {

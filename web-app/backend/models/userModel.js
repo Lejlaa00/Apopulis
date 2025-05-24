@@ -8,7 +8,7 @@ const userSchema = new Schema ({
     isActive: { type: Boolean, default: true },
     verificationToken: { type: String },  // Token za verifikaciju JWT
     verificationTokenExpires: { type: Date },
-    bookmarks: [{ type: Schema.Types.ObjectId, ref: 'NewsItem' }]
+    bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'NewsItem' }]
 }, { timestamps: true }); // defaultno createdAt i updatedAt
 
 module.exports = mongoose.model('User', userSchema);

@@ -15,6 +15,7 @@ export default function SortedNewsHeader({ categories, onFilterChange, onCategor
   const handleCategoryChange = (val) => {
     setCategory(val);
     onCategoryChange(val);
+    onFilterChange('category');
   };
 
   const handleSearchChange = (e) => {

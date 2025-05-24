@@ -11,6 +11,7 @@ const {
     getPopularityScore
 } = require('../controllers/newsController');
 const NewsItem = require('../models/newsItemModel'); 
+const authMiddleware = require('../middleware/authMiddleware');
 
 
 //Trending route
@@ -58,7 +59,6 @@ router.put('/:id', updateNews);
 
 // Delete a news item
 router.delete('/:id', deleteNews);
-
 
 
 module.exports = router;
