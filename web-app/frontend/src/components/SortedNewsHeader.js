@@ -29,11 +29,10 @@ export default function SortedNewsHeader({ categories, onFilterChange, onCategor
   ];
 
   const categoryOptions = [
-    { value: 'all', label: 'Category' },
-    { value: 'lifestyle', label: 'Lifestyle' },
-    { value: 'sport', label: 'Sport' },
-    ...categories.map(cat => ({ value: cat._id, label: cat.name })),
-  ];
+  { value: 'all', label: 'All Categories' },
+  ...categories.map(cat => ({ value: cat.name, label: cat.name }))
+];
+
 
   return (
     <div className="sorted-news-header">

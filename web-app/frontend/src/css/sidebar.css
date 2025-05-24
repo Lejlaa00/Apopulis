@@ -5,7 +5,7 @@
   width: 150px;
   height: 100vh;
   background-color: var(--color-bg-darker);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -28,7 +28,7 @@
   padding: 0;
   font-weight: 700;
   font-size: 1.4rem;
-  color: var(--color-text-light);
+  color: var(--color-text-white);
 }
 
 /* Divider line */
@@ -67,7 +67,7 @@
 .profile-button {
   background: none;
   border: none;
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   cursor: pointer;
   padding: 0;
 }
@@ -93,7 +93,7 @@
 .section-item {
   background: none;
   border: none;
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
@@ -117,7 +117,7 @@
 }
 
 .resource-list li a {
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   text-decoration: none;
   font-weight: 600;
   font-size: 0.9rem;
@@ -149,7 +149,7 @@
   border-radius: 6px;
   font-weight: 500;
   font-size: 0.9rem;
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   cursor: pointer;
   width: calc(100% - 16px);  
   box-sizing: border-box;
@@ -161,7 +161,7 @@
 .nav-list li a:hover,
 .profile-nav:hover {
   background-color: var(--color-hover-bg);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
 }
 
 .active-link {
@@ -187,7 +187,7 @@
 
 .dropdown-item {
   padding: 6px 12px;
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   text-decoration: none;
   cursor: pointer;
   font-weight: 500;

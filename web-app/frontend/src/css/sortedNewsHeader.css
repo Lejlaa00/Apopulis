@@ -27,7 +27,7 @@
   user-select: none;
   border-radius: 6px;
   background-color: var(--color-bg-darker);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   min-width: 140px;
   padding: 0.4rem 1rem;
   font-size: 0.9rem;
@@ -37,7 +37,7 @@
 
 .hover-dropdown:hover,
 .hover-dropdown:focus {
-  background-color: var(--color-bg-light);
+  background-color: var(--color-bg-white);
   color: var(--color-text-dark);
 }
 
@@ -59,7 +59,7 @@
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid var(--color-text-light);
+  border-top: 6px solid var(--color-text-white);
   transition: transform 0.2s ease;
 }
 
@@ -92,19 +92,19 @@
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.2s ease;
-  color: var(--color-text-light);
+  color: var(--color-text-white);
 }
 
 .hover-dropdown-item:hover,
 .hover-dropdown-item:focus {
   background-color: var(--color-hover-bg);
   outline: none;
-  color: var(--color-text-light);
+  color: var(--color-text-white);
 }
 
 .sorted-news-header input[type="text"] {
   background-color: var(--color-bg-darker);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 0.4rem 1rem 0.4rem 2.5rem; /* prostor za ikonu */
@@ -122,7 +122,7 @@
 .sorted-news-header input[type="text"]:focus {
   background-color: var(--color-bg-darker);
   border-color: var(--color-accent);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
 }
 
 

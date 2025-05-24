@@ -1,6 +1,16 @@
-.map-area{
-  background-color: var(--color-bg-light);
-  overflow: hidden;
-  padding: 1rem;
-  box-sizing: border-box;
+.map-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 1rem;
+  margin-right: 1.5rem;
+  overflow: visible;
+}
+
+.map-image {
+  width: 90%;          /* zauzmi punu širinu roditelja */
+  max-width: 1100px;    /* ograničenje da ne pređe previše */
+  height: auto;         /* automatska visina prema širini */
+  object-fit: contain;  /* NE reži rubove */
+  border-radius: 8px;
 }

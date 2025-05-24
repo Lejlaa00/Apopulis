@@ -14,7 +14,7 @@ body {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: var(--color-bg-darkest);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -31,7 +31,7 @@ html, body, #root {
 
 /* Links */
 a {
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   text-decoration: none;
 }
 
@@ -43,13 +43,13 @@ a:focus {
 /* Sidebar/Menu */
 .sidebar {
   background-color: var(--color-bg-darker);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
 }
 
 /* Main content area */
 .main-content {
   background-color: var(--color-bg-darkest);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   padding: 1.5rem;
 }
 
@@ -58,7 +58,7 @@ button {
   background-color: var(--color-accent);
   border: none;
   border-radius: 4px;
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   padding: 0.5rem 1rem;
   cursor: pointer;
   font-weight: 600;
@@ -66,7 +66,7 @@ button {
 }
 
 button:hover {
-  background-color: var(--color-text-light);
+  background-color: var(--color-text-white);
   color: var(--color-bg-darker);
 }
 
@@ -74,7 +74,7 @@ button:hover {
 input,
 textarea {
   background-color: var(--color-bg-darker);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   border: 1px solid var(--color-accent);
   border-radius: 4px;
   padding: 0.5rem;
@@ -86,24 +86,10 @@ textarea::placeholder {
   color: var(--color-accent);
 }
 
-/* Scrollbar styling for webkit browsers */
-body::-webkit-scrollbar,
-.sidebar::-webkit-scrollbar,
-.main-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-body::-webkit-scrollbar-thumb,
-.sidebar::-webkit-scrollbar-thumb,
-.main-content::-webkit-scrollbar-thumb {
-  background-color: var(--color-accent);
-  border-radius: 4px;
-}
-
 /* Footer */
 footer.footer {
   background-color: var(--color-bg-darker);
-  color: var(--color-text-light);
+  color: var(--color-text-white);
   padding: 0.75rem 1rem;
   text-align: center;
   font-size: 0.9rem;
@@ -137,10 +123,15 @@ footer.footer {
   overflow-y: hidden;
 }
 
-/* glavni sadržaj */
-.main-content {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: hidden;
-  background-color: var(--color-bg-darkest);
+.main-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: transparent; /* čini ga nevidljivim */
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: var(--color-active-scroll); /* providno siva */
+  border-radius: 4px;
 }

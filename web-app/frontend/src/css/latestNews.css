@@ -1,6 +1,67 @@
-.latest-news{
-  background-color: var(--color-bg-light);
+.latest-news {
+  grid-area: latest;
+  overflow-y: auto;
+  height: 100%; /* osiguraj da zauzima cijelu visinu svog grid polja */
+  padding-right: 0.5rem; /* opcionalno, da izbjegneš prikrivanje sadržaja scrollbarom */
+}
+
+.news-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background-color: var(--color-bg-darker);
+  color: var(--color-text-light);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
   overflow: hidden;
-  padding: 1rem;
-  box-sizing: border-box;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--color-divider, #333);
+}
+
+.news-card:hover {
+  background-color: var(--color-active-new);
+  text-decoration: none;
+}
+
+.news-time {
+  color: var(--color-text-muted);
+  min-width: 50px;
+  flex-shrink: 0;
+  font-size: 0.70rem;
+}
+
+.news-card:hover .news-title{
+  text-decoration: none;
+  color: var(--color-text-white); 
+}
+
+.news-title {
+  flex-grow: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.news-source {
+  font-size: 0.60rem;
+  color: var(--color-accent);
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.news-source:hover {
+  color: var(--color-accent-purple);
+  text-decoration: none;
+}
+
+.news-source .icon {
+  font-size: 0.45rem;
+  margin-right: 0.2rem;
+  vertical-align: middle;
 }
