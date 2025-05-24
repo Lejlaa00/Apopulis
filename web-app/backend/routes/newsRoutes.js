@@ -10,7 +10,32 @@ const {
     trackView,
     getPopularityScore
 } = require('../controllers/newsController');
+const NewsItem = require('../models/newsItemModel'); 
 
+
+//Trending route
+router.get('/trending', async (req, res) => {
+    try {
+        const { category } = req.query;
+        const filter = {
+            publishedAt: { $gte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) }
+        };
+        if (category) filter.category = category;
+
+        const trendingNews = await NewsItem.find(filter)
+            .sort({ cachedPopularityScore: -1 })
+            .limit(20)
+            .populate('sourceId')
+            .exec();
+
+        res.json({ news: trendingNews });
+    } catch (err) {
+        console.error('Error fetching trending news:', err);
+        res.status(500).json({ msg: 'Failed to load trending news' });
+    }
+});
+
+//Popularity score route for one newsItem
 router.get('/:id/popularity', getPopularityScore);
 
 // Create a view

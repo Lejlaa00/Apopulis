@@ -23,30 +23,48 @@ export default function SortedNews() {
 
   useEffect(() => {
     async function fetchNews() {
-      console.log("Search term:", searchTerm);
-
+      setLoading(true);
       try {
-        let url = `${API_URL}/news?limit=0`;
+        let url = '';
         const params = [];
 
-        if (selectedCategory !== 'all') {
-          const categoryObj = categories.find(c => c._id === selectedCategory || c.name === selectedCategory);
-          if (categoryObj) {
-            params.push(`category=${categoryObj._id}`);
+        if (filter === 'trending') {
+          url = `${API_URL}/news/trending`;
+          console.log("Fetching trending news from:", url);
+
+          if (selectedCategory !== 'all') {
+            const categoryObj = categories.find(c => c._id === selectedCategory || c.name === selectedCategory);
+            if (categoryObj) {
+              params.push(`category=${categoryObj._id}`);
+            }
           }
-        }
 
-        if (searchTerm.trim() !== '') params.push(`search=${searchTerm}`);
+          if (params.length > 0) {
+            url += '?' + params.join('&');
+          }
+        } else {
+          url = `${API_URL}/news?limit=0`;
 
-        if (params.length > 0) {
-          url += '&' + params.join('&');
+          if (selectedCategory !== 'all') {
+            const categoryObj = categories.find(c => c._id === selectedCategory || c.name === selectedCategory);
+            if (categoryObj) {
+              params.push(`category=${categoryObj._id}`);
+            }
+          }
+
+          if (searchTerm.trim() !== '') {
+            params.push(`search=${searchTerm}`);
+          }
+
+          if (params.length > 0) {
+            url += '&' + params.join('&');
+          }
         }
 
         const res = await fetch(url);
         const data = await res.json();
         if (res.ok) {
-          console.log('Fetched news:', data.news); // 👈 dodaj ovo
-          setNews(data.news);
+          setNews(data.news || data);
         } else {
           alert(data.msg || 'Failed to load news');
         }
@@ -59,7 +77,8 @@ export default function SortedNews() {
     }
 
     fetchNews();
-  }, [selectedCategory, searchTerm, categories]);
+  }, [selectedCategory, searchTerm, filter, categories]); // ← DODAJ `filter`
+
 
   function timeAgo(dateString) {
     const diff = Math.floor((new Date() - new Date(dateString)) / 1000);
