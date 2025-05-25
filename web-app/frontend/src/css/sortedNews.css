@@ -69,8 +69,8 @@
 .sorted-news-header {
   position: sticky;
   top: 0;
-  z-index: 100; /* iznad sadržaja */
-  background-color: var(--color-bg-darkest); /* isto kao i ranije da izgleda čisto */
+  z-index: 100; 
+  background-color: var(--color-bg-darkest); 
   padding: 0.5rem 1rem;
   border-radius: 8px 8px 0 0;
   box-sizing: border-box;
@@ -80,7 +80,7 @@
   padding-top: 3rem;
   display: flex;
   flex-direction: column;
-  height: 100%; /* važno da roditelj zauzme puni prostor */
+  height: 100%; 
   overflow: hidden;
 }
 

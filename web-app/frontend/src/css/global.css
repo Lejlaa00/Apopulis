@@ -110,8 +110,8 @@ footer.footer {
 /* glavni deo sa sidebarom i sadržajem */
 .content-area {
   display: flex;
-  flex: 1; /* zauzima sav raspoloživi prostor */
-  overflow: hidden; /* sprečava da sadržaj preliva */
+  flex: 1; 
+  overflow: hidden; 
 }
 
 /* sidebar sa leve strane */
@@ -128,10 +128,10 @@ footer.footer {
 }
 
 .main-content::-webkit-scrollbar-track {
-  background: transparent; /* čini ga nevidljivim */
+  background: transparent;
 }
 
 .main-content::-webkit-scrollbar-thumb {
-  background: var(--color-active-scroll); /* providno siva */
+  background: var(--color-active-scroll); 
   border-radius: 4px;
 }

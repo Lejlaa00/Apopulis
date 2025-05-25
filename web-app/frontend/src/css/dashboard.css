@@ -14,15 +14,14 @@
   "sorted latest"
   "sorted graphs"
   "sorted graphs"
-  "sorted graphs"  /* dodaj još jedan red za sorted */
+  "sorted graphs" 
   ".      graphs";
-  height: 130vh; /* može i više ako želiš da sve bude još viće */
+  height: 130vh; 
   gap: 1rem;
   padding: 1rem;
   box-sizing: border-box;
 }
 
-/* AREA DEFINICIJE */
 .map-area {
   grid-area: map;
   overflow-y: hidden;

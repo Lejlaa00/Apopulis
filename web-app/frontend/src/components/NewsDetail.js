@@ -1,82 +1,70 @@
+// abbreviated top
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useContext } from 'react';
 import { UserContext } from '../userContext';
 import { authFetch } from './authFetch';
 import CommentItem from './CommentItem';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faThumbsUp, faThumbsDown, faStar, faLocationDot } from '@fortawesome/free-solid-svg-icons';
+import { faComment } from '@fortawesome/free-solid-svg-icons';
+
+import '../css/newsDetail.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
-function NewsDetail() {
-    const { id } = useParams();
+function NewsDetail({ id: propId, embedded = false }) {
+    const { id: routeId } = useParams();
+    const id = propId || routeId;
+    const { user } = useContext(UserContext);
     const [news, setNews] = useState(null);
     const [loading, setLoading] = useState(true);
-    const { user } = useContext(UserContext);
     const [userVote, setUserVote] = useState(null);
     const [voteCount, setVoteCount] = useState({ up: 0, down: 0 });
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [isBookmarked, setIsBookmarked] = useState(false);
+    const [showComments, setShowComments] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editedContent, setEditedContent] = useState('');
     const [recommendedNews, setRecommendedNews] = useState([]);
 
-
     useEffect(() => {
         async function fetchNewsItem() {
-            try {
-                const res = await fetch(`${API_URL}/news/${id}`);
-                const data = await res.json();
-                if (res.ok) {
-                    setNews(data);
-                    // Fetch vote count
-                    const voteRes = await authFetch(`${API_URL}/votes/news/${id}`);
-                    if (voteRes.ok) {
-                        const voteData = await voteRes.json();
-                        setVoteCount({ up: voteData.upvotes, down: voteData.downvotes });
-                    }
-
-                    // Fetch user's vote
-                    if (user) {
-                        const userVoteRes = await authFetch(`${API_URL}/votes/news/${id}/user`);
-                        if (userVoteRes.ok) {
-                            const userVoteData = await userVoteRes.json();
-                            setUserVote(userVoteData.vote);
-                        }
-                    }
-                    // Fetch bookmarks for this user and check if this news is bookmarked
-                    if (user) {
-                        const bookmarksRes = await authFetch(`${API_URL}/users/bookmarks`);
-                        if (bookmarksRes.ok) {
-                            const bookmarksData = await bookmarksRes.json();
-                            const ids = bookmarksData.bookmarks.map(b => b._id);
-                            setIsBookmarked(ids.includes(id));
-                        }
-                    }
-  
-
-                } else {
-                    console.error('Failed to fetch news item:', data.msg);
+            const res = await fetch(`${API_URL}/news/${id}`);
+            const data = await res.json();
+            if (res.ok) {
+                setNews(data);
+                const voteRes = await authFetch(`${API_URL}/votes/news/${id}`);
+                if (voteRes.ok) {
+                    const voteData = await voteRes.json();
+                    setVoteCount({ up: voteData.upvotes, down: voteData.downvotes });
                 }
-            } catch (err) {
-                console.error('Error fetching news item:', err);
-            } finally {
-                setLoading(false);
-            }
-        }
+                if (user) {
+                    const userVoteRes = await authFetch(`${API_URL}/votes/news/${id}/user`);
+                    if (userVoteRes.ok) {
+                        const userVoteData = await userVoteRes.json();
+                        setUserVote(userVoteData.vote);
+                    }
+                    const bookmarksRes = await authFetch(`${API_URL}/users/bookmarks`);
+                    if (bookmarksRes.ok) {
+                        const bookmarksData = await bookmarksRes.json();
+                        const ids = Array.isArray(bookmarksData.bookmarks)
+                            ? bookmarksData.bookmarks.map(b => b._id)
+                            : [];
+                        setIsBookmarked(ids.includes(id));
+                    }
 
+                }
+            }
+            setLoading(false);
+        }
         fetchNewsItem();
     }, [id]);
 
-    useEffect(() => {
-        if (!user) {
-            setIsBookmarked(false);
-        }
-    }, [user]); 
-
     // Track view — sa tokenom ako postoji
     useEffect(() => {
-        const token = localStorage.getItem('token'); // ili user?.token ako ga imaš u kontekstu
+        const token = localStorage.getItem('token'); 
         fetch(`${API_URL}/news/${id}/view`, {
             method: 'POST',
             headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -84,51 +72,49 @@ function NewsDetail() {
             console.warn('Failed to track view:', err);
         });
     }, [id]);
-    
+
     useEffect(() => {
         fetchComments();
     }, [id, user]);
 
     useEffect(() => {
         fetchRecommendedNews();
-    }, []);      
+    }, []);
+
+    useEffect(() => {
+        fetch(`${API_URL}/news/${id}/view`, { method: 'POST' });
+    }, [id]);
 
     const fetchComments = async () => {
-        try {
-            const url = `${API_URL}/comments/news/${id}?limit=100&page=1`;
-            let commentsRes = await fetch(url);
-            if (commentsRes.status === 401 && user) {
-                commentsRes = await authFetch(url);
-            }
-
-            if (commentsRes.ok) {
-                const data = await commentsRes.json();
-                const allComments = data.comments;
-
-                const commentMap = {};
-                allComments.forEach(comment => {
-                    comment.replies = [];
-                    commentMap[comment._id.toString()] = comment;
-                });
-
-                const rootComments = [];
-                allComments.forEach(comment => {
-                    if (comment.parentCommentId && commentMap[comment.parentCommentId]) {
-                        commentMap[comment.parentCommentId].replies.push(comment);
-                    } else {
-                        rootComments.push(comment);
-                    }
-                });
-
-                setComments(rootComments); 
-            } else {
-                console.warn('Could not load comments:', commentsRes.status);
-            }
-        } catch (err) {
-            console.error('Error loading comments:', err);
+        const url = `${API_URL}/comments/news/${id}?limit=100&page=1`;
+        let res = await fetch(url);
+        if (res.status === 401 && user) {
+            res = await authFetch(url);
+        }
+        if (res.ok) {
+            const data = await res.json();
+            setComments(data.comments); 
         }
     };
 
+
+    //Upvoting or downvoting newsItem
+    const handleVote = async (type) => {
+        if (!user) return alert('Login required');
+        const res = await authFetch(`${API_URL}/votes/news/${id}`, {
+            method: 'POST',
+            body: JSON.stringify({ type }),
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setUserVote(data.type);
+            const countRes = await authFetch(`${API_URL}/votes/news/${id}`);
+            if (countRes.ok) {
+                const countData = await countRes.json();
+                setVoteCount({ up: countData.upvotes, down: countData.downvotes });
+            }
+        }
+    };
     const fetchRecommendedNews = async () => {
         try {
             const res = await authFetch(`${API_URL}/news/recommended`);
@@ -143,69 +129,90 @@ function NewsDetail() {
             console.error('Error fetching recommended news:', err);
         }
     };
-      
-        
-    //Upvoting or downvoting newsItem
-    const handleVote = async (type) => {
-        if (!user) {
-            alert('You must be logged in to vote.');
-            return;
+
+    const handleReply = async (parentCommentId, content) => {
+        if (!user) return alert('Login required');
+        if (!content.trim()) return alert('Reply cannot be empty');
+
+        const isReplyToReply = !comments.some(c => c._id === parentCommentId);
+        if (isReplyToReply) {
+            return alert('You can only reply to top-level comments.');
         }
-        const res = await authFetch(`${API_URL}/votes/news/${id}`, {
+        const res = await authFetch(`${API_URL}/comments/news/${id}`, {
             method: 'POST',
-            body: JSON.stringify({ type }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, parentCommentId }),
         });
+
         if (res.ok) {
-            const data = await res.json();
-            setUserVote(data.type);
+            const newReply = await res.json();
+            setComments(prevComments => {
+                const addReplyRecursively = (comments) =>
+                    comments.map(comment => {
+                        if (comment._id === parentCommentId) {
+                            return {
+                                ...comment,
+                                replies: [...(comment.replies || []), newReply],
+                            };
+                        } else if (comment.replies?.length > 0) {
+                            return {
+                                ...comment,
+                                replies: addReplyRecursively(comment.replies),
+                            };
+                        } else {
+                            return comment;
+                        }
+                    });
 
-            // refresh count
-            const countRes = await authFetch(`${API_URL}/votes/news/${id}`);
-            if (countRes.ok) {
-                const countData = await countRes.json();
-                setVoteCount({ up: countData.upvotes, down: countData.downvotes });
-            }
-        }
-    };
-
-    //Bookmarking newsItem
-    const handleToggleBookmark = async () => {
-        if (!user) {
-            alert('You must be logged in to bookmark.');
-            return;
-        }
-
-        try {
-            const res = await authFetch(`${API_URL}/users/bookmarks/${id}`, {
-                method: isBookmarked ? 'DELETE' : 'POST',
+                return addReplyRecursively(prevComments);
             });
-            if (res.ok) {
-                setIsBookmarked(prev => !prev);
-            } else {
-                const data = await res.json();
-                alert(data.msg || 'Failed to update bookmark');
-            }
-        } catch (err) {
-            console.error('Error updating bookmark', err);
-            alert('Error updating bookmark');
+        } else {
+            alert('Failed to submit reply');
         }
     };
 
     const handleEditStart = (comment) => {
-        if (user && comment.userId === user.id) {
+        if (user && comment.userId?._id === user.id) {
             setEditedContent(comment.content);
             setEditingCommentId(comment._id);
         } else {
             alert("You can only edit your own comments.");
         }
     };
+      
 
     const handleEditCancel = () => {
         setEditingCommentId(null);
         setEditedContent('');
     };
 
-      
+    //Editing comment
+    const handleEditComment = async (commentId) => {
+        if (!editedContent.trim()) {
+            alert('Comment cannot be empty.');
+            return;
+        }
+
+        try {
+            const res = await authFetch(`${API_URL}/comments/${commentId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: editedContent }),
+            });
+
+            if (res.ok) {
+                await fetchComments(); 
+                setEditingCommentId(null);
+                setEditedContent('');
+            } else {
+                const data = await res.json();
+                alert(data.msg || 'Failed to update comment');
+            }
+        } catch (err) {
+            console.error('Error updating comment:', err);
+        }
+      };
+
     //Adding comment
     const handleSubmitComment = async () => {
         if (!user) {
@@ -221,11 +228,15 @@ function NewsDetail() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content: newComment }),
         });
+
+        console.log("Submitting comment for news ID:", id);
+        console.log("Comment content:", newComment);
         if (res.ok) {
-            await fetchComments();
-            setNewComment('');
+            const newCommentData = await res.json();
+            setComments(prev => [newCommentData, ...prev]); 
         }
     };
+    
 
     //Deleting comment
     const handleDeleteComment = async (commentId) => {
@@ -251,201 +262,155 @@ function NewsDetail() {
             alert('Error deleting comment');
         }
     };
-    
-    //Editing comment
-    const handleEditComment = async (commentId) => {
-        if (!editedContent.trim()) {
-            alert('Comment cannot be empty.');
-            return;
-        }
 
-        try {
-            const res = await authFetch(`${API_URL}/comments/${commentId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: editedContent }),
-            });
-
-            if (res.ok) {
-                await fetchComments();
-                setEditingCommentId(null);
-                setEditedContent('');
-            } else {
-                const data = await res.json();
-                alert(data.msg || 'Failed to update comment');
-            }
-        } catch (err) {
-            console.error('Error updating comment:', err);
-        }
-    };
-    
-
-    //Replying to comment
-    const handleReply = async (parentId, replyContent) => {
+    const handleToggleBookmark = async () => {
         if (!user) return alert('Login required');
-        if (!replyContent.trim()) return alert('Comment cannot be empty');
-
-        const res = await authFetch(`${API_URL}/comments/news/${id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: replyContent, parentCommentId: parentId })
+        const res = await authFetch(`${API_URL}/users/bookmarks/${id}`, {
+            method: isBookmarked ? 'DELETE' : 'POST',
         });
-
-        if (res.ok) {
-            fetchComments(); 
-        } else {
-            const data = await res.json();
-            alert(data.msg || 'Failed to post reply');
-        }
+        if (res.ok) setIsBookmarked(prev => !prev);
     };
-      
-    
-          
+
     if (loading) return <p>Loading...</p>;
-    if (!news) return <p>News not found</p>;
+    if (!news) return <p>Not found</p>;
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h2>{news.title}</h2>
-            <p style={{ color: '#555' }}>
-                <strong>Published:</strong> {new Date(news.publishedAt).toLocaleString()}
-            </p>
-            <p><strong>Category:</strong> {news.categoryId?.name || 'N/A'}</p>
-            <p><strong>Location:</strong> {news.locationId?.name || 'N/A'}</p>
-            <p><strong>Source:</strong> <a href={news.sourceId?.url} target="_blank" rel="noreferrer">{news.sourceId?.name}</a></p>
-            <p style={{ marginTop: '20px' }}>{news.content || news.summary}</p>
-            <p>
-                <a href={news.url} target="_blank" rel="noreferrer">
-                    View original article ↗
-                </a>
-            </p>
-
-            {/* Vote buttons */}
-            <div style={{ marginTop: '20px' }}>
-                <button
-                    onClick={() => handleVote('UP')}
-                    style={{
-                        backgroundColor: userVote === 'UP' ? 'green' : 'lightgray',
-                        color: userVote === 'UP' ? 'white' : 'black',
-                        marginRight: '8px',
-                    }}
-                >
-                    👍 {voteCount.up}
-                </button>
-                <button
-                    onClick={() => handleVote('DOWN')}
-                    style={{
-                        backgroundColor: userVote === 'DOWN' ? 'red' : 'lightgray',
-                        color: userVote === 'DOWN' ? 'white' : 'black',
-                    }}
-                >
-                    👎 {voteCount.down}
-                </button>
-
-                <button
-                    onClick={handleToggleBookmark}
-                    style={{
-                        marginLeft: '16px',
-                        backgroundColor: isBookmarked ? '#007bff' : 'lightgray',
-                        color: isBookmarked ? 'white' : 'black',
-                        borderRadius: '4px',
-                        padding: '4px 10px',
-                        cursor: 'pointer',
-                    }}
-                    title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-                >
-                    {isBookmarked ? '🔖 Bookmarked' : '🔖 Bookmark'}
-                </button>
-
-            </div>
-
-            {/* Comments */}
-            <div style={{ marginTop: '30px' }}>
-                <h4>Comments</h4>
-
-                {comments.length === 0 ? (
-                    <p>No comments yet.</p>
-                ) : (
-                    <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-                        {comments
-                            .filter(comment => !comment.parentCommentId)
-                            .map(parent => (
-                                <li key={parent._id} style={{ marginBottom: '10px' }}>
-                                    <CommentItem
-                                        comment={parent}
-                                        user={user}
-                                        onReply={handleReply}
-                                        onDelete={handleDeleteComment}
-                                        onEdit={handleEditComment}
-                                        onEditStart={handleEditStart}
-                                        onEditCancel={handleEditCancel}
-                                        isEditing={editingCommentId === parent._id}
-                                        editedContent={editedContent}
-                                         setEditedContent={setEditedContent}
-                                    />
-
-                                    {/* Comment replays */}
-                                    <ul style={{ listStyle: 'none', paddingLeft: '20px', marginTop: '5px' }}>
-                                        {comments
-                                            .filter(reply => reply.parentCommentId === parent._id)
-                                            .map(reply => (
-                                                <li key={reply._id}>
-                                                    <CommentItem
-                                                        comment={reply}
-                                                        user={user}
-                                                        onReply={handleReply}
-                                                        onDelete={handleDeleteComment}
-                                                        onEdit={handleEditComment}
-                                                        onEditStart={handleEditStart}
-                                                        onEditCancel={handleEditCancel}
-                                                        isEditing={editingCommentId === reply._id}
-                                                        editedContent={editedContent}
-                                                        setEditedContent={setEditedContent}
-                                                    />
-                                                </li>
-                                            ))}
-                                    </ul>
-                                </li>
-                            ))}
-                    </ul>
+        <div className="news-detail-grid">
+            <div className="news-content">
+                <h2>{news.title}</h2>
+                <p className="news-meta-published">
+                    Published: {new Date(news.publishedAt).toLocaleString()}
+                </p>
+                <hr className="news-meta-divider" />
+                <div className="news-meta-row">
+                    <div className="news-meta-item">
+                        <div className="news-meta-icon">👤</div>
+                        <span><strong>{news.author || "N/A"}</strong></span>
+                    </div>
+                    <div className="news-meta-divider-vertical"></div>
+                    <div className="news-meta-item">
+                        <div className="news-meta-icon">
+                            <FontAwesomeIcon icon={faLocationDot} />
+                        </div>
+                        <span><strong>{news.locationId?.name || "N/A"}</strong></span>
+                    </div>
+                </div>
+                <hr className="news-meta-divider" />
+                {news.imageUrl && (
+                    <div className="news-image-wrapper">
+                        <img src={news.imageUrl} alt="News" />
+                    </div>
+                )}
+                <div className="news-content-text">
+                    {news.content || news.summary}
+                </div>
+                {!embedded && news.url && (
+                    <p><a href={news.url} target="_blank" rel="noreferrer">View original article ↗</a></p>
                 )}
 
-                {user ? (
-                    <div style={{ marginTop: '10px' }}>
+                {recommendedNews.length > 0 && (
+                    <div style={{ marginTop: '40px' }}>
+                        <h3>Recommended News</h3>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: '20px',
+                            marginTop: '20px'
+                        }}>
+                            {recommendedNews.slice(0, 6).map(item => (
+                                <div
+                                    key={item._id}
+                                    style={{
+                                        backgroundColor: '#f9f9f9',
+                                        padding: '15px',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.2s',
+                                    }}
+                                    onClick={() => window.location.href = `/news/${item._id}`}
+                                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                >
+                                    <h4 style={{ marginBottom: '10px' }}>{item.title}</h4>
+                                    <p style={{ fontSize: '0.9rem', color: '#666' }}>
+                                        {new Date(item.publishedAt).toLocaleDateString()}
+                                    </p>
+                                    <p style={{ fontSize: '0.85rem', color: '#888' }}>
+                                        {item.sourceId?.name || 'Unknown Source'}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="side-panel">
+                <div className="news-action-bar">
+                    <div className={`news-action-item ${userVote === 'UP' ? 'active-vote' : ''}`} onClick={() => handleVote('UP')}>
+                        <FontAwesomeIcon icon={faThumbsUp} className="news-action-icon" />
+                        <span className="news-action-label">{voteCount.up}</span>
+                    </div>
+                    <div className={`news-action-item ${userVote === 'DOWN' ? 'active-vote' : ''}`} onClick={() => handleVote('DOWN')}>
+                        <FontAwesomeIcon icon={faThumbsDown} className="news-action-icon" />
+                        <span className="news-action-label">{voteCount.down}</span>
+                    </div>
+                    <div className="news-action-item" onClick={handleToggleBookmark}>
+                        <FontAwesomeIcon icon={faStar} className={`news-action-icon ${isBookmarked ? 'active-bookmark' : ''}`} />
+                        <span className="news-action-label">{isBookmarked ? 'Saved' : 'Save'}</span>
+                    </div>
+                </div>
+
+                {user && (
+                    <>
                         <textarea
-                            rows={3}
-                            style={{ width: '100%', padding: '8px' }}
+                            rows={2}
+                            className="comment-input"
                             placeholder="Write a comment..."
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                         />
-                        <button onClick={handleSubmitComment} style={{ marginTop: '5px' }}>
-                            Submit Comment
-                        </button>
-                    </div>
-                ) : (
-                    <p><em>Login to comment.</em></p>
+                        <button onClick={handleSubmitComment} className="comment-submit-btn">Submit</button>
+                    </>
                 )}
-            </div>
 
-
-            {recommendedNews.length > 0 && (
-                <div style={{ marginTop: '40px' }}>
-                    <h3>Recommended News</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                        {recommendedNews.slice(0, 6).map(item => (
-                            <div key={item._id} style={{ backgroundColor: '#f4f4f4', padding: '10px', borderRadius: '5px', cursor: 'pointer' }} onClick={() => window.location.href = `/news/${item._id}`}>
-                                <h5>{item.title}</h5>
-                                <p style={{ fontSize: '0.85rem', color: '#555' }}>{new Date(item.publishedAt).toLocaleDateString()}</p>
-                                <p style={{ fontSize: '0.85rem', color: '#777' }}>{item.sourceId?.name}</p>
-                            </div>
-                        ))}
+                <div className="comments-summary" onClick={() => setShowComments(prev => !prev)}>
+                    <div className="comments-summary-left">
+                        <FontAwesomeIcon icon={faComment} className="comments-summary-icon" />
+                        {comments.length} comments
+                    </div>
+                    <div className="comments-summary-arrow">
+                        {showComments ? '▴' : '▾'}
                     </div>
                 </div>
-            )}
 
-        </div>   
-     );
+
+                {showComments && (
+                    <ul className="comments-list">
+                        {comments.map(comment => (
+                            <li key={comment._id} className="comment-item">
+                                <CommentItem
+                                    comment={comment}
+                                    user={user}
+                                    onReply={handleReply}
+                                    onEdit={handleEditComment}
+                                    onEditStart={handleEditStart}
+                                    onEditCancel={handleEditCancel}
+                                    isEditing={editingCommentId === comment._id}
+                                    editedContent={editedContent}
+                                    setEditedContent={setEditedContent}
+                                      onDelete={handleDeleteComment}
+                                />
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+            </div>
+        </div>
+    );
+
 }
 
 export default NewsDetail;

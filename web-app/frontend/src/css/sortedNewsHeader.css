@@ -9,9 +9,9 @@
   border-radius: 8px;
   margin-bottom: 1rem;
   box-sizing: border-box;
-  overflow: visible; /* ⚠️ ključno da dropdown može izaći van */
-  position: relative; /* ⚠️ osnova za pozicioniranje unutar */
-  z-index: 10;        /* osiguraj da je iznad sadržaja */
+  overflow: visible;
+  position: relative; 
+  z-index: 10;       
 }
 
 .dropdown-group {
@@ -21,8 +21,8 @@
 
 .hover-dropdown {
   position: relative;
-  display: inline-flex;          /* koristi flexbox */
-  align-items: center;           /* vertikalno centriraj tekst i strelicu */
+  display: inline-flex;    
+  align-items: center;           
   cursor: pointer;
   user-select: none;
   border-radius: 6px;
@@ -42,16 +42,14 @@
 }
 
 .hover-dropdown-selected {
-  /* ukloni padding-right, jer ćemo strelicu staviti kao inline element */
   padding-right: 0;
   user-select: none;
-  display: flex;                /* da labela i strelica budu u redu */
+  display: flex;             
   align-items: center;
-  gap: 0.4rem;                  /* razmak između teksta i strelice */
+  gap: 0.4rem;                 
   white-space: nowrap;
 }
 
-/* Strelica kao zaseban element sada */
 .hover-dropdown-selected::after {
   content: '';
   display: inline-block;
@@ -63,7 +61,6 @@
   transition: transform 0.2s ease;
 }
 
-/* Kad je dropdown otvoren */
 .hover-dropdown.open .hover-dropdown-selected::after {
   transform: rotate(180deg);
 }
@@ -107,7 +104,7 @@
   color: var(--color-text-white);
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 0.4rem 1rem 0.4rem 2.5rem; /* prostor za ikonu */
+  padding: 0.4rem 1rem 0.4rem 2.5rem; 
   font-size: 0.9rem;
   outline: none;
   width: 250px;
