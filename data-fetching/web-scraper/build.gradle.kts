@@ -16,6 +16,9 @@ dependencies {
     // Kotlin coroutines for async operations
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     
+    // skrape{it} for web scraping
+    implementation("it.skrape:skrapeit:1.2.0")
+    
     // Testing
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")

@@ -41,7 +41,7 @@ class U24urScraper : BaseScraper(
                 .get()
 
             val heading = doc.selectFirst("h1")?.text() ?: return@withContext null
-            var content = doc.select("div.contextual p").joinToString("\n") { it.text() }
+            var content = doc.select("div.contextual p").joinToString("\n\n") { it.text() }
             if (content.isBlank()) {
                 content = doc.selectFirst("p.text-article-summary")?.text() ?: ""
             }
