@@ -4,7 +4,17 @@ import ast.*
 import kotlinx.serialization.json.*
 import kotlin.math.*
 
+/**
+ * Generates GeoJSON output from the city infrastructure DSL AST.
+ * Converts the internal representation of city infrastructure elements into a standardized
+ * GeoJSON format that can be visualized by mapping tools.
+ */
 object GeoJsonGenerator {
+    /**
+     * Generates GeoJSON output from an AST node.
+     * @param program The AST node to convert to GeoJSON
+     * @return A string containing the GeoJSON representation
+     */
     fun generate(program: ProgramNode): String {
         val features = mutableListOf<JsonObject>()
         val context = mutableMapOf<String, Value>()

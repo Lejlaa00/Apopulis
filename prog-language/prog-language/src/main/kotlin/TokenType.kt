@@ -1,3 +1,8 @@
+/**
+ * Defines all possible token types for the city infrastructure DSL lexical analysis.
+ * This enum is used by the Scanner to classify different parts of the input code
+ * into meaningful tokens that can be processed by the Parser.
+ */
 enum class TokenType {
     // Keywords
     REGION, CITY, ROAD, BUILDING, NEWS, PARK, LAKE,

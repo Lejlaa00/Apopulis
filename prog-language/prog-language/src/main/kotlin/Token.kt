@@ -1,4 +1,10 @@
+/**
+ * Represents a lexical token in the city infrastructure DSL.
+ * Each token contains information about its type, lexeme (actual text),
+ * line number where it appears, and optional literal value.
+ */
 class Token(
+    /** The type/category of this token */
     private val lexem: String,
     private val column: Int,
     private val row: Int,
@@ -6,7 +12,14 @@ class Token(
     val tokenType: Int,
     private val eof: Boolean
 ) {
+    /**
+     * Returns the lexeme of this token.
+     */
     fun getLexem(): String = lexem
+
+    /**
+     * Returns the column number of this token.
+     */
     fun getColumn(): Int = column
     fun getRow(): Int = row
     fun getToken(): Int = token

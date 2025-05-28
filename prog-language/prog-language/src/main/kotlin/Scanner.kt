@@ -1,10 +1,18 @@
 import java.io.InputStream
 
+/**
+ * Performs lexical analysis on the city infrastructure DSL source code.
+ * Breaks down the input text into a sequence of tokens that can be processed by the parser.
+ */
 class Scanner(private val input: InputStream) {
     var row = 1
     var column = 0
     private val automat = Automat()
 
+    /**
+     * Peeks at the next character in the input stream without consuming it.
+     * @return The next character in the input stream, or -1 if the end of the stream has been reached.
+     */
     fun peek(): Int {
         input.mark(1)
         val result = input.read()
@@ -12,6 +20,10 @@ class Scanner(private val input: InputStream) {
         return result
     }
 
+    /**
+     * Reads the next character from the input stream and advances the current position.
+     * @return The next character in the input stream, or -1 if the end of the stream has been reached.
+     */
     fun read(): Int {
         val temp = input.read()
         column++
@@ -22,16 +34,34 @@ class Scanner(private val input: InputStream) {
         return temp
     }
 
+    /**
+     * Checks if the end of the input stream has been reached.
+     * @return True if the end of the stream has been reached, false otherwise.
+     */
     fun eof(): Boolean {
         return peek() == -1
     }
 
+    /**
+     * Returns the current position in the input stream.
+     * @return A pair containing the current row and column.
+     */
     fun getPosition(): Pair<Int, Int> = Pair(row, column)
+
+    /**
+     * Sets the current position in the input stream.
+     * @param row The new row position.
+     * @param column The new column position.
+     */
     fun setPosition(row: Int, column: Int) {
         this.row = row
         this.column = column
     }
 
+    /**
+     * Scans the input stream and returns the next token.
+     * @return The next token in the input stream.
+     */
     fun nextToken(): Token {
         var currentState = Automat.START_STATE
         val lexem = StringBuilder()

@@ -4,7 +4,12 @@ import Parser
 import export.GeoJsonGenerator
 import java.io.FileOutputStream
 
-fun main() {
+/**
+ * Entry point for the city infrastructure DSL compiler/interpreter.
+ * Reads input files, parses them into an AST, and generates GeoJSON output.
+ * @param args Command line arguments - expects input file paths
+ */
+fun main(args: Array<String>) {
     val fileContent = File("../test.txt").readText()
     val testInputs2 = fileContent.trim().split(Regex("\n\\s*\n"))
 

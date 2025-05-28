@@ -1,3 +1,7 @@
+/**
+ * Implements a finite state automaton for lexical analysis of the city infrastructure DSL.
+ * This class handles the state transitions and token recognition during the scanning phase.
+ */
 class Automat {
     companion object {
         const val MAX_STATE = 100
@@ -266,16 +270,32 @@ class Automat {
         automata[currentState]['_'.code] = NO_EDGE
     }
 
-    fun getNextState(currentState: Int, inputChar: Int): Int {
+    /**
+     * Determines the next state based on the current state and input character.
+     * @param currentState The current state of the automaton
+     * @param c The input character to process
+     * @return The next state, or NO_EDGE if no valid transition exists
+     */
+    fun getNextState(currentState: Int, c: Int): Int {
         if (currentState < 0 || currentState > MAX_STATE) return NO_EDGE
-        if (inputChar < 0 || inputChar >= 256) return NO_EDGE
-        return automata[currentState][inputChar]
+        if (c < 0 || c >= 256) return NO_EDGE
+        return automata[currentState][c]
     }
 
+    /**
+     * Checks if the given state is a final state.
+     * @param state The state to check
+     * @return True if the state is final, false otherwise
+     */
     fun isFiniteState(state: Int): Boolean {
         return finite[state] != TokenType.ERROR.ordinal
     }
 
+    /**
+     * Gets the token type associated with a final state.
+     * @param state The final state to get the token type for
+     * @return The token type for the final state
+     */
     fun getFiniteState(state: Int): Int {
         return finite[state]
     }

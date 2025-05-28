@@ -20,33 +20,85 @@ data class BendCommand(val from: Expression, val to: Point, val angle: Expressio
 data class HighlightCommand(val expression: Expression) : CommandNode()
 data class CallCommand(val name: String, val arguments: List<Expression>) : CommandNode()
 
+/**
+ * Represents a marker node, containing a name, an expression representing the point, and a list of metadata.
+ */
 data class MarkerNode(
     val name: String,
     val pointExpr: Expression,
     val metadata: List<Metadata> = emptyList()
 ) : CommandNode()
+/**
+ * Represents a junction node, containing an expression representing the point.
+ */
 data class JunctionNode(val pointExpr: Expression) : ASTNode()
 
+/**
+ * Represents a news node, containing a title, a location, and a list of metadata.
+ */
 data class NewsNode(
     val title: String,
     val location: Location?,
     val metadata: List<Metadata> = emptyList()
 ) : ASTNode()
 
+/**
+ * Represents a let statement, containing a name and a value.
+ */
 data class LetStatement(val name: String, val value: Value) : ASTNode()
+/**
+ * Represents an if statement, containing a condition, a then branch, and an optional else branch.
+ */
 data class IfStatement(val condition: Expression, val thenBranch: List<ASTNode>, val elseBranch: List<ASTNode>?) : ASTNode()
+/**
+ * Represents a for statement, containing a variable, a start expression, an end expression, and a body.
+ */
 data class ForStatement(val variable: String, val start: Expression, val end: Expression, val body: List<ASTNode>) : ASTNode()
+/**
+ * Represents a foreach statement, containing a variable, an iterable expression, and a body.
+ */
 data class ForeachStatement(val variable: String, val iterable: Expression, val body: List<ASTNode>) : ASTNode()
+/**
+ * Represents a procedure definition, containing a name, a list of parameters, and a body.
+ */
 data class ProcedureDef(val name: String, val parameters: List<String>, val body: List<ASTNode>) : ASTNode()
+/**
+ * Represents a procedure call, containing a name and a list of expressions representing the arguments.
+ */
 data class ProcedureCall(val name: String, val arguments: List<Expression>) : CommandNode()
+/**
+ * Represents a translate block, containing a target location and a body.
+ */
 data class TranslateBlock(val target: Location, val body: List<ASTNode>) : ASTNode()
+/**
+ * Represents a validate block, containing a list of checks.
+ */
 data class ValidateBlock(val checks: List<String>) : ASTNode()
 
+/**
+ * Base interface for all values in the AST.
+ * Values can be used in expressions and statements.
+ */
 sealed class Value : ASTNode()
+/**
+ * Represents a string value, containing a string.
+ */
 data class StringValue(val value: String) : Value()
+/**
+ * Represents an expression value, containing an expression.
+ */
 data class ExpressionValue(val expression: Expression) : Value()
+/**
+ * Represents a point value, containing a point.
+ */
 data class PointValue(val point: Point) : Value()
+/**
+ * Represents a list value, containing a list of values.
+ */
 data class ListValue(val items: List<Value>) : Value()
+/**
+ * Represents the nil value.
+ */
 object NilValue : Value()
 
 sealed class Location : Expression()

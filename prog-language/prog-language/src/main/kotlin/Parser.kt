@@ -1,5 +1,9 @@
 import ast.*
 
+/**
+ * Parses a sequence of tokens into an Abstract Syntax Tree (AST) for the city infrastructure DSL.
+ * Implements recursive descent parsing to handle the grammar rules of the language.
+ */
 class Parser(val scanner: Scanner) {
     private var currentToken: Token? = null
     private var savedPosition: Pair<Int, Int> = Pair(1, 0)
@@ -503,7 +507,10 @@ class Parser(val scanner: Scanner) {
         return@withPosition Metadata(key, ExpressionValue(valueExpr))
     }
 
-    //<highlight_statement> ::= 'highlight' <expression> ';'
+    /**
+     * Parses a highlight statement.
+     * @return Highlight command node if successful, null otherwise
+     */
     private fun parseHighlightNode(): CommandNode? = withPosition {
         if (!match(TokenType.HIGHLIGHT)) return@withPosition null
         val expr = parseExpressionNode() ?: return@withPosition null
@@ -584,7 +591,11 @@ class Parser(val scanner: Scanner) {
 
 
     // <let_statement> ::= 'let' <identifier> '=' (<expression> | <point> | <list> | <string>) ';'
-    private fun parseLetStatement(): LetStatement? = withPosition {
+    private    /**
+     * Parses a let statement.
+     * @return Let statement node if successful, null otherwise
+     */
+    fun parseLetStatement(): LetStatement? = withPosition {
         if (!match(TokenType.LET)) return@withPosition null
 
         val idToken = currentToken
