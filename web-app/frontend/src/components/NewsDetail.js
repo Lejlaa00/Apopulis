@@ -6,7 +6,7 @@ import { UserContext } from '../userContext';
 import { authFetch } from './authFetch';
 import CommentItem from './CommentItem';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faThumbsUp, faThumbsDown, faStar, faLocationDot } from '@fortawesome/free-solid-svg-icons';
+import { faThumbsUp, faThumbsDown, faStar, faLocationDot, faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
 import { faComment } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,7 +29,42 @@ function NewsDetail({ id: propId, embedded = false }) {
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editedContent, setEditedContent] = useState('');
     const [recommendedNews, setRecommendedNews] = useState([]);
+    const [isSpeaking, setIsSpeaking] = useState(false);
     const navigate = useNavigate();
+
+    const handleTextToSpeech = () => {
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
+        const text = news?.content || news?.summary;
+        if (!text) return;
+
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Optimize for Slovenian
+        utterance.lang = 'sl-SI';
+        utterance.rate = 0.9; // Slightly slower for better pronunciation
+        utterance.pitch = 1.0;
+        
+        // Get Slovenian voice if available
+        const voices = window.speechSynthesis.getVoices();
+        const slovenianVoice = voices.find(voice => voice.lang.includes('sl'));
+        if (slovenianVoice) {
+            utterance.voice = slovenianVoice;
+        }
+        utterance.lang = 'sl-SI';
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+        
+        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
+    };
 
     useEffect(() => {
         async function fetchNewsItem() {
@@ -340,6 +375,16 @@ function NewsDetail({ id: propId, embedded = false }) {
             </div>
 
             <div className="side-panel">
+                <div className="text-to-speech-container" onClick={handleTextToSpeech}>
+                    <FontAwesomeIcon 
+                        icon={isSpeaking ? faVolumeXmark : faVolumeHigh} 
+                        className={`text-to-speech-icon ${isSpeaking ? 'speaking' : ''}`} 
+                    />
+                    <span className="text-to-speech-label">
+                        {isSpeaking ? 'Stop Reading' : 'Read Article'}
+                    </span>
+                </div>
+
                 <div className="news-action-bar">
                     <div className={`news-action-item ${userVote === 'UP' ? 'active-vote' : ''}`} onClick={() => handleVote('UP')}>
                         <FontAwesomeIcon icon={faThumbsUp} className="news-action-icon" />
@@ -353,6 +398,7 @@ function NewsDetail({ id: propId, embedded = false }) {
                         <FontAwesomeIcon icon={faStar} className={`news-action-icon ${isBookmarked ? 'active-bookmark' : ''}`} />
                         <span className="news-action-label">{isBookmarked ? 'Saved' : 'Save'}</span>
                     </div>
+
                 </div>
 
                 {user && (

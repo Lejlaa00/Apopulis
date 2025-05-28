@@ -23,15 +23,30 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const sourceRoutes = require('./routes/sourceRoutes');
 const provinceRoutes = require('./routes/provinceRoutes');
+const statsRoutes = require('./routes/statsRoutes');
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
-// Test route
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    console.log('Request Headers:', req.headers);
+    console.log('Request Body:', req.body);
+    next();
+});
+
+// Test routes
 app.get('/', (req, res) => {
     res.send('MERN Backend Running');
 });
+
+
 
 // API routes
 app.use('/api/users', userRoutes);
@@ -43,7 +58,8 @@ app.use('/api/votes', voteRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/sources', sourceRoutes);
-app.use('/api/provinces', provinceRoutes)
+app.use('/api/provinces', provinceRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Protected test route
 app.get('/api/me', authMiddleware, (req, res) => {
