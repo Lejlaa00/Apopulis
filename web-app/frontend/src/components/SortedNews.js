@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import SortedNewsHeader from './SortedNewsHeader';
 import { authFetch } from './authFetch';
-import '../css/sortedNews.css'; // koristi isti stil
+import { useNavigate } from 'react-router-dom';
+
+import '../css/sortedNews.css'; 
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
-export default function SortedNews() {
+export default function SortedNews({ onSelect }) {
   const [categories, setCategories] = useState([]);
   const [filter, setFilter] = useState('trending');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
 
   useEffect(() => {
   async function fetchCategories() {
@@ -101,7 +105,7 @@ export default function SortedNews() {
           <div
             key={item._id}
             className="news-card"
-            onClick={() => window.location.href = `/news/${item._id}`}
+            onClick={() => onSelect(item._id)}
             role="link"
             tabIndex={0}
           >

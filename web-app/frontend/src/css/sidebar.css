@@ -173,6 +173,7 @@
   position: absolute;
   top: 100%;
   left: 0;
+  margin-left: 13px;
   margin-top: 4px;
   background-color: var(--color-bg-darker);
   border: 1px solid var(--color-divider);
@@ -209,4 +210,18 @@
 .profile-hover-area {
   position: relative;
   width: 100%;
+}
+
+.profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.profile-avatar-circle {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--color-divider);
 }

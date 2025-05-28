@@ -68,10 +68,12 @@ export default function Sidebar() {
               }, 150); 
             }}
           >
-            <div className="profile-nav">
-              <FaUserCircle size={20} />
-              <span className="nav-text">Profile</span>
-            </div>
+            <NavLink to="/profile" className={({ isActive }) => (isActive ? 'active-link' : 'nav-link')} onClick={() => setHovered(false)}>
+              <div className="profile-dropdown-item">
+                <FaUserCircle size={20} style={{ color: user?.avatarColor || 'var(--color-text-white)' }} />
+                <span className="nav-text">Profile</span>
+              </div>
+            </NavLink>
 
             {hovered && (
               <div className="profile-dropdown">

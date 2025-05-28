@@ -16,6 +16,8 @@ function CommentItem({
   }) {
     const [showReply, setShowReply] = useState(false);
     const [replyContent, setReplyContent] = useState('');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
 
     const handleSubmitReply = () => {
         if (!replyContent.trim()) {
@@ -42,13 +44,15 @@ function CommentItem({
                 {isEditing ? (
                     <>
                         <textarea
+                            className="reply-textarea"
                             value={editedContent}
                             onChange={(e) => setEditedContent(e.target.value)}
                             rows={2}
-                            style={{ width: '100%', marginTop: '5px' }}
                         />
-                        <button onClick={() => onEdit(comment._id)}>Save</button>
-                        <button onClick={onEditCancel}>Cancel</button>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                            <button className="reply-button" onClick={() => onEdit(comment._id, editedContent)}>Save</button>
+                            <button className="reply-button" onClick={onEditCancel}>Cancel</button>
+                        </div>
                     </>
                 ) : (
                     <span>: {comment.content}</span>
@@ -71,12 +75,33 @@ function CommentItem({
                     <button onClick={() => onEditStart(comment)}>
                     <FontAwesomeIcon icon={faPen} className="comment-action-icon" />
                     </button>
-                    <button onClick={() => onDelete(comment._id)}>
-                    <FontAwesomeIcon icon={faTrash} className="comment-action-icon" />
-                    </button>
+                    <button onClick={() => setShowDeleteModal(true)}>
+                        <FontAwesomeIcon icon={faTrash} className="comment-action-icon" />
+                    </button> 
                 </>
                 )}
             </div>
+            {showDeleteModal && (
+                <div className="news-popup-overlay">
+                    <div className="delete-confirm-modal">
+                    <p>Are you sure you want to delete this comment?</p>
+                    <div className="delete-confirm-buttons">
+                        <button
+                        className="reply-button"
+                        onClick={() => {
+                            onDelete(comment._id);
+                            setShowDeleteModal(false);
+                        }}
+                        >
+                        Yes
+                        </button>
+                        <button className="reply-button" onClick={() => setShowDeleteModal(false)}>
+                        No
+                        </button>
+                    </div>
+                    </div>
+                </div>
+            )}
             </div>
 
            {showReply && (

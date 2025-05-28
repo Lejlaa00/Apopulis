@@ -193,6 +193,7 @@ exports.login = async (req, res) => {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                avatarColor: user.avatarColor,
                 isVerified: user.isVerified,
                 role: user.role || 'user'
             }
@@ -255,3 +256,28 @@ exports.getBookmarks = async (req, res) => {
     }
 };
 
+exports.updateProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const { username, email, avatarColor } = req.body;
+
+        if (username) user.username = username;
+        if (email) user.email = email;
+        if (avatarColor) user.avatarColor = avatarColor;
+
+        await user.save();
+
+        res.json({
+            msg: 'Profile updated successfully',
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                avatarColor: user.avatarColor
+            }
+        });
+    } catch (err) {
+        console.error('Update profile error:', err);
+        res.status(500).json({ msg: 'Failed to update profile' });
+    }
+};

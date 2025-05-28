@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const User = require('../models/userModel');
-const { register, login, logout, getBookmarks, addBookmark, removeBookmark } = require('../controllers/userController');
-
+const { register, login, logout, getBookmarks, addBookmark, removeBookmark, updateProfile } = require('../controllers/userController');
 
 // Bookmarked news for logged-in user
 router.get('/bookmarks', authMiddleware, async (req, res) => {
@@ -23,5 +22,7 @@ router.post('/logout', logout);
 router.get('/bookmarks', authMiddleware, getBookmarks);
 router.post('/bookmarks/:newsId', authMiddleware, addBookmark);
 router.delete('/bookmarks/:newsId', authMiddleware, removeBookmark);
+
+router.put('/profile', authMiddleware, updateProfile);
 
 module.exports = router;

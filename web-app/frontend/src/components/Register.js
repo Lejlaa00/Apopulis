@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import '../css/login.css'; 
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -20,11 +21,10 @@ function Register() {
 
             const data = await res.json();
             if (res.ok) {
-                alert('Registration successful');
-                console.log('Token:', data.token);
-                navigate('/login'); 
+                alert('Registration successful!');
+                navigate('/login');
             } else {
-                alert(data.msg || 'Error with registration.');
+                alert(data.msg || 'Registration failed.');
             }
         } catch (err) {
             console.error('Error:', err);
@@ -32,28 +32,37 @@ function Register() {
     };
 
     return (
-        <div>
-            <h2>Register</h2>
-            <form onSubmit={handleRegister}>
-                <label>Ime:</label>
+        <div className="login-container">
+            <h2 className="login-title">Create Account</h2>
+            <form onSubmit={handleRegister} className="login-form">
+                <label>Username:</label>
                 <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                /><br />
+                    className="login-input"
+                    placeholder="Enter your username"
+                />
+
                 <label>Email:</label>
                 <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                /><br />
-                <label>Lozinka:</label>
+                    className="login-input"
+                    placeholder="Enter your email"
+                />
+
+                <label>Password:</label>
                 <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                /><br />
-                <button type="submit">Registracija</button>
+                    className="login-input"
+                    placeholder="Enter your password"
+                />
+
+                <button type="submit" className="login-button">Register</button>
             </form>
         </div>
     );

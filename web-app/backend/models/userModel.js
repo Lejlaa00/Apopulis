@@ -6,8 +6,9 @@ const userSchema = new Schema ({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     isActive: { type: Boolean, default: true },
-    verificationToken: { type: String },  // Token za verifikaciju JWT
+    verificationToken: { type: String },  
     verificationTokenExpires: { type: Date },
+    avatarColor: { type: String }, 
     bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'NewsItem' }]
 }, { timestamps: true }); // defaultno createdAt i updatedAt
 

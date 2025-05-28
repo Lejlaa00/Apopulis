@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from "../userContext";
-import { authFetch } from './authFetch';
+import '../css/login.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -10,7 +10,6 @@ function Login() {
     const [password, setPassword] = useState('');
     const { setUserContext } = useContext(UserContext);
     const navigate = useNavigate();
-
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -23,31 +22,44 @@ function Login() {
 
             const data = await res.json();
             if (res.ok) {
-                alert('Login sucsessful!');
+                alert('Login successful!');
                 localStorage.setItem("token", data.token);
                 setUserContext(data.user); 
                 navigate('/');
             } else {
-                alert(data.msg || 'Error wiht login');
+                alert(data.msg || 'Login failed');
             }
         } catch (err) {
             console.error('Error:', err);
         }
     };
-    
+
     return (
-        <div>
-            <h2>Login</h2>
-            <form onSubmit={handleLogin}>
+        <div className="login-container">
+            <h2 className="login-title">Log In</h2>
+            <form onSubmit={handleLogin} className="login-form">
                 <label>Username:</label>
-                <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} /><br />
-                <label>Lozinka:</label>
-                <input type="password" value={password} onChange={(e)=> setPassword(e.target.value)} /><br />
-                <button type="submit">Prijava</button>
+                <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="login-input"
+                    placeholder="Enter your username"
+                />
+
+                <label>Password:</label>
+                <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="login-input"
+                    placeholder="Enter your password"
+                />
+
+                <button type="submit" className="login-button">Log In</button>
             </form>
         </div>
     );
 }
 
 export default Login;
-  

@@ -235,7 +235,7 @@ export default function Home() {
         <LatestNews onSelect={(id) => setSelectedNewsId(id)} />
       </div>
       <div className="sorted-news">
-        <SortedNews />
+        <SortedNews onSelect={(id) => setSelectedNewsId(id)} />
       </div>
       <div className="graphs-area">
         <Graphs />

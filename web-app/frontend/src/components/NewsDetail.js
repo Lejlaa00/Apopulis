@@ -8,6 +8,7 @@ import CommentItem from './CommentItem';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faThumbsUp, faThumbsDown, faStar, faLocationDot } from '@fortawesome/free-solid-svg-icons';
 import { faComment } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom';
 
 import '../css/newsDetail.css';
 
@@ -28,6 +29,7 @@ function NewsDetail({ id: propId, embedded = false }) {
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editedContent, setEditedContent] = useState('');
     const [recommendedNews, setRecommendedNews] = useState([]);
+    const navigate = useNavigate();
 
     useEffect(() => {
         async function fetchNewsItem() {
@@ -240,7 +242,6 @@ function NewsDetail({ id: propId, embedded = false }) {
 
     //Deleting comment
     const handleDeleteComment = async (commentId) => {
-        if (!window.confirm("Are you sure you want to delete this comment?")) return;
         try {
             const res = await authFetch(`${API_URL}/comments/${commentId}`, {
                 method: 'DELETE'
@@ -309,38 +310,30 @@ function NewsDetail({ id: propId, embedded = false }) {
                 )}
 
                 {recommendedNews.length > 0 && (
-                    <div style={{ marginTop: '40px' }}>
-                        <h3>Recommended News</h3>
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
-                            gap: '20px',
-                            marginTop: '20px'
-                        }}>
-                            {recommendedNews.slice(0, 6).map(item => (
-                                <div
-                                    key={item._id}
-                                    style={{
-                                        backgroundColor: '#f9f9f9',
-                                        padding: '15px',
-                                        borderRadius: '8px',
-                                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
-                                        cursor: 'pointer',
-                                        transition: 'transform 0.2s',
-                                    }}
-                                    onClick={() => window.location.href = `/news/${item._id}`}
-                                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
-                                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                                >
-                                    <h4 style={{ marginBottom: '10px' }}>{item.title}</h4>
-                                    <p style={{ fontSize: '0.9rem', color: '#666' }}>
-                                        {new Date(item.publishedAt).toLocaleDateString()}
-                                    </p>
-                                    <p style={{ fontSize: '0.85rem', color: '#888' }}>
-                                        {item.sourceId?.name || 'Unknown Source'}
-                                    </p>
+                    <div className="recommended-news-section">
+                        <h3 className="recommended-title">You might also like</h3>
+                        <hr className="news-meta-divider" />
+                        <div className="recommended-news-grid">
+                        {recommendedNews.slice(0, 6).map(item => (
+                            <div
+                                key={item._id}
+                                className="recommended-news-card"
+                                onClick={() => navigate(`/news/${item._id}`)}
+                            >
+                                {item.imageUrl && (
+                                <div className="recommended-news-image-wrapper">
+                                    <img src={item.imageUrl} alt="thumbnail" className="recommended-news-image" />
                                 </div>
-                            ))}
+                                )}
+                                <div className="recommended-news-title">{item.title}</div>
+                                <div className="recommended-news-date">
+                                {new Date(item.publishedAt).toLocaleDateString()}
+                                </div>
+                                <div className="recommended-news-source">
+                                {item.sourceId?.name || 'Unknown Source'}
+                                </div>
+                            </div>
+                        ))}
                         </div>
                     </div>
                 )}
