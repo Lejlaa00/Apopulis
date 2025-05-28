@@ -1,3 +1,5 @@
+import ast.*
+
 class Parser(val scanner: Scanner) {
     private var currentToken: Token? = null
     private var savedPosition: Pair<Int, Int> = Pair(1, 0)
@@ -36,9 +38,10 @@ class Parser(val scanner: Scanner) {
         }
     }
 
-    private inline fun <T> withPosition(block: PositionScope.() -> T): T {
-        return PositionScope(this).block() ?: (false as T)
+    private inline fun <T> withPosition(block: PositionScope.() -> T?): T? {
+        return PositionScope(this).block()
     }
+
 
     private fun handleErrorToken(): Boolean {
         if (currentToken?.getTokenSubtype() == "error") {
@@ -48,120 +51,122 @@ class Parser(val scanner: Scanner) {
         return true
     }
 
-    // <program> ::= <region_or_city>
-    fun parseProgram(): Boolean {
-        nextToken()
-        if (!handleErrorToken()) return false
+    private fun toPoint(expr: Expression): Point? {
+        return when (expr) {
+            is Point -> expr
+            is PointExpr -> {
+                val x = evaluateNumeric(expr.x) ?: return null
+                val y = evaluateNumeric(expr.y) ?: return null
+                Point(x, y)
+            }
 
-        val result = parseRegionOrCity()
-
-        // Check for EOF
-        val atEnd = when {
-            currentToken == null -> true
-            currentToken?.getTokenSubtype() == "eof" -> true
-            currentToken?.getTokenSubtype() == "error" && scanner.eof() -> true
-            else -> false
+            else -> null
         }
-
-        if (!handleErrorToken()) return false
-
-        println("Parse result: $result, atEnd: $atEnd, currentToken: $currentToken")
-        return result && atEnd
     }
 
+    private fun toLocation(expr: Expression): Location? {
+        return when (expr) {
+            is Point -> expr
+            is PointExpr -> PointExpr(expr.x, expr.y)
+            is Identifier -> LocationIdentifier(expr.name)
+            else -> null
+        }
+    }
+
+
+    // <program> ::= <region_or_city>
+    fun parseProgram(): ProgramNode? {
+        nextToken()
+        if (!handleErrorToken()) return null
+
+        val items = mutableListOf<ASTNode>()
+
+        while (!scanner.eof() && currentToken?.getTokenSubtype() != "eof") {
+            val item = parseRegionOrCity() ?: return null
+            items.add(item)
+        }
+
+        return ProgramNode(items)
+    }
+
+
     // <region_or_city> ::= <region> | <city>
-    private fun parseRegionOrCity(): Boolean = withPosition {
-        val regionAttempt = attempt { parseRegion() }
-        if (regionAttempt != null) {
-            println("Parsed REGION successfully")
-            return true
-        }
-
-        val cityAttempt = attempt { parseCity() }
-        if (cityAttempt != null) {
-            println("Parsed CITY successfully")
-
-            return true
-        }
-
-        println("Failed to parse both region and city")
-        return false
+    private fun parseRegionOrCity(): ASTNode? = withPosition {
+        attempt { parseRegion() } ?: attempt { parseCity() }
     }
 
     // <region> ::= 'region' <string> '{' <region_body> '}'
-    private fun parseRegion(): Boolean = withPosition {
-        match(TokenType.REGION) &&
-                match(TokenType.STRING) &&
-                match(TokenType.LBRACE) &&
-                parseRegionBody() &&
-                match(TokenType.RBRACE)
-    }
+    private fun parseRegion(): RegionNode? = withPosition {
+        if (!match(TokenType.REGION)) return@withPosition null
 
-    // <region_body> ::= { <region_element> }*
-    private fun parseRegionBody(): Boolean {
-        println("Entering region body")
-        while (true) {
-            if (currentToken?.getTokenSubtype() == "rbrace") {
-                //println("Found city closing brace")
-                return true
-            }
+        val nameToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val regionName = nameToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
 
+        if (!match(TokenType.LBRACE)) return@withPosition null
+
+        val body = mutableListOf<ASTNode>()
+        while (currentToken?.getTokenSubtype() != "rbrace" && !scanner.eof()) {
             savePosition()
-            if (!parseRegionElement()) {
-                println("No more region elements at ${scanner.row}:${scanner.column}")
+            val element = parseRegionElement()
+            if (element != null) {
+                body.add(element)
+            } else {
                 restorePosition()
                 break
             }
         }
-        return true
+
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition RegionNode(regionName, body)
     }
 
     // <region_element> ::= <city> | <let_statement> | <foreach_statement> |
-    //                      <translate_statement> | <procedure_def> | <call_statement> | <highlight>
-    private fun parseRegionElement(): Boolean = withPosition {
+    // <translate_statement> | <procedure_def> | <call_statement> | <highlight>
+    private fun parseRegionElement(): ASTNode? = withPosition {
         attempt { parseCity() }
             ?: attempt { parseLetStatement() }
             ?: attempt { parseForeachStatement() }
             ?: attempt { parseTranslateStatement() }
             ?: attempt { parseProcedureDef() }
             ?: attempt { parseCallStatement() }
-            ?: attempt { parseHighlightStatement() }
-            ?: false
+            ?: attempt { parseHighlightNode() }
     }
+
 
     // <city> ::= 'city' <string> '{' <city_body> '}'
-    private fun parseCity(): Boolean = withPosition {
-        match(TokenType.CITY) &&
-                match(TokenType.STRING) &&
-                match(TokenType.LBRACE) &&
-                parseCityBody().also { println("City body parsed: $it") } &&
-                match(TokenType.RBRACE).also { println("City closed successfully") }
+    private fun parseCity(): CityNode? = withPosition {
+        if (!match(TokenType.CITY)) return@withPosition null
 
-    }
+        val nameToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val cityName = nameToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
 
-    // <city_body> ::= { <element> }*
-    private fun parseCityBody(): Boolean {
-        while (true) {
-            if (currentToken?.getTokenSubtype() == "rbrace") {
-               // println("Found city closing brace")
-                return true
-            }
+        if (!match(TokenType.LBRACE)) return@withPosition null
 
+        val body = mutableListOf<ASTNode>()
+        while (currentToken?.getTokenSubtype() != "rbrace" && !scanner.eof()) {
             savePosition()
-            if (!parseElement()) {
-                println("No more city elements at ${scanner.row}:${scanner.column}")
+            val element = parseStatement()
+            if (element != null) {
+                body.add(element)
+            } else {
                 restorePosition()
                 break
             }
         }
-        return true
+
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition CityNode(cityName, body)
     }
 
     // <element> ::= <road> | <building> | <lake> | <park> | <news> | <junction> | <marker>
     //             | <let_statement> | <foreach_statement> | <translate_statement>
     //             | <validate_block> | <if_statement> | <for_statement>
     //             | <procedure_def> | <call_statement>
-    private fun parseElement(): Boolean = withPosition {
+    private fun parseElement(): ASTNode? = withPosition {
         attempt { parseBuilding() }
             ?: attempt { parseRoad() }
             ?: attempt { parseLake() }
@@ -177,724 +182,881 @@ class Parser(val scanner: Scanner) {
             ?: attempt { parseForStatement() }
             ?: attempt { parseProcedureDef() }
             ?: attempt { parseCallStatement() }
-            ?: attempt { parseHighlightStatement() }
-            ?: false
+            ?: attempt { parseHighlightNode() }
     }
 
     // <road> ::= 'road' <string> '{' <road_body> '}'
-    private fun parseRoad(): Boolean = withPosition {
-        match(TokenType.ROAD) &&
-                match(TokenType.STRING) &&
-                match(TokenType.LBRACE) &&
-                parseRoadBody() &&
-                match(TokenType.RBRACE).also { println("ROAD command parsed successfully") }
-    }
+    private fun parseRoad(): RoadNode? = withPosition {
+        if (!match(TokenType.ROAD)) return@withPosition null
 
-    // <road_body> ::= { <road_step> }*
-    private fun parseRoadBody(): Boolean {
-        while (true) {
+        val nameToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val roadName = nameToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
+
+        if (!match(TokenType.LBRACE)) return@withPosition null
+
+        val body = mutableListOf<ASTNode>()
+        while (currentToken?.getTokenSubtype() != "rbrace" && !scanner.eof()) {
             savePosition()
-            if (!parseRoadStep()) {
+            val step = parseRoadStep()
+            if (step != null) {
+                body.add(step)
+            } else {
                 restorePosition()
                 break
             }
         }
-        return true
+
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition RoadNode(roadName, body)
     }
 
     // <road_step> ::= <command> | <let_statement> | <foreach_statement>
     //                | <translate_statement> | <if_statement> | <for_statement> | <call_statement>
-    private fun parseRoadStep(): Boolean = withPosition {
-        attempt { parseCommand() }
+    private fun parseRoadStep(): ASTNode? = withPosition {
+        attempt { parseCommandNode() }
             ?: attempt { parseLetStatement() }
             ?: attempt { parseForeachStatement() }
             ?: attempt { parseTranslateStatement() }
             ?: attempt { parseIfStatement() }
             ?: attempt { parseForStatement() }
             ?: attempt { parseCallStatement() }
-            ?: false
     }
+
 
     // <building> ::= 'building' <string> '{' <building_body> '}'
-    private fun parseBuilding(): Boolean = withPosition {
-        match(TokenType.BUILDING) &&
-                match(TokenType.STRING) &&
-                match(TokenType.LBRACE) &&
-                parseBuildingBody().also { println("Building body result: $it") } &&
-                match(TokenType.RBRACE).also { println("BuiUILDING command parsed successfully") }
-    }
+    private fun parseBuilding(): BuildingNode? = withPosition {
+        if (!match(TokenType.BUILDING)) return@withPosition null
 
-    // <building_body> ::= { <building_step> }*
-    private fun parseBuildingBody(): Boolean {
-        while (true) {
-            if (currentToken?.getTokenSubtype() == "rbrace") {
-                //println("Found closing brace at ${scanner.row}:${scanner.column}")
-                return true
-            }
+        val nameToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val buildingName = nameToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
 
+        if (!match(TokenType.LBRACE)) return@withPosition null
+
+        val body = mutableListOf<ASTNode>()
+        while (currentToken?.getTokenSubtype() != "rbrace" && !scanner.eof()) {
             savePosition()
-            if (!parseBuildingStep()) {
-                println("No more building steps at ${scanner.row}:${scanner.column}")
+            val step = parseBuildingStep()
+            if (step != null) {
+                body.add(step)
+            } else {
                 restorePosition()
                 break
             }
         }
-        return true
+
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition BuildingNode(buildingName, body)
     }
 
     // <building_step> ::= <command> | <let_statement> | <foreach_statement>
     //                    | <translate_statement> | <if_statement> | <for_statement> | <call_statement>
-    private fun parseBuildingStep(): Boolean = withPosition {
-        attempt { parseCommand() }
+    private fun parseBuildingStep(): ASTNode? = withPosition {
+        attempt { parseCommandNode() }
             ?: attempt { parseLetStatement() }
             ?: attempt { parseForeachStatement() }
             ?: attempt { parseTranslateStatement() }
             ?: attempt { parseIfStatement() }
             ?: attempt { parseForStatement() }
             ?: attempt { parseCallStatement() }
-            ?: false
     }
 
+
     // <lake> ::= 'lake' <string> '{' <lake_body> '}'
-    private fun parseLake(): Boolean = withPosition {
-        match(TokenType.LAKE) &&
-                match(TokenType.STRING) &&
-                match(TokenType.LBRACE) &&
-                run { while (parseCommand()) { /* continue */ }; true } &&
-                match(TokenType.RBRACE).also { println("LAKE command parsed successfully: $it")}
+    // <lake> ::= 'lake' <string> [ '(' <expr> ',' <expr> ')' ] '{' <lake_body> '}'
+    private fun parseLake(): LakeNode? = withPosition {
+        if (!match(TokenType.LAKE)) return@withPosition null
+
+        val nameToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val lakeName = nameToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
+
+        val location = if (currentToken?.getTokenSubtype() == "lparen") {
+            parsePointNode() ?: return@withPosition null
+        } else null
+
+        if (!match(TokenType.LBRACE)) return@withPosition null
+
+        val commands = mutableListOf<CommandNode>()
+        while (true) {
+            savePosition()
+            val cmd = parseCommandNode()
+            if (cmd != null) {
+                commands.add(cmd)
+            } else {
+                restorePosition()
+                break
+            }
+        }
+
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition LakeNode(lakeName, location, commands)
     }
 
     // <park> ::= 'park' <string> '{' <park_body> '}'
-    private fun parsePark(): Boolean = withPosition {
-        match(TokenType.PARK) &&
-                match(TokenType.STRING) &&
-                match(TokenType.LBRACE) &&
-                run { while (parseCommand()) { /* continue */ }; true } &&
-                match(TokenType.RBRACE).also { println("PARK command parsed successfully: $it")}
-    }
+    private fun parsePark(): ParkNode? = withPosition {
+        if (!match(TokenType.PARK)) return@withPosition null
 
-    // <news> ::= 'news' <string> <location_or_unknown> <metadata_blocks> ';'
-    private fun parseNews(): Boolean = withPosition {
-        // Saving initial position
-        savePosition()
+        val nameToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val parkName = nameToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
 
-        if (!match(TokenType.NEWS)) {
-            restorePosition()
-            return@withPosition false
-        }
+        if (!match(TokenType.LBRACE)) return@withPosition null
 
-        if (!match(TokenType.STRING)) {
-            restorePosition()
-            return@withPosition false
-        }
-
-        savePosition()
-        val hasLocation = parsePoint() || match(TokenType.UNKNOWN) || match(TokenType.IDENTIFIER)
-        if (!hasLocation) {
-            println("ERROR: Expected location point, 'unknown', or identifier at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return@withPosition false
-        }
-
-        savePosition()
-        val hasMetadata = currentToken?.getTokenSubtype() == "lbrace" && parseMetadataBlocks()
-        if (!hasMetadata) {
-            restorePosition()
-        }
-
-        if (!match(TokenType.SEMI)) {
-            println("ERROR: Expected semicolon after news statement at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return@withPosition false
-        }
-
-        true
-    }
-
-    // <location_or_unknown> ::= <point> | 'unknown'
-    private fun parseLocationOrUnknown(): Boolean = withPosition {
-        attempt { parsePoint() } ?: attempt { match(TokenType.UNKNOWN) } ?: false
-    }
-
-
-    //<metadata_blocks> ::= <metadata_block> | ε
-    private fun parseMetadataBlocks(): Boolean = withPosition {
-        if (!match(TokenType.LBRACE)) return@withPosition false
-
-        if (!parseMetadataStatement()) {
-            println("ERROR: Expected metadata statement at ${scanner.row}:${scanner.column}")
-            return@withPosition false
-        }
-
-        while (parseMetadataStatement()) { /* continue */ }
-
-        if (!match(TokenType.RBRACE)) {
-            println("ERROR: Expected '}' to close metadata block at ${scanner.row}:${scanner.column}")
-            return@withPosition false
-        }
-
-        true
-    }
-
-    // <metadata_block> ::= '{' <metadata_statement> { <metadata_statement> } '}'
-    private fun parseMetadataBlock(): Boolean = withPosition {
-        match(TokenType.LBRACE) &&
-                parseMetadataStatement() &&
-                run { while (parseMetadataStatement()) { /* continue */ }; true } &&
-                match(TokenType.RBRACE)
-    }
-
-    // <metadata_statement> ::= 'set' '(' <string> ',' <expression> ')' ';'
-    private fun parseMetadataStatement(): Boolean = withPosition {
-        match(TokenType.SET) &&
-                match(TokenType.LPAREN) &&
-                match(TokenType.STRING) &&
-                match(TokenType.COMMA) &&
-                (match(TokenType.STRING) || parseExpression()) &&
-                match(TokenType.RPAREN) &&
-                match(TokenType.SEMI).also { println("METADATA STATEMENT command parsed successfully: $it")}
-    }
-
-    // <junction> ::= 'junction' <point> ';'
-    private fun parseJunction(): Boolean = withPosition {
-        match(TokenType.JUNCTION) &&
-                parsePoint() &&
-                match(TokenType.SEMI)
-    }
-
-    // <marker> ::= 'marker' <string> <point> <metadata_block> ';'
-    private fun parseMarker(): Boolean = withPosition {
-        savePosition()
-
-        if (!match(TokenType.MARKER)) {
-            restorePosition()
-            return@withPosition false
-        }
-
-        if (!match(TokenType.STRING)) {
-            restorePosition()
-            return@withPosition false
-        }
-
-        if (!parsePoint()) {
-            restorePosition()
-            return@withPosition false
-        }
-
-        val metadataResult = withPosition {
+        val commands = mutableListOf<CommandNode>()
+        while (true) {
             savePosition()
-            if (currentToken?.getTokenSubtype() == "lbrace") {
-                if (parseMetadataBlocks()) {
-                    true
-                } else {
-                    restorePosition()
-                    false
-                }
+            val cmd = parseCommandNode()
+            if (cmd != null) {
+                commands.add(cmd)
             } else {
                 restorePosition()
-                false
+                break
             }
         }
 
-        if (!match(TokenType.SEMI)) {
-            println("ERROR: Expected semicolon after marker at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return@withPosition false
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition ParkNode(parkName, commands)
+    }
+
+
+    // <news> ::= 'news' <string> <location_or_unknown> <metadata_blocks> ';'
+    private fun parseNews(): NewsNode? = withPosition {
+        if (!match(TokenType.NEWS)) return@withPosition null
+
+        val titleToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val title = titleToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
+
+        val location: Location = when {
+            currentToken?.getTokenSubtype() == "lparen" -> {
+                val pointExpr = parsePointNode() ?: return@withPosition null
+                toLocation(pointExpr) ?: return@withPosition null
+            }
+
+            currentToken?.getTokenSubtype() == "unknown" -> {
+                nextToken()
+                UnknownLocation
+            }
+
+            currentToken?.getTokenSubtype() == "identifier" -> {
+                val name = currentToken!!.getLexem()
+                nextToken()
+                LocationIdentifier(name)
+            }
+
+            else -> return@withPosition null
         }
 
-        true
+        val metadata = if (currentToken?.getTokenSubtype() == "lbrace") {
+            parseMetadataBlockList() ?: return@withPosition null
+        } else {
+            emptyList()
+        }
+
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition NewsNode(title, location, metadata)
     }
 
-    // <command> ::= <draw_line> | <draw_bend> | <draw_box> | <draw_circle> | <call_statement> | <highlight_statement>
-    private fun parseCommand(): Boolean = withPosition {
-        attempt { parseDrawBox() }
-            ?: attempt { parseHighlightStatement() }
-            ?: attempt { parseDrawBend() }
-            ?: attempt { parseDrawLine() }
-            ?: attempt { parseDrawCircle() }
-            ?: attempt { parseCallStatement() }
-            ?: false
+
+    // <junction> ::= 'junction' <point> ';'
+    private fun parseJunction(): JunctionNode? = withPosition {
+        if (!match(TokenType.JUNCTION)) return@withPosition null
+        val expr = parseExpressionNode() ?: return@withPosition null
+        if (!match(TokenType.SEMI)) return@withPosition null
+        return@withPosition JunctionNode(expr)
     }
 
-   //<highlight_statement> ::= 'highlight' <expression> ';'
-   private fun parseHighlightStatement(): Boolean = withPosition {
-       savePosition()
 
-       if (!match(TokenType.HIGHLIGHT)) {
-           restorePosition()
-           return@withPosition false
-       }
+    // <marker> ::= 'marker' <string> <point> <metadata_block> ';'
+    private fun parseMarker(): MarkerNode? = withPosition {
+        if (!match(TokenType.MARKER)) return@withPosition null
 
-       if (!parseExpression()) {
-           println("Failed to parse highlight expression")
-           restorePosition()
-           return@withPosition false
-       }
+        val nameToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val markerName = nameToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
 
-       if (!match(TokenType.SEMI)) {
-           println("Missing semicolon after highlight")
-           restorePosition()
-           return@withPosition false
-       }
+        val pointExpr = when {
+            currentToken?.getTokenSubtype() == "lparen" -> parsePointNode()
+            currentToken?.getTokenSubtype() == "identifier" -> {
+                val name = currentToken!!.getLexem()
+                nextToken()
+                Identifier(name)
+            }
 
-       true
-   }
+            else -> null
+        } ?: return@withPosition null
+
+        val metadata = if (match(TokenType.LBRACE)) {
+            val list = mutableListOf<Metadata>()
+            while (true) {
+                savePosition()
+                val stmt = parseMetadataStatementNode()
+                if (stmt != null) list.add(stmt)
+                else {
+                    restorePosition()
+                    break
+                }
+            }
+            if (!match(TokenType.RBRACE)) return@withPosition null
+            list
+        } else {
+            emptyList()
+        }
+
+        if (!match(TokenType.SEMI)) return@withPosition null
+        println("Parsed marker '$markerName' at row ${scanner.row}, column ${scanner.column}")
+
+        return@withPosition MarkerNode(markerName, pointExpr, metadata)
+    }
+
+    private fun parseMarkerCommand(): CommandNode? = withPosition {
+        if (!match(TokenType.MARKER)) return@withPosition null
+
+        val nameToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val markerName = nameToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
+
+        val pointExpr = when {
+            currentToken?.getTokenSubtype() == "lparen" -> parsePointNode()
+            currentToken?.getTokenSubtype() == "identifier" -> {
+                val name = currentToken!!.getLexem()
+                nextToken()
+                Identifier(name)
+            }
+
+            else -> null
+        } ?: return@withPosition null
+
+        if (currentToken?.getTokenSubtype() == "lbrace") {
+            var count = 1
+            match(TokenType.LBRACE)
+            while (count > 0 && !scanner.eof()) {
+                if (currentToken?.getTokenSubtype() == "lbrace") count++
+                else if (currentToken?.getTokenSubtype() == "rbrace") count--
+                nextToken()
+            }
+        }
+
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition MarkerNode(markerName, pointExpr)
+    }
+
+
+    private fun parsePointNode(): Expression? = withPosition {
+        if (!match(TokenType.LPAREN)) return@withPosition null
+
+        val xExpr = parseExpressionNode() ?: return@withPosition null
+        if (!match(TokenType.COMMA)) return@withPosition null
+        val yExpr = parseExpressionNode() ?: return@withPosition null
+
+        if (!match(TokenType.RPAREN)) return@withPosition null
+
+        return@withPosition PointExpr(xExpr, yExpr)
+    }
+
+
+    private fun parseMetadataBlockList(): List<Metadata>? = withPosition {
+        if (!match(TokenType.LBRACE)) return@withPosition null
+
+        val metadataList = mutableListOf<Metadata>()
+
+        while (true) {
+            savePosition()
+            val metadata = parseMetadataStatementNode()
+            if (metadata != null) {
+                metadataList.add(metadata)
+            } else {
+                restorePosition()
+                break
+            }
+        }
+
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition metadataList
+    }
+
+
+    private fun parseMetadataStatementNode(): Metadata? = withPosition {
+        if (!match(TokenType.SET)) return@withPosition null
+        if (!match(TokenType.LPAREN)) return@withPosition null
+
+        val keyToken = currentToken
+        if (!match(TokenType.STRING)) return@withPosition null
+        val key = keyToken?.getLexem()?.removeSurrounding("\"") ?: return@withPosition null
+
+        if (!match(TokenType.COMMA)) return@withPosition null
+
+        val valueExpr = parseExpressionNode() ?: return@withPosition null
+
+        if (!match(TokenType.RPAREN)) return@withPosition null
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition Metadata(key, ExpressionValue(valueExpr))
+    }
+
+    //<highlight_statement> ::= 'highlight' <expression> ';'
+    private fun parseHighlightNode(): CommandNode? = withPosition {
+        if (!match(TokenType.HIGHLIGHT)) return@withPosition null
+        val expr = parseExpressionNode() ?: return@withPosition null
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition HighlightCommand(expr)
+    }
+
 
     // draw_line ::= 'line' '(' <point> ',' <point> ')' ';'
-    private fun parseDrawLine(): Boolean = withPosition {
-        println("Parsing LINE command at ${scanner.row}:${scanner.column}")
-        match(TokenType.LINE) &&
-                match(TokenType.LPAREN) &&
-                parsePoint() &&
-                match(TokenType.COMMA) &&
-                parsePoint() &&
-                match(TokenType.RPAREN) &&
-                match(TokenType.SEMI).also { println("LINE command parsed successfully: $it")}
+    private fun parseDrawLineNode(): CommandNode? = withPosition {
+        if (!match(TokenType.LINE)) return@withPosition null
+        if (!match(TokenType.LPAREN)) return@withPosition null
+
+        val p1 = parseExpressionNode() ?: return@withPosition null
+        if (!match(TokenType.COMMA)) return@withPosition null
+        val p2 = parseExpressionNode() ?: return@withPosition null
+
+        if (!match(TokenType.RPAREN)) return@withPosition null
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition LineCommand(p1, p2)
     }
+
 
     // draw_bend ::= 'bend' '(' <point> ',' <point> ',' <expression> ')' ';'
-    private fun parseDrawBend(): Boolean = withPosition {
-        match(TokenType.BEND) &&
-                match(TokenType.LPAREN) &&
-                parsePoint() &&
-                match(TokenType.COMMA) &&
-                parsePoint() &&
-                match(TokenType.COMMA) &&
-                parseExpression() &&
-                match(TokenType.RPAREN) &&
-                match(TokenType.SEMI).also { println("BEND command parsed successfully: $it")}
+    private fun parseDrawBendNode(): CommandNode? = withPosition {
+        if (!match(TokenType.BEND)) return@withPosition null
+        if (!match(TokenType.LPAREN)) return@withPosition null
+
+        val fromExpr = parsePointNode() ?: return@withPosition null
+        val from = toPoint(fromExpr) ?: return@withPosition null
+
+        if (!match(TokenType.COMMA)) return@withPosition null
+
+        val toExpr = parsePointNode() ?: return@withPosition null
+        val to = toPoint(toExpr) ?: return@withPosition null
+
+        if (!match(TokenType.COMMA)) return@withPosition null
+        val angle = parseExpressionNode() ?: return@withPosition null
+
+        if (!match(TokenType.RPAREN)) return@withPosition null
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition BendCommand(from, to, angle)
     }
 
+
     // draw_box ::= 'box' '(' <point> ',' <point> ')' ';'
-    private fun parseDrawBox(): Boolean = withPosition {
-        match(TokenType.BOX) &&
-                match(TokenType.LPAREN) &&
-                parsePoint() &&
-                match(TokenType.COMMA) &&
-                parsePoint() &&
-                match(TokenType.RPAREN) &&
-                match(TokenType.SEMI).also { println("BOX command parsed successfully: $it")}
+    private fun parseDrawBoxNode(): CommandNode? = withPosition {
+        if (!match(TokenType.BOX)) return@withPosition null
+        if (!match(TokenType.LPAREN)) return@withPosition null
+
+        val p1 = parseExpressionNode() ?: return@withPosition null
+        if (!match(TokenType.COMMA)) return@withPosition null
+        val p2 = parseExpressionNode() ?: return@withPosition null
+
+        if (!match(TokenType.RPAREN)) return@withPosition null
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition BoxCommand(p1, p2)
     }
 
     // draw_circle ::= 'circ' '(' <point> ',' <expression> ')' ';'
-    private fun parseDrawCircle(): Boolean = withPosition {
-        match(TokenType.CIRC) &&
-                match(TokenType.LPAREN) &&
-                parsePoint() &&
-                match(TokenType.COMMA) &&
-                parseExpression() &&
-                match(TokenType.RPAREN) &&
-                match(TokenType.SEMI).also { println("CIRCLE command parsed successfully: $it")}
+    private fun parseDrawCircleNode(): CommandNode? = withPosition {
+        if (!match(TokenType.CIRC)) return@withPosition null
+        if (!match(TokenType.LPAREN)) return@withPosition null
+
+        val center = parsePointNode() ?: return@withPosition null
+        if (!match(TokenType.COMMA)) return@withPosition null
+        val radius = parseExpressionNode() ?: return@withPosition null
+
+        if (!match(TokenType.RPAREN)) return@withPosition null
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition CircleCommand(center, radius)
     }
+
 
     // <let_statement> ::= 'let' <identifier> '=' (<expression> | <point> | <list> | <string>) ';'
-    private fun parseLetStatement(): Boolean = withPosition {
-        // Save position for backtracking
-        savePosition()
+    private fun parseLetStatement(): LetStatement? = withPosition {
+        if (!match(TokenType.LET)) return@withPosition null
 
-        if (!match(TokenType.LET)) {
-            restorePosition()
-            return@withPosition false
-        }
+        val idToken = currentToken
+        if (!match(TokenType.IDENTIFIER)) return@withPosition null
+        val name = idToken!!.getLexem()
 
-        if (!match(TokenType.IDENTIFIER)) {
-            restorePosition()
-            return@withPosition false
-        }
+        if (!match(TokenType.EQUALS)) return@withPosition null
 
-        if (!match(TokenType.EQUALS)) {
-            restorePosition()
-            return@withPosition false
-        }
+        val value: Value = when {
+            currentToken?.getTokenSubtype() == "lbracket" -> {
+                val listItems = parseListValues() ?: return@withPosition null
+                ListValue(listItems)
+            }
 
-        when {
-            parseList() -> {}  // First try lists since they start with [
-            parsePoint() -> {} // Then try points
-            parseExpression() -> {} // Then expressions
-            match(TokenType.STRING) -> {} // Finally strings
+            currentToken?.getTokenSubtype() == "lparen" -> {
+                val pointExpr = parsePointNode() ?: return@withPosition null
+                val point = toPoint(pointExpr) ?: return@withPosition null
+                PointValue(point)
+            }
+
+            currentToken?.getTokenSubtype() == "string" -> {
+                val strToken = currentToken
+                if (!match(TokenType.STRING)) return@withPosition null
+                StringValue(strToken!!.getLexem().removeSurrounding("\""))
+            }
+
             else -> {
-                println("ERROR: Expected expression, point, list or string after '=' at ${scanner.row}:${scanner.column}")
-                restorePosition()
-                return@withPosition false
+                val expr = parseExpressionNode() ?: return@withPosition null
+                ExpressionValue(expr)
             }
         }
 
-        // Require semicolon
-        if (!match(TokenType.SEMI)) {
-            println("ERROR: Expected ';' after let statement at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return@withPosition false
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition LetStatement(name, value)
+    }
+
+    private fun parseListValues(): List<Value>? = withPosition {
+        if (!match(TokenType.LBRACKET)) return@withPosition null
+
+        val items = mutableListOf<Value>()
+
+        val first = parseExpressionOrPointValue() ?: return@withPosition null
+        items.add(first)
+
+        while (match(TokenType.COMMA)) {
+            val item = parseExpressionOrPointValue() ?: return@withPosition null
+            items.add(item)
         }
 
-        true
+        if (!match(TokenType.RBRACKET)) return@withPosition null
+
+        return@withPosition items
     }
 
-    // <list> ::= '[' (<expression> | <point>) (',' (<expression> | <point>))* ']'
-    private fun parseList(): Boolean = withPosition {
-        match(TokenType.LBRACKET) && run {
-            if (!parseExpression() && !parsePoint()) {
-                return@run false
-            }
-
-            while (match(TokenType.COMMA)) {
-                if (!parseExpression() && !parsePoint()) {
-                    return@run false
-                }
-            }
-
-            true
-        } && match(TokenType.RBRACKET)
+    private fun parseExpressionOrPointValue(): Value? = withPosition {
+        if (currentToken?.getTokenSubtype() == "lparen") {
+            val expr = parsePointNode() ?: return@withPosition null
+            val point = toPoint(expr) ?: return@withPosition null
+            return@withPosition PointValue(point)
+        }
+        parseExpressionNode()?.let { return@withPosition ExpressionValue(it) }
     }
+
 
     // <foreach_statement> ::= 'foreach' <identifier> 'in' <expression> '{' <foreach_body> '}'
-    private fun parseForeachStatement(): Boolean = withPosition {
-        match(TokenType.FOREACH) &&
-                match(TokenType.IDENTIFIER) &&
-                match(TokenType.IN) &&
-                parseExpression() &&
-                match(TokenType.LBRACE) &&
-                parseForeachBody() &&
-                match(TokenType.RBRACE).also { println("FOREACH command parsed successfully: $it")}
-    }
+    private fun parseForeachStatement(): ForeachStatement? = withPosition {
+        if (!match(TokenType.FOREACH)) return@withPosition null
 
-    // <foreach_body> ::= { <statement> }*
-    private fun parseForeachBody(): Boolean {
-        while (parseStatement()) { /* continue */ }
-        return true
+        val idToken = currentToken
+        if (!match(TokenType.IDENTIFIER)) return@withPosition null
+        val variableName = idToken!!.getLexem()
+
+        if (!match(TokenType.IN)) return@withPosition null
+
+        val iterableExpr = parseExpressionNode() ?: return@withPosition null
+
+        if (!match(TokenType.LBRACE)) return@withPosition null
+
+        val body = parseStatementBlock() ?: return@withPosition null
+
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition ForeachStatement(variableName, iterableExpr, body)
     }
 
     //<translate_statement> ::= 'translate' (<point> | <identifier>) '{' <translate_body> '}'
-    private fun parseTranslateStatement(): Boolean = withPosition {
-        // Saving initial position
-        savePosition()
+    private fun parseTranslateStatement(): TranslateBlock? = withPosition {
+        println("Trying to parse translate at ${scanner.row}:${scanner.column} with token ${currentToken}")
 
-        if (!match(TokenType.TRANSLATE)) {
-            restorePosition()
-            return@withPosition false
+        if (!match(TokenType.TRANSLATE)) return@withPosition null
+
+        val target: Location = when {
+            currentToken?.getTokenSubtype() == "lparen" -> {
+                val expr = parseExpressionNode() ?: return@withPosition null
+                when (expr) {
+                    is Grouped -> {
+                        val inner = expr.expr
+                        if (inner is Point) inner
+                        else return@withPosition null
+                    }
+
+                    is Point -> expr
+                    else -> return@withPosition null
+                }
+            }
+
+            currentToken?.getTokenSubtype() == "identifier" -> {
+                val name = currentToken!!.getLexem()
+                nextToken()
+                LocationIdentifier(name)
+            }
+
+            else -> return@withPosition null
         }
 
-        val hasTarget = when {
-            parsePoint() -> true
-            match(TokenType.IDENTIFIER) -> true
-            else -> {
-                println("ERROR: Expected point or identifier after 'translate' at ${scanner.row}:${scanner.column}")
+
+        if (!match(TokenType.LBRACE)) return@withPosition null
+        val body = parseStatementBlock() ?: return@withPosition null
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition TranslateBlock(target, body)
+    }
+
+
+    // <validate_block> ::= 'validate' '{' <validate_statement> <validate_block_tail> '}'
+    private fun parseValidateBlock(): ValidateBlock? = withPosition {
+        if (!match(TokenType.VALIDATE)) return@withPosition null
+        if (!match(TokenType.LBRACE)) return@withPosition null
+
+        val checks = mutableListOf<String>()
+
+        while (true) {
+            savePosition()
+            val id = parseValidateStatementId()
+            if (id != null) {
+                checks.add(id)
+            } else {
                 restorePosition()
-                return@withPosition false
+                break
             }
         }
 
-        if (!match(TokenType.LBRACE)) {
-            println("ERROR: Expected '{' after translate target at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return@withPosition false
-        }
+        if (!match(TokenType.RBRACE)) return@withPosition null
 
-        if (!parseTranslateBody()) {
-            restorePosition()
-            return@withPosition false
-        }
-
-        if (!match(TokenType.RBRACE)) {
-            println("ERROR: Expected '}' to close translate block at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return@withPosition false
-        }
-
-        true
+        return@withPosition ValidateBlock(checks)
     }
 
-    // <translate_body> ::= { <statement> }*
-    private fun parseTranslateBody(): Boolean {
-        while (parseStatement()) { /* continue */ }
-        return true
-    }
+    private fun parseValidateStatementId(): String? = withPosition {
+        if (!match(TokenType.CHECK)) return@withPosition null
+        if (!match(TokenType.LPAREN)) return@withPosition null
 
-    // <validate_block> ::= 'validate' '{' <validate_statement> <validate_block_tail> '}'
-    private fun parseValidateBlock(): Boolean = withPosition {
-        match(TokenType.VALIDATE) &&
-                match(TokenType.LBRACE) &&
-                parseValidateStatement() &&
-                run { while (parseValidateStatement()) { /* continue */ }; true } &&
-                match(TokenType.RBRACE)
-    }
+        val idToken = currentToken
+        if (!match(TokenType.IDENTIFIER)) return@withPosition null
+        val id = idToken!!.getLexem()
 
-    // <validate_statement> ::= 'check' '(' <identifier> ')' ';'
-    private fun parseValidateStatement(): Boolean = withPosition {
-        match(TokenType.CHECK) &&
-                match(TokenType.LPAREN) &&
-                match(TokenType.IDENTIFIER) &&
-                match(TokenType.RPAREN) &&
-                match(TokenType.SEMI).also { println("VALIDATING command parsed successfully: $it")}
+        if (!match(TokenType.RPAREN)) return@withPosition null
+        if (!match(TokenType.SEMI)) return@withPosition null
+
+        return@withPosition id
     }
 
     // <if_statement> ::= 'if' <expression> '{' <statement_list> '}' <else_opt>
-    private fun parseIfStatement(): Boolean = withPosition {
-        match(TokenType.IF) &&
-                parseExpression() &&
-                match(TokenType.LBRACE) &&
-                parseStatementList() &&
-                match(TokenType.RBRACE) &&
-                parseElseOpt().also { println("IF command parsed successfully: $it")}
+    private fun parseIfStatement(): IfStatement? = withPosition {
+        if (!match(TokenType.IF)) return@withPosition null
+
+        val condition = parseExpressionNode() ?: return@withPosition null
+
+        if (!match(TokenType.LBRACE)) return@withPosition null
+        val thenBranch = parseStatementBlock() ?: return@withPosition null
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        val elseBranch = parseElseOptional()
+
+        return@withPosition IfStatement(condition, thenBranch, elseBranch)
     }
 
-    // <else_opt> ::= 'else' '{' <statement_list> '}' | ε
-    private fun parseElseOpt(): Boolean = withPosition {
-        if (match(TokenType.ELSE)) {
-            match(TokenType.LBRACE) &&
-                    parseStatementList() &&
-                    match(TokenType.RBRACE)
-        } else {
-            true
+    private fun parseStatementBlock(): List<ASTNode>? = withPosition {
+        val statements = mutableListOf<ASTNode>()
+
+        while (true) {
+            val stmt = parseStatement() ?: break
+            statements.add(stmt)
         }
+
+        return@withPosition statements
+    }
+
+    private fun parseElseOptional(): List<ASTNode>? = withPosition {
+        if (match(TokenType.ELSE)) {
+            if (!match(TokenType.LBRACE)) return@withPosition null
+            val elseBody = parseStatementBlock() ?: return@withPosition null
+            if (!match(TokenType.RBRACE)) return@withPosition null
+            return@withPosition elseBody
+        }
+        return@withPosition null
     }
 
     // <for_statement> ::= 'for' <identifier> '=' <expression> 'to' <expression> '{' <statement_list> '}'
-    private fun parseForStatement(): Boolean = withPosition {
-        match(TokenType.FOR) &&
-                match(TokenType.IDENTIFIER) &&
-                match(TokenType.EQUALS) &&
-                parseExpression() &&
-                match(TokenType.TO) &&
-                parseExpression() &&
-                match(TokenType.LBRACE) &&
-                parseStatementList() &&
-                match(TokenType.RBRACE).also { println("FOR command parsed successfully: $it")}
+    private fun parseForStatement(): ForStatement? = withPosition {
+        if (!match(TokenType.FOR)) return@withPosition null
+
+        val idToken = currentToken
+        if (!match(TokenType.IDENTIFIER)) return@withPosition null
+        val variableName = idToken!!.getLexem()
+
+        if (!match(TokenType.EQUALS)) return@withPosition null
+
+        val startExpr = parseExpressionNode() ?: return@withPosition null
+        if (!match(TokenType.TO)) return@withPosition null
+        val endExpr = parseExpressionNode() ?: return@withPosition null
+
+        if (!match(TokenType.LBRACE)) return@withPosition null
+        val body = parseStatementBlock() ?: return@withPosition null
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition ForStatement(variableName, startExpr, endExpr, body)
+    }
+
+    private fun evaluateNumeric(expr: Expression): Double? {
+        return when (expr) {
+            is NumberLiteral -> expr.value
+            is Identifier -> null // možeš proširiti ako želiš evaluirati varijable
+            is BinaryOp -> {
+                val left = evaluateNumeric(expr.left)
+                val right = evaluateNumeric(expr.right)
+                if (left != null && right != null) {
+                    when (expr.op) {
+                        "+" -> left + right
+                        "-" -> left - right
+                        "*" -> left * right
+                        "/" -> left / right
+                        else -> null
+                    }
+                } else null
+            }
+
+            is Grouped -> evaluateNumeric(expr.expr)
+            else -> null
+        }
     }
 
     // <procedure_def> ::= 'procedure' <identifier> '(' <parameter_list> ')' '{' <statement_list> '}'
-    private fun parseProcedureDef(): Boolean = withPosition {
-        match(TokenType.PROCEDURE) &&
-                match(TokenType.IDENTIFIER) &&
-                match(TokenType.LPAREN) &&
-                parseParameterList() &&
-                match(TokenType.RPAREN) &&
-                match(TokenType.LBRACE) &&
-                parseStatementList() &&
-                match(TokenType.RBRACE).also { println("PROCEDURE command parsed successfully: $it")}
+    private fun parseProcedureDef(): ProcedureDef? = withPosition {
+        if (!match(TokenType.PROCEDURE)) return@withPosition null
+
+        val nameToken = currentToken
+        if (!match(TokenType.IDENTIFIER)) return@withPosition null
+        val procName = nameToken!!.getLexem()
+
+        if (!match(TokenType.LPAREN)) return@withPosition null
+
+        val params = parseParameterListNode() ?: return@withPosition null
+
+        if (!match(TokenType.RPAREN)) return@withPosition null
+        if (!match(TokenType.LBRACE)) return@withPosition null
+
+        val body = parseStatementBlock() ?: return@withPosition null  // ✅ KORISTI PARSER BLOK
+
+        if (!match(TokenType.RBRACE)) return@withPosition null
+
+        return@withPosition ProcedureDef(procName, params, body)
     }
 
-    // <parameter_list> ::= <identifier> ( ',' <identifier> )* | ε
-    private fun parseParameterList(): Boolean = withPosition {
-        if (currentToken != null && currentToken?.getTokenSubtype() == TokenType.IDENTIFIER.toString().lowercase()) {
-            match(TokenType.IDENTIFIER) && run {
-                while (match(TokenType.COMMA)) {
-                    if (!match(TokenType.IDENTIFIER)) return@run false
-                }
-                true
-            }
-        } else {
-            true
+    private fun parseParameterListNode(): List<String>? = withPosition {
+        val params = mutableListOf<String>()
+
+        // prazna lista
+        if (currentToken?.getTokenSubtype() == "rparen") {
+            return@withPosition params
         }
+
+        // prvi parametar
+        if (currentToken?.getTokenSubtype() != "identifier") return@withPosition null
+        params.add(currentToken!!.getLexem())
+        nextToken()
+
+        // pokušaj parsiranja ostalih, ali SAMO ako postoji zarez
+        while (currentToken?.getTokenSubtype() == "comma") {
+            match(TokenType.COMMA)  // sada sigurno postoji, pa matchaj
+            if (currentToken?.getTokenSubtype() != "identifier") return@withPosition null
+            params.add(currentToken!!.getLexem())
+            nextToken()
+        }
+
+        return@withPosition params
     }
 
     // <call_statement> ::= <identifier> '(' <arg_list> ')' ';'
-    private fun parseCallStatement(): Boolean = withPosition {
-        // Saving initial position
-        savePosition()
+    private fun parseCallStatement(): ProcedureCall? = withPosition {
+        println("Parsed ProcedureCall to")
+        val nameToken = currentToken
+        if (!match(TokenType.IDENTIFIER)) return@withPosition null
+        val name = nameToken!!.getLexem()
 
-        if (!match(TokenType.IDENTIFIER)) {
-            restorePosition()
-            return@withPosition false
-        }
+        if (!match(TokenType.LPAREN)) return@withPosition null
 
-        if (!match(TokenType.LPAREN)) {
-            restorePosition()
-            return@withPosition false
-        }
+        val args = parseArgumentList() ?: return@withPosition null
 
-        if (!parseArgList()) {
-            restorePosition()
-            return@withPosition false
-        }
+        if (!match(TokenType.RPAREN)) return@withPosition null
+        if (!match(TokenType.SEMI)) return@withPosition null
 
-        if (!match(TokenType.RPAREN)) {
-            println("ERROR: Expected ')' after argument list at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return@withPosition false
-        }
-
-        if (!match(TokenType.SEMI)) {
-            println("ERROR: Expected ';' after call statement at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return@withPosition false
-        }
-
-        true
+        return@withPosition ProcedureCall(name, args)
     }
 
-    // <arg_list> ::= <expression> ( ',' <expression> )* | ε
-    private fun parseArgList(): Boolean = withPosition {
+    private fun parseArgumentList(): List<Expression>? = withPosition {
+        val args = mutableListOf<Expression>()
+
         if (currentToken?.getTokenSubtype() == "rparen") {
-            return true
+            return@withPosition args // prazna lista
         }
 
-        if (!parseExpression()) {
-            return false
-        }
+        val first = parseExpressionNode() ?: return@withPosition null
+        args.add(first)
 
         while (match(TokenType.COMMA)) {
-            if (!parseExpression()) {
-                return false
-            }
+            val next = parseExpressionNode() ?: return@withPosition null
+            args.add(next)
         }
 
-        true
-    }
-
-    // <statement_list> ::= { <statement> }*
-    private fun parseStatementList(): Boolean {
-        while (parseStatement()) { /* continue */ }
-        return true
+        return@withPosition args
     }
 
     // <statement> ::= <command> | <let_statement> | <foreach_statement>
     //              | <translate_statement> | <validate_block> | <if_statement>
     //              | <for_statement> | <call_statement> | <marker> | <news> | <junction>
-    private fun parseStatement(): Boolean = withPosition {
-        attempt { parseCommand() }
+    private fun parseStatement(): ASTNode? = withPosition {
+        attempt { parseProcedureDef() } // ⬅️ procedure mora ostati prva
+            ?: attempt { parseTranslateStatement() }
             ?: attempt { parseLetStatement() }
             ?: attempt { parseForeachStatement() }
-            ?: attempt { parseTranslateStatement() }
-            ?: attempt { parseValidateBlock() }
             ?: attempt { parseIfStatement() }
             ?: attempt { parseForStatement() }
-            ?: attempt { parseCallStatement() }
-            ?: attempt { parseMarker() }
             ?: attempt { parseNews() }
             ?: attempt { parseJunction() }
-            ?: false
-    }
-
-    // <point> ::= '(' <expression> ',' <expression> ')' | <identifier>
-    private fun parsePoint(): Boolean = withPosition {
-        savePosition()
-
-        if (match(TokenType.IDENTIFIER)) {
-            return@withPosition true
-        }
-        restorePosition()
-
-        if (match(TokenType.LPAREN) &&
-            parseExpression() &&
-            match(TokenType.COMMA).also {
-                if (!it) println("ERROR: Missing comma in point at ${scanner.row}:${scanner.column}")
-            } &&
-            parseExpression() &&
-            match(TokenType.RPAREN).also {
-                if (!it) println("ERROR: Missing closing parenthesis at ${scanner.row}:${scanner.column}")
-            }
-        ) {
-            return@withPosition true
-        }
-
-        restorePosition()
-        false
+            ?: attempt { parseMarker() }
+            ?: attempt { parseValidateBlock() }
+            ?: attempt { parseCommandNode() }
+            ?: attempt { parseCallStatement() }
+            ?: attempt { parseBuilding() }
+            ?: attempt { parseLake() }
+            ?: attempt { parsePark() }
+            ?: attempt { parseRoad() }
+            ?: attempt { parseHighlightNode() }
     }
 
     // <expression> ::= <term> <expression_prime> | <neigh>
-    private fun parseExpression(): Boolean = withPosition {
+    private fun parseExpressionNode(): Expression? = withPosition {
         savePosition()
-        if (parseNeigh()) {
-            return@withPosition true
-        }
+
+        // ⬅️ prvo probaj Neigh
+        val neigh = parseNeighNode()
+        if (neigh != null) return@withPosition neigh
+
+        // ⬅️ zatim probaj PointExpr
+        val maybePoint = parsePointNode()
+        if (maybePoint != null) return@withPosition maybePoint
+
         restorePosition()
 
-        parseTerm() && parseExpressionPrime()
+        val left = parseTermNode() ?: return@withPosition null
+        return@withPosition parseExpressionPrime(left)
     }
 
     // <expression_prime> ::= <operand> <term> <expression_prime> | ε
-    private fun parseExpressionPrime(): Boolean = withPosition {
-        if (currentToken?.getTokenSubtype() in setOf("plus", "minus", "times", "divide", "lessthan", "greaterthan")) {
+    private fun parseExpressionPrime(left: Expression): Expression {
+        var result = left
+
+        while (currentToken?.getTokenSubtype() in setOf(
+                "plus",
+                "minus",
+                "times",
+                "divide",
+                "lessthan",
+                "greaterthan"
+            )
+        ) {
+            val op = currentToken!!.getLexem()
             nextToken()
-            parseTerm() && parseExpressionPrime()
-        } else {
-            true
+            val right = parseTermNode() ?: break
+            result = BinaryOp(result, op, right)
         }
+
+        return result
     }
 
     // <term> ::= <number> | <identifier> | '(' <expression> ')'
 //           | 'fst' '(' <expression> ')' | 'snd' '(' <expression> ')' | 'nil'
-    private fun parseTerm(): Boolean = withPosition {
-        println("Parsing TERM at ${scanner.row}:${scanner.column} - ${currentToken}")
-
-        when (currentToken?.getTokenSubtype()) {
+    private fun parseTermNode(): Expression? = withPosition {
+        when (val subtype = currentToken?.getTokenSubtype()) {
             "number" -> {
+                val value = currentToken!!.getLexem().toDouble()
                 nextToken()
-                true
+                NumberLiteral(value)
             }
-            TokenType.IDENTIFIER.toString().lowercase() -> {
-                nextToken()
-                true
-            }
-            TokenType.NIL.toString().lowercase() -> {
-                nextToken()
-                true
-            }
-            TokenType.FST.toString().lowercase(),
-            TokenType.SND.toString().lowercase() -> {
-                val type = currentToken?.getTokenSubtype()
-                nextToken() // consume fst/snd
 
-                match(TokenType.LPAREN).also {
-                    if (!it) println("ERROR: Missing '(' after $type at ${scanner.row}:${scanner.column}")
-                } &&
-                        parseExpression().also {
-                            if (!it) println("ERROR: Expected expression after $type at ${scanner.row}:${scanner.column}")
-                        } &&
-                        match(TokenType.RPAREN).also {
-                            if (!it) println("ERROR: Missing ')' after $type argument at ${scanner.row}:${scanner.column}")
-                        }
+            "identifier" -> {
+                val name = currentToken!!.getLexem()
+                nextToken()
+                Identifier(name)
             }
-            TokenType.LPAREN.toString() -> {
-                match(TokenType.LPAREN) &&
-                        parseExpression() &&
-                        match(TokenType.RPAREN).also {
-                            if (!it) println("ERROR: Missing closing parenthesis at ${scanner.row}:${scanner.column}")
-                        }
+
+            "nil" -> {
+                nextToken()
+                NilExpr
             }
-            else -> false
+
+            "fst", "snd" -> {
+                val isFst = subtype == "fst"
+                nextToken()
+                if (!match(TokenType.LPAREN)) return@withPosition null
+                val inner = parseExpressionNode() ?: return@withPosition null
+                if (!match(TokenType.RPAREN)) return@withPosition null
+                if (isFst) Fst(inner) else Snd(inner)
+            }
+
+            "lparen" -> {
+                match(TokenType.LPAREN)
+                val inner = parseExpressionNode() ?: return@withPosition null
+                if (!match(TokenType.RPAREN)) return@withPosition null
+                Grouped(inner)
+            }
+
+            "string" -> {
+                val value = currentToken!!.getLexem().removeSurrounding("\"")
+                nextToken()
+                StringLiteral(value)
+            }
+
+            else -> null
         }
     }
 
     // <neigh> ::= 'neigh' '(' <expression> ',' <expression> ')'
-    private fun parseNeigh(): Boolean = withPosition {
-        savePosition()
+    private fun parseNeighNode(): Expression? = withPosition {
+        if (!match(TokenType.NEIGH)) return@withPosition null
+        if (!match(TokenType.LPAREN)) return@withPosition null
 
-        if (!match(TokenType.NEIGH)) {
-            restorePosition()
-            return false
+        val location = when {
+            currentToken?.getTokenSubtype() == "identifier" -> {
+                val name = currentToken!!.getLexem()
+                nextToken()
+                LocationIdentifier(name)
+            }
+
+            currentToken?.getTokenSubtype() == "lparen" -> {
+                val pointExpr = parsePointNode() ?: return@withPosition null
+                toLocation(pointExpr) ?: return@withPosition null
+            }
+
+            else -> return@withPosition null
         }
 
-        if (!match(TokenType.LPAREN)) {
-            println("ERROR: Missing '(' after 'neigh' at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return false
-        }
+        if (!match(TokenType.COMMA)) return@withPosition null
 
-        if (!parseExpression()) {
-            println("ERROR: Expected first expression argument for 'neigh' at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return false
-        }
+        val radius = parseExpressionNode() ?: return@withPosition null
 
-        if (!match(TokenType.COMMA)) {
-            println("ERROR: Missing comma between 'neigh' arguments at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return false
-        }
+        if (!match(TokenType.RPAREN)) return@withPosition null
 
-        if (!parseExpression()) {
-            println("ERROR: Expected second expression argument for 'neigh' at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return false
-        }
+        return@withPosition Neigh(location, radius)
+    }
 
-        if (!match(TokenType.RPAREN)) {
-            println("ERROR: Missing closing ')' for 'neigh' at ${scanner.row}:${scanner.column}")
-            restorePosition()
-            return false
-        }
-
-        true
+    private fun parseCommandNode(): CommandNode? = withPosition {
+        attempt { parseDrawLineNode() }
+            ?: attempt { parseDrawBoxNode() }
+            ?: attempt { parseDrawCircleNode() }
+            ?: attempt { parseDrawBendNode() }
+            ?: attempt { parseHighlightNode() }
+            ?: attempt { parseCallStatement() }
+            ?: attempt { parseMarkerCommand() }
     }
 }
+
+
+

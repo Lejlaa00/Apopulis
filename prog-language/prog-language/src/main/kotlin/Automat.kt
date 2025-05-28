@@ -1,4 +1,3 @@
-
 class Automat {
     companion object {
         const val MAX_STATE = 100
@@ -112,8 +111,8 @@ class Automat {
         addKeyword("snd", TokenType.SND, SND_STATE)
         addKeyword("nil", TokenType.NIL, NIL_STATE)
         addKeyword("set", TokenType.SET, SET_STATE)
-        addKeyword("highlight", TokenType.SET, HIGHLIGHT_STATE)
-        addKeyword("neigh", TokenType.SET, NEIGH_STATE)
+        addKeyword("highlight", TokenType.HIGHLIGHT, HIGHLIGHT_STATE)
+        addKeyword("neigh", TokenType.NEIGH, NEIGH_STATE)
     }
 
     private fun initializeCommands() {

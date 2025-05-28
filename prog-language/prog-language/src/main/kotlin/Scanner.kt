@@ -1,8 +1,8 @@
 import java.io.InputStream
 
 class Scanner(private val input: InputStream) {
-     var row = 1
-     var column = 0
+    var row = 1
+    var column = 0
     private val automat = Automat()
 
     fun peek(): Int {
@@ -72,7 +72,6 @@ class Scanner(private val input: InputStream) {
                         tokenType = tokenTypeValue,
                         eof()
                     )
-
                     if (token.getToken() == TokenType.IGNORE.ordinal) {
                         return nextToken()
                     } else {

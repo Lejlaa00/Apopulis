@@ -21,7 +21,7 @@ class Token(
 
             TokenType.IDENTIFIER.ordinal -> {
                 when (lexem.lowercase()) {
-                    "region" ->"region"
+                    "region" -> "region"
                     "city" -> "city"
                     "road" -> "road"
                     "building" -> "building"
@@ -30,7 +30,7 @@ class Token(
                     "lake" -> "lake"
                     "junction" -> "junction"
                     "marker" -> "marker"
-                    "procedure"-> "procedure"
+                    "procedure" -> "procedure"
                     "unknown" -> "unknown"
                     "let" -> "let"
                     "foreach" -> "foreach"
