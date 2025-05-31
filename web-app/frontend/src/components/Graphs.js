@@ -1,8 +1,34 @@
 import { useEffect, useState } from 'react';
-import { Line, Pie, Bar, Scatter } from 'react-chartjs-2';
-import { Chart as ChartJS } from 'chart.js/auto';
+import { Line, Pie, Bar, Scatter, Radar } from 'react-chartjs-2';
+//import { Chart as ChartJS } from 'chart.js/auto';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faChartPie, faChartBar, faChartColumn } from '@fortawesome/free-solid-svg-icons';
+import {
+  Chart as ChartJS,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  RadialLinearScale,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+
+ChartJS.register(
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,        
+  RadialLinearScale,   
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -19,9 +45,24 @@ const Graphs = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_URL}/stats/${chartType}`, {
+        let endpoint;
+        if (chartType === 'user-interest-compass') {
+          endpoint = `${API_URL}/stats/user-interest-compass-pie`;
+        } else if (chartType === 'user-interest-compass-radar') {
+          endpoint = `${API_URL}/stats/user-interest-compass-radar`;
+        } else {
+          endpoint = `${API_URL}/stats/${chartType}`;
+        }
+
+        const response = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(chartType.startsWith('user-interest-compass') && {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+          
+            })
+          },
           body: JSON.stringify({})
         });
         
@@ -33,8 +74,15 @@ const Graphs = () => {
         console.log(`Data for ${chartType}:`, data);
         let datasets = [];
 
-        // Check if data has the expected properties
-        if (!data.labels || data.labels.length === 0) {
+        // Checking if data has the expected properties
+        if (
+          (
+            chartType !== 'user-interest-compass' &&
+            chartType !== 'user-interest-compass-radar' &&
+            (!data.labels || data.labels.length === 0)
+          )||
+          (chartType === 'user-interest-compass' && (!data.pieData || !data.pieData.labels || data.pieData.labels.length === 0))
+        ) {
           console.warn(`No labels found for ${chartType}`);
           throw new Error(`No data available for ${chartType}`);
         }
@@ -48,8 +96,10 @@ const Graphs = () => {
             datasets = [{
               label: 'Average Popularity Score',
               data: data.popularityScores,
-              borderColor: '#36A2EB',
-              backgroundColor: 'rgba(54, 162, 235, 0.2)',
+              //borderColor: '#36A2EB',
+              //backgroundColor: 'rgba(54, 162, 235, 0.2)',
+              borderColor: 'rgba(211, 188, 232, 0.6)', // pale purple
+              backgroundColor: 'rgba(113, 73, 156, 0.6)',//accent purple - main website color
               fill: true,
               tension: 0.1
             }];
@@ -61,13 +111,25 @@ const Graphs = () => {
             }
             datasets = [{
               data: data.counts,
-              backgroundColor: [
-                'rgba(54, 162, 235, 0.8)',   // Primary blue
-                'rgba(54, 162, 235, 0.6)',   // Lighter blue
-                'rgba(54, 162, 235, 0.4)',   // Even lighter blue
-                'rgba(54, 162, 235, 0.2)',   // Very light blue
-                'rgba(54, 162, 235, 1.0)'    // Full blue
-              ],
+                backgroundColor: [
+                  /* 'rgba(54, 162, 235, 0.8)',   // Primary blue
+               'rgba(54, 162, 235, 0.6)',   // Lighter blue
+               'rgba(54, 162, 235, 0.4)',   // Even lighter blue
+               'rgba(54, 162, 235, 0.2)',   // Very light blue
+               'rgba(54, 162, 235, 1.0)'    // Full blue*/
+                  'rgba(113, 73, 156, 0.6)',   // #71499c - main website color
+                  'rgba(130, 85, 170, 0.6)',   // #8255aa
+                  'rgba(147, 97, 184, 0.6)',   // #9361b8
+                  'rgba(164, 109, 198, 0.6)',  // #a46dc6
+                  'rgba(181, 121, 212, 0.6)',  // #b579d4
+                  'rgba(198, 133, 226, 0.6)',  // #c685e2
+                  'rgba(215, 145, 240, 0.6)',  // #d791f0
+                  'rgba(156, 109, 179, 0.6)',  // #9c6db3
+                  'rgba(91, 59, 121, 0.6)',    // #5b3b79
+                  'rgba(170, 136, 200, 0.6)',  // #aa88c8
+                  'rgba(191, 160, 218, 0.6)',  // #bfa0da
+                  'rgba(211, 188, 232, 0.6)'   // #d3bce8
+                ],
               borderColor: 'white',
               borderWidth: 1,
               hoverOffset: 4
@@ -81,16 +143,70 @@ const Graphs = () => {
             datasets = [{
               label: 'Total Engagement',
               data: data.engagement,
-              backgroundColor: 'rgba(54, 162, 235, 0.6)',
-              borderColor: 'rgba(54, 162, 235, 1)',
+              backgroundColor: 'rgba(113, 73, 156, 0.6)',       
+              borderColor: 'rgba(156, 109, 179, 0.6)',          
+              hoverBackgroundColor: 'rgba(160, 119, 197, 0.6)',  
+              hoverBorderColor: 'rgba(211, 188, 232, 0.6)',  
+              //backgroundColor: 'rgba(54, 162, 235, 0.6)',
+              //borderColor: 'rgba(54, 162, 235, 1)',
+              //hoverBackgroundColor: 'rgba(54, 162, 235, 0.8)',
+              //hoverBorderColor: 'rgba(54, 162, 235, 1)'
               borderWidth: 2,
               barThickness: 40,
-              borderRadius: 4,
-              hoverBackgroundColor: 'rgba(54, 162, 235, 0.8)',
-              hoverBorderColor: 'rgba(54, 162, 235, 1)'
+              borderRadius: 4
             }];
             break;
 
+          case 'user-interest-compass':
+            if (!data.pieData || !data.pieData.labels || !data.pieData.counts) {
+              console.warn('No user interest pie data found');
+              throw new Error('No interest data available');
+            }
+
+            datasets = [{
+              data: data.pieData.counts,
+              backgroundColor: [
+                  'rgba(255, 99, 132, 0.6)',   
+                  'rgba(255, 159, 64, 0.6)',  
+                  'rgba(255, 206, 86, 0.6)',   
+                  'rgba(75, 192, 192, 0.6)',   
+                  'rgba(54, 162, 235, 0.6)',   
+                  'rgba(153, 102, 255, 0.6)',  
+
+                  'rgba(201, 203, 207, 0.6)', 
+                  'rgba(255, 140, 180, 0.6)',  
+                  'rgba(100, 200, 255, 0.6)',  
+                  'rgba(255, 220, 100, 0.6)',  
+                  'rgba(120, 180, 200, 0.6)',  
+                  'rgba(180, 150, 255, 0.6)'   
+              ],
+              borderColor: 'white',
+              borderWidth: 1,
+              hoverOffset: 6
+            }];
+            break;
+
+
+          case 'user-interest-compass-radar':
+            if (!data.radarData || data.radarData.length === 0) {
+              console.warn('No radar data found');
+              throw new Error('No radar data available');
+            }
+
+            setChartData({
+              labels: data.radarData.map(item => item.category),
+              datasets: [{
+                label: 'User Interest',
+                data: data.radarData.map(item => item.views),
+                backgroundColor: 'rgba(113, 73, 156, 0.2)',      
+                borderColor: 'rgba(142, 95, 191, 1)',             
+                pointBackgroundColor: 'rgba(160, 119, 197, 1)',   
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(160, 119, 197, 1)'  
+              }]
+            });
+            return;
           default:
             throw new Error('Unknown graph type');
         }
@@ -112,6 +228,8 @@ const Graphs = () => {
     'popularity-trend': Line,
     'category-distribution': Pie,
     'engagement-by-source': Bar,
+    'user-interest-compass': Pie,
+    'user-interest-compass-radar': Radar
 
   }[chartType] || Line;
 
@@ -120,7 +238,7 @@ const Graphs = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: chartType === 'category-distribution',
+        display: chartType === 'category-distribution' || chartType === 'user-interest-compass',
         position: 'bottom',
         labels: {
           color: 'white',
@@ -200,6 +318,10 @@ const Graphs = () => {
           { value: 'popularity-trend', label: 'Popularity Trend' },
           { value: 'category-distribution', label: 'Category Distribution' },
           { value: 'engagement-by-source', label: 'Engagement by Source' },
+          ...(localStorage.getItem('token') ? [
+            { value: 'user-interest-compass', label: 'User Interest Compass' },
+            { value: 'user-interest-compass-radar', label: 'User Interest Compass - Radar' }
+          ] : [])
         ].map(option => (
           <option key={option.value} value={option.value}>
             {option.label}

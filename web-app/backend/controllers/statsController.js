@@ -3,8 +3,9 @@ const Category = require('../models/categoryModel');
 const Source = require('../models/sourceModel');
 const Vote = require('../models/voteModel');
 const Comment = require('../models/commentModel');
+const User = require('../models/userModel');
 
-exports.getStats = async (req, res) => {
+async function getStats(req, res) {
     const { type } = req.params;
     const { startDate, endDate } = req.body;
 
@@ -20,8 +21,7 @@ exports.getStats = async (req, res) => {
                 break;
             case 'engagement-by-source':
                 data = await getEngagementBySource();
-                break;
-
+                break;     
             default:
                 return res.status(400).json({ error: 'Invalid stats type' });
         }
@@ -219,4 +219,105 @@ async function getEngagementBySource() {
     }
 }
 
+async function getCombinedUserCategoryData(userId, startDate, endDate) {
+    try {
+        const dateMatch = {};
+        if (startDate) dateMatch.$gte = new Date(startDate);
+        if (endDate) dateMatch.$lte = new Date(endDate);
+
+        const createdAtFilter = (startDate || endDate) ? [{ createdAt: dateMatch }] : [];
+
+        const [viewedNews, votedNews, commentedNews, bookmarkedUser] = await Promise.all([
+            // Views
+            NewsItem.find({
+                $and: [
+                    { viewedBy: userId },
+                    ...createdAtFilter
+                ]
+            }).populate('categoryId'),
+
+            // Votes
+            Vote.find({
+                $and: [
+                    { userId },
+                    ...createdAtFilter
+                ]
+            }).populate({
+                path: 'newsItemId',
+                populate: { path: 'categoryId' }
+            }),
+
+            // Comments
+            Comment.find({
+                $and: [
+                    { userId },
+                    ...createdAtFilter
+                ]
+            }).populate({
+                path: 'newsItemId',
+                populate: { path: 'categoryId' }
+            }),
+
+            // Bookmarks
+            User.findById(userId).populate({
+                path: 'bookmarks',
+                match: (startDate || endDate) ? { createdAt: dateMatch } : {},
+                populate: { path: 'categoryId' }
+            })
+        ]);
+
+        const categoryCounts = {};
+
+        // Count viewed
+        viewedNews.forEach(news => {
+            const cat = news.categoryId?.name || 'Uncategorized';
+            categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+        });
+
+        // Count voted
+        votedNews.forEach(vote => {
+            const cat = vote.newsItemId?.categoryId?.name || 'Uncategorized';
+            categoryCounts[cat] = (categoryCounts[cat] || 0) + 2;
+        });
+
+        // Count comments
+        commentedNews.forEach(comment => {
+            const cat = comment.newsItemId?.categoryId?.name || 'Uncategorized';
+            categoryCounts[cat] = (categoryCounts[cat] || 0) + 3;
+        });
+
+        // Count bookmarks
+        if (bookmarkedUser && bookmarkedUser.bookmarks) {
+            bookmarkedUser.bookmarks.forEach(news => {
+                const cat = news.categoryId?.name || 'Uncategorized';
+                categoryCounts[cat] = (categoryCounts[cat] || 0) + 4;
+            });
+        }
+
+        const pieData = {
+            labels: Object.keys(categoryCounts),
+            counts: Object.values(categoryCounts)
+        };
+
+        const radarData = Object.entries(categoryCounts).map(([category, views]) => ({
+            category,
+            views
+        }));
+
+        console.log('Radar data:', radarData);
+        return { pieData, radarData };
+
+    } catch (err) {
+        console.error('Error in getCombinedUserCategoryData:', err);
+        return {
+            pieData: { labels: [], counts: [] },
+            radarData: []
+        };
+    }
+}
+
+module.exports = {
+    getStats,
+    getCombinedUserCategoryData, 
+  };
 

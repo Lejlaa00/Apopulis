@@ -29,7 +29,8 @@ const statsRoutes = require('./routes/statsRoutes');
 app.use(cors({
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 }));
 app.use(express.json());
 
@@ -72,6 +73,6 @@ app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
 
-cron.schedule('* * * * *', async () => {   //testing every one minute->'* * * * *'
+cron.schedule('0 * * * *', async () => {   //testing every one minute->'* * * * *'
     await recalculateAndCachePopularity(); //every hour ->'0 * * * *'
 });
