@@ -11,5 +11,6 @@ data class NewsItem(
     val publishedAt: LocalDateTime,
     val imageUrl: String? = null,
     val category: String? = null,
+    val location: String? = null,
     val tags: List<String> = emptyList()
 ) 

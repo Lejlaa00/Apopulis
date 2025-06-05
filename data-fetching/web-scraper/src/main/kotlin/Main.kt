@@ -2,20 +2,37 @@ package org.example
 
 import kotlinx.coroutines.*
 import scraper.U24urScraper
+import model.NewsItem
 import scraper.N1infoScraper
+import org.example.nlp.TfidfCalculator
+import org.example.nlp.Categorizer
 
 fun main() = runBlocking {
     val scrapers = listOf(
         U24urScraper(),
-        //N1infoScraper()
+        N1infoScraper()
     )
+
     while (true) {
         println("\n--- Scraping cycle started at ${java.time.LocalDateTime.now()} ---")
+
         scrapers.forEach { scraper ->
             launch {
                 println("\nRunning scraper: ${scraper.sourceName}")
                 val news = scraper.scrape()
-                news.forEachIndexed { idx, item ->
+
+                val tfidfResults = TfidfCalculator.computeTopKeywords(news)
+
+                val enrichedNews: List<NewsItem> = news.map { item ->
+                    val keywords = tfidfResults[item] ?: emptyList()
+                    item.copy(
+                        tags = keywords,
+                        category = Categorizer.categorizeByText(item),
+                        location = Categorizer.extractLocationByText(item)
+                    )
+                }
+
+                enrichedNews.forEachIndexed { idx, item ->
                     println("\nNews #${idx + 1}")
                     println("Heading: ${item.heading}")
                     println("Content: ${item.content}")
@@ -26,9 +43,17 @@ fun main() = runBlocking {
                     println("Image URL: ${item.imageUrl}")
                     println("Tags: ${item.tags}")
                     println("Author: ${item.author}")
+                    println("")
+                    println("===> Location: ${item.location ?: "unknown"}")
+                    println("===> Category: ${item.category ?: "unknown"}")
+                    println("===> Tags: ${item.tags.joinToString(", ")}")
+                    println("-------------------------------------")
+
                 }
+
+                println("\n────────────────────────────────────────────")
             }
         }
-        delay(10 * 60 * 1000L) // 10 minutes
+        delay(10 * 60 * 1000L)  // 10 minues
     }
 }
