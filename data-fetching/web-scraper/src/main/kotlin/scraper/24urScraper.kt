@@ -50,7 +50,7 @@ class U24urScraper : BaseScraper(
             val publishedAt = parseDate(publishedAtText)
             val imageUrl = doc.selectFirst("figure img")?.absUrl("src")
             NewsItem(
-                heading = cleanText(heading),
+                title = cleanText(heading),
                 content = cleanText(content),
                 author = author,
                 source = sourceName,

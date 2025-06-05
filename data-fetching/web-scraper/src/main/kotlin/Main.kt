@@ -1,11 +1,13 @@
 package org.example
 
 import kotlinx.coroutines.*
-import scraper.U24urScraper
 import model.NewsItem
+import scraper.U24urScraper
 import scraper.N1infoScraper
+import scraper.*
 import org.example.nlp.TfidfCalculator
 import org.example.nlp.Categorizer
+
 
 fun main() = runBlocking {
     val scrapers = listOf(
@@ -34,7 +36,7 @@ fun main() = runBlocking {
 
                 enrichedNews.forEachIndexed { idx, item ->
                     println("\nNews #${idx + 1}")
-                    println("Heading: ${item.heading}")
+                    println("Heading: ${item.title}")
                     println("Content: ${item.content}")
                     println("Source: ${item.source}")
                     println("URL: ${item.url}")
@@ -49,6 +51,7 @@ fun main() = runBlocking {
                     println("===> Tags: ${item.tags.joinToString(", ")}")
                     println("-------------------------------------")
 
+                    NewsSender.send(item)
                 }
 
                 println("\n────────────────────────────────────────────")

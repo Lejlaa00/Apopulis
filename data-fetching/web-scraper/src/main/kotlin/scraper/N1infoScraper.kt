@@ -134,7 +134,7 @@ class N1infoScraper : BaseScraper(
                             }
 
                             NewsItem(
-                                heading = cleanText(headingText),
+                                title = cleanText(headingText),
                                 content = cleanText(contentText),
                                 author = authorText?.let { cleanText(it) },
                                 source = sourceName,

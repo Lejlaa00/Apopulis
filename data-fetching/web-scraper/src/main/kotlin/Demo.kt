@@ -10,7 +10,7 @@ fun main() = runBlocking {
     val news = scraper.scrape()
     news.forEachIndexed { idx, item ->
         println("\nNews #${idx + 1}")
-        println("Heading: ${item.heading}")
+        println("Heading: ${item.title}")
         println("Content: ${item.content}")
         println("Source: ${item.source}")
         println("URL: ${item.url}")

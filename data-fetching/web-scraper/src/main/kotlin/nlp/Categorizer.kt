@@ -19,7 +19,7 @@ object Categorizer {
     }
 
     fun categorizeByText(item: NewsItem): String? {
-        val text = "${item.heading} ${item.content}".lowercase()
+        val text = "${item.title} ${item.content}".lowercase()
             .replace(Regex("[^a-zčšžđć ]"), " ")
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }
@@ -40,7 +40,7 @@ object Categorizer {
     }
 
     fun extractLocationByText(item: NewsItem): String {
-        val text = "${item.heading} ${item.content}".lowercase()
+        val text = "${item.title} ${item.content}".lowercase()
             .replace(Regex("[^a-zčšžđć ]"), " ")
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }

@@ -3,7 +3,7 @@ package model
 import java.time.LocalDateTime
 
 data class NewsItem(
-    val heading: String,
+    val title: String,
     val content: String,
     val author: String?,
     val source: String,
