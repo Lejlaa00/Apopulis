@@ -1,6 +1,8 @@
 const NewsItem = require('../models/newsItemModel');
 const Comment = require('../models/commentModel');
 const Vote = require('../models/voteModel');
+const Category = require('../models/categoryModel');
+const Source = require('../models/sourceModel'); 
 const { getUserTopInterests } = require('../helpers/userRecommendations');
 const { calculatePopularity } = require('../utils/popularity');
 const jwt = require('jsonwebtoken');
@@ -83,12 +85,16 @@ exports.getNewsById = async (req, res) => {
 // Create a new news item
 exports.createNews = async (req, res) => {
     try {
-        const { title, summary, content, publishedAt, sourceId, locationId, category, url } = req.body;
+        const { title, summary, content, publishedAt, source, sourceId, locationId, category, url , imageUrl, author, tags} = req.body;
 
         const categoryDoc = await Category.findOne({ name: category });
-
         if (!categoryDoc) {
             return res.status(400).json({ msg: `Category '${category}' does not exist.` });
+        }
+
+        const sourceDoc = await Source.findOne({ name: source });
+        if (!sourceDoc) {
+            return res.status(400).json({ msg: `Source '${source}' does not exist.` });
         }
 
         const newsItem = new NewsItem({
@@ -96,11 +102,14 @@ exports.createNews = async (req, res) => {
             summary,
             content,
             publishedAt: publishedAt || new Date(),
-            sourceId,
+            sourceId: sourceDoc._id,
             locationId,
             categoryId: categoryDoc._id,
-            url
-        });
+            url,
+            imageUrl: imageUrl || 'http://localhost:5001/images/default-image.jpg',
+            author,
+            tags
+            });
 
         await newsItem.save();
         res.status(201).json(newsItem);

@@ -34,6 +34,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
+
+const path = require('path');
+app.use('/images', express.static(path.join(__dirname, 'images')));
+
+
 // Request logging middleware
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
