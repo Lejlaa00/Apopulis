@@ -36,10 +36,9 @@
 
 .fade-chart {
   background-color: var(--color-bg-darker);
-  padding: 1rem;
   border-radius: 8px;
   flex: 1;
-  min-height: 450px;
+  min-height: 420px;
   width: 100%;
 }
 
@@ -49,4 +48,19 @@
   align-items: center;
   height: 300px;
   color: var(--color-text-white);
+}
+
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.graph-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-light);
+  margin-bottom: 0.40rem;
+  margin-top: -0.60rem;
+  text-align: center;
 }
