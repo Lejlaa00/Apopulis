@@ -135,3 +135,12 @@ footer.footer {
   background: var(--color-active-scroll); 
   border-radius: 4px;
 }
+
+.fade-chart {
+  opacity: 1;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.fade-chart.hidden {
+  opacity: 0;
+}

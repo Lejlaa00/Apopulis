@@ -37,8 +37,16 @@ const Graphs = () => {
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-
+  const chartTypesToCycle = [
+    'popularity-trend',
+    'category-distribution',
+    'engagement-by-source',
+    ...(localStorage.getItem('token') ? [
+      'user-interest-compass',
+      'user-interest-compass-radar'
+    ] : [])
+  ];
+  const [showChart, setShowChart] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -162,6 +170,8 @@ const Graphs = () => {
               console.warn('No user interest pie data found');
               throw new Error('No interest data available');
             }
+            
+            setChartData({ labels: data.pieData.labels, datasets });
 
             datasets = [{
               data: data.pieData.counts,
@@ -222,6 +232,20 @@ const Graphs = () => {
     };
 
     fetchData();
+
+    const interval = setInterval(() => {
+      setShowChart(false); // fade out
+      setTimeout(() => {
+        setChartType(prev => {
+          const currentIndex = chartTypesToCycle.indexOf(prev);
+          const nextIndex = (currentIndex + 1) % chartTypesToCycle.length;
+          return chartTypesToCycle[nextIndex];
+        });
+        setShowChart(true); // fade back in
+      }, 500); // match with CSS transition
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [chartType]);
 
   const ChartComponent = {
@@ -268,33 +292,21 @@ const Graphs = () => {
         titleColor: 'white',
         bodyColor: 'white',
         padding: 10,
-        cornerRadius: 4
+        cornerRadius: 4,
+        callbacks: {
+          label: function (context) {
+            const label = chartData.labels?.[context.dataIndex] || '';
+            return `${label}: ${context.parsed}`;
+          }
+        }
       }
     },
-    scales: chartType !== 'category-distribution' ? {
-      x: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        },
-        ticks: {
-          color: 'white',
-          font: {
-            size: 11
-          }
-        }
-      },
-      y: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        },
-        ticks: {
-          color: 'white',
-          font: {
-            size: 11
-          }
-        }
+    scales: ['category-distribution', 'user-interest-compass'].includes(chartType)
+    ? undefined
+    : {
+        x: { /* ... */ },
+        y: { /* ... */ }
       }
-    } : undefined
   };
 
   const getIcon = (type) => {
@@ -309,33 +321,15 @@ const Graphs = () => {
 
   return (
     <div className="graphs-content">
-      <select 
-        value={chartType} 
-        onChange={(e) => setChartType(e.target.value)}
-        className="chart-selector"
-      >
-        {[
-          { value: 'popularity-trend', label: 'Popularity Trend' },
-          { value: 'category-distribution', label: 'Category Distribution' },
-          { value: 'engagement-by-source', label: 'Engagement by Source' },
-          ...(localStorage.getItem('token') ? [
-            { value: 'user-interest-compass', label: 'User Interest Compass' },
-            { value: 'user-interest-compass-radar', label: 'User Interest Compass - Radar' }
-          ] : [])
-        ].map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-
       <div className="chart-container">
         {loading ? (
-          <div className="loading-spinner">Loading...</div>
+          <div className="loading-spinner"> </div>
         ) : error ? (
           <div className="error-message">{error}</div>
         ) : (
+          <div className={`fade-chart ${showChart ? '' : 'hidden'}`}>
           <ChartComponent data={chartData} options={chartOptions} />
+        </div>
         )}
       </div>
     </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import SortedNewsHeader from './SortedNewsHeader';
 import { authFetch } from './authFetch';
 import { useNavigate } from 'react-router-dom';
-
+import { toast } from 'react-toastify';
 import '../css/sortedNews.css'; 
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
@@ -21,7 +21,7 @@ export default function SortedNews({ onSelect }) {
   async function fetchCategories() {
     const res = await fetch(`${API_URL}/categories`);
     const data = await res.json();
-    setCategories(data); // NEMA .categories jer već dobivaš niz
+    setCategories(data); 
   }
   fetchCategories();
 }, []);
@@ -46,6 +46,9 @@ export default function SortedNews({ onSelect }) {
             }
           }
         }
+        else if (filter === 'latest') {
+          url = `${API_URL}/news?limit=0`;
+        }
 
         // Allow search in all except bookmark
         if (filter !== 'bookmark' && searchTerm.trim() !== '') {
@@ -64,10 +67,10 @@ export default function SortedNews({ onSelect }) {
         if (res.ok) {
           setNews(data.news || data);
         } else {
-          alert(data.msg || 'Failed to load news');
+          toast.error(data.msg || 'Failed to load news');
         }
       } catch (err) {
-        alert('Error loading news');
+        toast.error('Error loading news');
         console.error(err);
       } finally {
         setLoading(false);
@@ -93,10 +96,11 @@ export default function SortedNews({ onSelect }) {
       onFilterChange={setFilter}
       onCategoryChange={setSelectedCategory}
       onSearch={setSearchTerm}
+      isAuthenticated={!!localStorage.getItem('token')}
     />
 
     <div className="sorted-news-content">
-      {loading && <div className="news-loading">Loading...</div>}
+      {loading && <div className="news-loading"> </div>}
       {!loading && news.length === 0 && (
         <div className="news-empty">No news items found.</div>
       )}

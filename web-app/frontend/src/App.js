@@ -7,6 +7,8 @@ import Register from "./components/Register";
 import Home from "./components/Home";
 import NewsDetail from './components/NewsDetail';
 import Profile from './components/Profile';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 
 function App() {
@@ -29,6 +31,18 @@ function App() {
             <Route path="/profile" element={<Profile />} />
           </Routes>
         </Layout>
+
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+        />
       </UserContext.Provider>
     </BrowserRouter>
   );
