@@ -34,14 +34,13 @@
   border-color: var(--color-accent-blue);
 }
 
-.chart-container {
+.fade-chart {
   background-color: var(--color-bg-darker);
   padding: 1rem;
   border-radius: 8px;
   flex: 1;
-  min-height: 300px;
+  min-height: 450px;
   width: 100%;
-  margin-top: 0.5rem;
 }
 
 .loading-spinner {

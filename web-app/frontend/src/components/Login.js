@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from "../userContext";
+import { toast } from 'react-toastify';
 import '../css/login.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
@@ -22,12 +23,12 @@ function Login() {
 
             const data = await res.json();
             if (res.ok) {
-                alert('Login successful!');
+                toast('Login successful!');
                 localStorage.setItem("token", data.token);
                 setUserContext(data.user); 
                 navigate('/');
             } else {
-                alert(data.msg || 'Login failed');
+                toast(data.msg || 'Login failed');
             }
         } catch (err) {
             console.error('Error:', err);

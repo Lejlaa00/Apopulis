@@ -13,6 +13,7 @@ import '../css/mapSection.css';
 import '../css/latestNews.css';
 import '../css/sortedNews.css';
 import '../css/graphs.css';
+import { toast } from 'react-toastify';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -36,10 +37,10 @@ export default function Home() {
         if (res.ok || res.status === 200) {
           setNewsList(data.news);
         } else {
-          alert(data.msg || 'Failed to load news');
+          toast.error(data.msg || 'Failed to load news');
         }
       } catch (err) {
-        alert('Error loading news');
+        toast.error('Error loading news');
         console.error(err);
       } finally {
         setLoading(false);
@@ -139,7 +140,11 @@ export default function Home() {
   }, [user]);
 
   const handleVote = async (newsId, voteType) => {
-    if (!user) return alert('You must be logged in to vote.');
+    if (!user) return toast.warn('You must be logged in to perform this action.', {
+      position: "top-right",
+      autoClose: 3000,
+      theme: "dark",
+    });
     try {
       const res = await authFetch(`${API_URL}/votes/news/${newsId}`, {
         method: 'POST',
@@ -162,16 +167,20 @@ export default function Home() {
         }
       } else {
         const data = await res.json();
-        alert(data.msg || 'Vote failed');
+        toast.error(data.msg || 'Vote failed');
       }
     } catch (err) {
-      alert('Error processing vote');
+      toast.error('Error processing vote');
       console.error(err);
     }
   };
 
   const handleToggleBookmark = async (newsId) => {
-    if (!user) return alert('You must be logged in to bookmark.');
+    if (!user) return toast.warn('You must be logged in to perform this action.', {
+      position: "top-right",
+      autoClose: 3000,
+      theme: "dark",
+    });
     const isBookmarked = bookmarkedIds.has(newsId);
     try {
       const res = await authFetch(`${API_URL}/users/bookmarks/${newsId}`, {
@@ -185,10 +194,10 @@ export default function Home() {
         });
       } else {
         const data = await res.json();
-        alert(data.msg || 'Failed to update bookmark');
+        toast.error(data.msg || 'Failed to update bookmark');
       }
     } catch (err) {
-      alert('Error updating bookmark');
+      toast.error('Error updating bookmark');
       console.error(err);
     }
   };
@@ -198,9 +207,13 @@ export default function Home() {
   };
 
   const handleSubmitComment = async (newsId) => {
-    if (!user) return alert('You must be logged in to comment.');
+    if (!user) return toast.warn('You must be logged in to perform this action.', {
+      position: "top-right",
+      autoClose: 3000,
+      theme: "dark",
+    });
     const content = newComments[newsId];
-    if (!content || content.trim() === '') return alert('Comment cannot be empty.');
+    if (!content || content.trim() === '') return toast('Comment cannot be empty.');
     try {
       const res = await authFetch(`${API_URL}/comments/${newsId}`, {
         method: 'POST',
@@ -216,10 +229,10 @@ export default function Home() {
         setNewComments(prev => ({ ...prev, [newsId]: '' }));
       } else {
         const data = await res.json();
-        alert(data.msg || 'Failed to add comment');
+        toast.error(data.msg || 'Failed to add comment');
       }
     } catch (err) {
-      alert('Error submitting comment');
+      toast.error('Error submitting comment');
       console.error(err);
     }
   };

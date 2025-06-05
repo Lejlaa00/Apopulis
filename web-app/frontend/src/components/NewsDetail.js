@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faThumbsUp, faThumbsDown, faStar, faLocationDot, faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
 import { faComment } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 import '../css/newsDetail.css';
 
@@ -137,7 +138,11 @@ function NewsDetail({ id: propId, embedded = false }) {
 
     //Upvoting or downvoting newsItem
     const handleVote = async (type) => {
-        if (!user) return alert('Login required');
+        if (!user) return toast.warn('You must be logged in to perform this action.', {
+            position: "top-right",
+            autoClose: 3000,
+            theme: "dark",
+        });
         const res = await authFetch(`${API_URL}/votes/news/${id}`, {
             method: 'POST',
             body: JSON.stringify({ type }),
@@ -168,12 +173,16 @@ function NewsDetail({ id: propId, embedded = false }) {
     };
 
     const handleReply = async (parentCommentId, content) => {
-        if (!user) return alert('Login required');
-        if (!content.trim()) return alert('Reply cannot be empty');
+        if (!user) return toast.warn('You must be logged in to perform this action.', {
+            position: "top-right",
+            autoClose: 3000,
+            theme: "dark",
+        });
+        if (!content.trim()) return toast('Reply cannot be empty');
 
         const isReplyToReply = !comments.some(c => c._id === parentCommentId);
         if (isReplyToReply) {
-            return alert('You can only reply to top-level comments.');
+            return toast('You can only reply to top-level comments.');
         }
         const res = await authFetch(`${API_URL}/comments/news/${id}`, {
             method: 'POST',
@@ -204,7 +213,7 @@ function NewsDetail({ id: propId, embedded = false }) {
                 return addReplyRecursively(prevComments);
             });
         } else {
-            alert('Failed to submit reply');
+            toast.warn('Failed to submit reply');
         }
     };
 
@@ -213,7 +222,7 @@ function NewsDetail({ id: propId, embedded = false }) {
             setEditedContent(comment.content);
             setEditingCommentId(comment._id);
         } else {
-            alert("You can only edit your own comments.");
+            toast("You can only edit your own comments.");
         }
     };
       
@@ -226,7 +235,7 @@ function NewsDetail({ id: propId, embedded = false }) {
     //Editing comment
     const handleEditComment = async (commentId) => {
         if (!editedContent.trim()) {
-            alert('Comment cannot be empty.');
+            toast('Comment cannot be empty.');
             return;
         }
 
@@ -243,7 +252,7 @@ function NewsDetail({ id: propId, embedded = false }) {
                 setEditedContent('');
             } else {
                 const data = await res.json();
-                alert(data.msg || 'Failed to update comment');
+                toast.warn(data.msg || 'Failed to update comment');
             }
         } catch (err) {
             console.error('Error updating comment:', err);
@@ -253,11 +262,11 @@ function NewsDetail({ id: propId, embedded = false }) {
     //Adding comment
     const handleSubmitComment = async () => {
         if (!user) {
-            alert('You must be logged in to comment.');
+            toast('You must be logged in to comment.');
             return;
         }
         if (!newComment.trim()) {
-            alert('Comment cannot be empty.');
+            toast('Comment cannot be empty.');
             return;
         }
         const res = await authFetch(`${API_URL}/comments/news/${id}`, {
@@ -291,16 +300,20 @@ function NewsDetail({ id: propId, embedded = false }) {
                 }
             } else {
                 const data = await res.json();
-                alert(data.msg || 'Failed to delete comment');
+                toast.warn(data.msg || 'Failed to delete comment');
             }
         } catch (err) {
             console.error('Error deleting comment:', err);
-            alert('Error deleting comment');
+            toast('Error deleting comment');
         }
     };
 
     const handleToggleBookmark = async () => {
-        if (!user) return alert('Login required');
+        if (!user) return toast.warn('You must be logged in to perform this action.', {
+            position: "top-right",
+            autoClose: 3000,
+            theme: "dark",
+        });
         const res = await authFetch(`${API_URL}/users/bookmarks/${id}`, {
             method: isBookmarked ? 'DELETE' : 'POST',
         });
@@ -311,7 +324,7 @@ function NewsDetail({ id: propId, embedded = false }) {
     if (!news) return <p>Not found</p>;
 
     return (
-        <div className="news-detail-grid">
+        <div className="news-detail-grid news-detail-enter">
             <div className="news-content">
                 <h2>{news.title}</h2>
                 <p className="news-meta-published">
@@ -330,6 +343,16 @@ function NewsDetail({ id: propId, embedded = false }) {
                         </div>
                         <span><strong>{news.locationId?.name || "N/A"}</strong></span>
                     </div>
+                    <div className="news-meta-divider-vertical"></div>
+                    <div className="text-to-speech-container" onClick={handleTextToSpeech}>
+                    <FontAwesomeIcon 
+                        icon={isSpeaking ? faVolumeXmark : faVolumeHigh} 
+                        className={`text-to-speech-icon ${isSpeaking ? 'speaking' : ''}`} 
+                    />
+                    <span className="text-to-speech-label">
+                        {isSpeaking ? 'Stop Reading' : 'Read Article'}
+                    </span>
+                </div>
                 </div>
                 <hr className="news-meta-divider" />
                 {news.imageUrl && (
@@ -375,16 +398,6 @@ function NewsDetail({ id: propId, embedded = false }) {
             </div>
 
             <div className="side-panel">
-                <div className="text-to-speech-container" onClick={handleTextToSpeech}>
-                    <FontAwesomeIcon 
-                        icon={isSpeaking ? faVolumeXmark : faVolumeHigh} 
-                        className={`text-to-speech-icon ${isSpeaking ? 'speaking' : ''}`} 
-                    />
-                    <span className="text-to-speech-label">
-                        {isSpeaking ? 'Stop Reading' : 'Read Article'}
-                    </span>
-                </div>
-
                 <div className="news-action-bar">
                     <div className={`news-action-item ${userVote === 'UP' ? 'active-vote' : ''}`} onClick={() => handleVote('UP')}>
                         <FontAwesomeIcon icon={faThumbsUp} className="news-action-icon" />
@@ -449,7 +462,6 @@ function NewsDetail({ id: propId, embedded = false }) {
             </div>
         </div>
     );
-
 }
 
 export default NewsDetail;

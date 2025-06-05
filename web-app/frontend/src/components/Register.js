@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../css/login.css'; 
 
+import { toast } from 'react-toastify';
+
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 function Register() {
@@ -21,10 +23,10 @@ function Register() {
 
             const data = await res.json();
             if (res.ok) {
-                alert('Registration successful!');
+                toast('Registration successful!');
                 navigate('/login');
             } else {
-                alert(data.msg || 'Registration failed.');
+                toast(data.msg || 'Registration failed.');
             }
         } catch (err) {
             console.error('Error:', err);

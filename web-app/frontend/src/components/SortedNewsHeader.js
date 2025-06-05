@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import HoverDropdown from './HoverDropdown'; // ili gdje god smjestiš komponentu
+import HoverDropdown from './HoverDropdown'; 
 import '../css/sortedNewsHeader.css';
 
-export default function SortedNewsHeader({ categories, onFilterChange, onCategoryChange, onSearch }) {
+export default function SortedNewsHeader({ categories, onFilterChange, onCategoryChange, onSearch, isAuthenticated }) {
   const [filter, setFilter] = useState('trending');
   const [category, setCategory] = useState('all');
   const [searchText, setSearchText] = useState('');
@@ -25,8 +25,9 @@ export default function SortedNewsHeader({ categories, onFilterChange, onCategor
   };
 
   const filterOptions = [
+    { value: 'latest', label: 'Latest' },
     { value: 'trending', label: 'Trending' },
-    { value: 'bookmark', label: 'Bookmark' },
+    ...(isAuthenticated ? [{ value: 'bookmark', label: 'Bookmark' }] : [])
   ];
 
   const categoryOptions = [
@@ -35,8 +36,9 @@ export default function SortedNewsHeader({ categories, onFilterChange, onCategor
 ];
 
 
-  return (
-    <div className="sorted-news-header">
+return (
+  <div className="sorted-news-header">
+    <div className="header-box">
       <div className="dropdown-group">
         <HoverDropdown
           options={filterOptions}
@@ -58,5 +60,6 @@ export default function SortedNewsHeader({ categories, onFilterChange, onCategor
         className="search-input"
       />
     </div>
-  );
+  </div>
+);
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faReply, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { toast } from 'react-toastify';
 
 function CommentItem({
     comment,
@@ -21,7 +22,7 @@ function CommentItem({
 
     const handleSubmitReply = () => {
         if (!replyContent.trim()) {
-            alert("Comment cannot be empty.");
+            toast("Comment cannot be empty.");
             return;
         }
         onReply(comment._id, replyContent);
