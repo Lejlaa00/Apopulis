@@ -320,6 +320,7 @@ const Graphs = () => {
   };
 
   return (
+    
     <div className="graphs-content">
       <div className="chart-container">
         {loading ? (
@@ -327,8 +328,19 @@ const Graphs = () => {
         ) : error ? (
           <div className="error-message">{error}</div>
         ) : (
+         <div className="chart-container">
+          <h3 className="graph-title">
+            {{
+              'popularity-trend': 'News Popularity Over Time',
+              'category-distribution': 'News by Category',
+              'engagement-by-source': 'Engagement by Source',
+              'user-interest-compass': 'Your Interests Breakdown',
+              'user-interest-compass-radar': 'Your Interest Radar'
+            }[chartType]}
+          </h3>
           <div className={`fade-chart ${showChart ? '' : 'hidden'}`}>
-          <ChartComponent data={chartData} options={chartOptions} />
+            <ChartComponent data={chartData} options={chartOptions} />
+          </div>
         </div>
         )}
       </div>

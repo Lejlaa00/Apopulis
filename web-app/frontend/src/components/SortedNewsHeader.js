@@ -25,13 +25,13 @@ export default function SortedNewsHeader({ categories, onFilterChange, onCategor
   };
 
   const filterOptions = [
-    { value: 'latest', label: 'Latest' },
-    { value: 'trending', label: 'Trending' },
-    ...(isAuthenticated ? [{ value: 'bookmark', label: 'Bookmark' }] : [])
+    { value: 'latest', label: 'Latest ' },
+    { value: 'trending', label: 'Trending ' },
+    ...(isAuthenticated ? [{ value: 'bookmark', label: 'Bookmark ' }] : [])
   ];
 
   const categoryOptions = [
-  { value: 'all', label: 'All Categories' },
+  { value: 'all', label: 'All Categories ' },
   ...categories.map(cat => ({ value: cat.name, label: cat.name }))
 ];
 
