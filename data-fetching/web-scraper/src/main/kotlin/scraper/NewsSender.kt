@@ -12,7 +12,7 @@ import java.io.IOException
 object NewsSender {
     private val gson = Gson()
     private val client = OkHttpClient()
-    private const val API_URL = "http://localhost:3001/api/news"
+    private const val API_URL = "http://localhost:5001/api/news"
 
     fun send(newsItem: NewsItem) {
         val json = Gson().toJson(mapOf(
@@ -31,7 +31,7 @@ object NewsSender {
 
         val requestBody = json.toRequestBody("application/json".toMediaType())
         val request = Request.Builder()
-            .url("http://localhost:3000/api/news")
+            .url("http://localhost:5001/api/news")
             .post(requestBody)
             .build()
 
