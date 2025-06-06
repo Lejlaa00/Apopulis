@@ -15,6 +15,7 @@ import scraper.N1infoScraper
 import scraper.U24urScraper
 import ui.ui.screens.*
 import ui.util.Storage
+import scraper.NewsSender
 
 @Composable
 @Preview
@@ -35,14 +36,16 @@ fun App() {
                         currentScreen = "editNews"
                     },
                     onDelete = { toDelete ->
+                        scraper.NewsSender.delete(toDelete)
                         allNews = allNews.filter { it.url != toDelete.url }
                         Storage.save(allNews)
                     },
                     onNavigate = { currentScreen = it }
                 )
                 "addNews" -> AddNewsScreen(
-                    onSave = {
-                        allNews = allNews + it
+                    onSave = { item ->
+                        NewsSender.send(item)
+                        allNews = allNews + item
                         Storage.save(allNews)
                         currentScreen = "newsList"
                     },
@@ -51,7 +54,13 @@ fun App() {
                 "editNews" -> NewsEditScreen(
                     item = editingItem,
                     onSave = {
-                        allNews = allNews.map { n -> if (n.url == it.url) it else n }
+                        val enriched = it.copy(
+                            id = editingItem?.id,
+                            category = it.category ?: Categorizer.categorizeByText(it),
+                            location = Categorizer.extractLocationByText(it)
+                        )
+                        allNews = allNews.map { n -> if (n.url == enriched.url) enriched else n }
+                        scraper.NewsSender.update(enriched)
                         currentScreen = "newsList"
                     },
                     onNavigate = { currentScreen = it }
@@ -73,8 +82,18 @@ fun App() {
 
                             val enrichedNews = scraped.map { item ->
                                 item.copy(
-                                    category = Categorizer.categorizeByText(item)
+                                    category = Categorizer.categorizeByText(item),
+                                    location = Categorizer.extractLocationByText(item)
+
                                 )
+                            }
+
+                            enrichedNews.forEach {
+                                try {
+                                    NewsSender.send(it)
+                                } catch (e: Exception) {
+                                    println("Failed to send: ${e.message}")
+                                }
                             }
 
                             val newItems = enrichedNews.filter { scrapedItem ->

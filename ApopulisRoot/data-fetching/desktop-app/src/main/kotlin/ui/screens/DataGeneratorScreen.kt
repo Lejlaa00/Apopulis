@@ -11,6 +11,10 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
+import org.example.nlp.Categorizer
+import scraper.NewsSender
+
+
 
 @Composable
 fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (String) -> Unit) {
@@ -43,7 +47,7 @@ fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (Strin
                 val from = try { LocalDateTime.parse(startDate, formatter) } catch (e: Exception) { LocalDateTime.now().minusDays(30) }
                 val to = try { LocalDateTime.parse(endDate, formatter) } catch (e: Exception) { LocalDateTime.now() }
 
-                val items = (1..(count.toIntOrNull() ?: 0)).map {
+                val rawItems = (1..(count.toIntOrNull() ?: 0)).map {
                     val randomTime = from.plusSeconds(Random.nextLong(0, to.toEpochSecond(ZoneOffset.UTC) - from.toEpochSecond(ZoneOffset.UTC)))
                     NewsItem(
                         title = faker.book.title(),
@@ -53,15 +57,26 @@ fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (Strin
                         url = "http://generator.si/$it",
                         publishedAt = randomTime,
                         imageUrl = "https://placekitten.com/${300 + it}/200",
-                        category = if (category.isNotBlank()) category else faker.book.genre(),
+                        category = category, // dodaćemo kasnije ako prazno
                         tags = listOf(faker.animal.name(), faker.color.name())
                     )
                 }
 
-                onGenerate(items)
+                // Dodaj kategoriju i lokaciju + pošalji u bazu
+                val enrichedItems = rawItems.map { item ->
+                    val fixedCategory = if (item.category.isNullOrBlank()) Categorizer.categorizeByText(item) else item.category
+                    val location = Categorizer.extractLocationByText(item)
+                    val enriched = item.copy(category = fixedCategory, location = location)
+
+                    scraper.NewsSender.send(enriched) // šaljemo u bazu
+                    enriched
+                }
+
+                onGenerate(enrichedItems)
             }) {
                 Text("Generate")
             }
+
         }
     }
 }

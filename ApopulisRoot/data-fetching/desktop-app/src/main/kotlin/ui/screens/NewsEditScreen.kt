@@ -27,6 +27,9 @@ fun NewsEditScreen(
         var url by remember { mutableStateOf(item?.url ?: "") }
         var imageUrl by remember { mutableStateOf(item?.imageUrl ?: "") }
         var category by remember { mutableStateOf(item?.category ?: "") }
+        var location by remember { mutableStateOf(item?.location ?: "") }
+        var tags by remember { mutableStateOf(item?.tags?.joinToString(", ") ?: "") }
+
 
         Column(
             modifier = Modifier
@@ -60,9 +63,13 @@ fun NewsEditScreen(
             OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") })
             Spacer(Modifier.height(16.dp))
 
+            OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("Location") })
+            Spacer(Modifier.height(8.dp))
+
             Button(onClick = {
                 onSave(
                     NewsItem(
+                        id = item?.id,
                         title = heading,
                         content = content,
                         author = author.ifBlank { null },
@@ -71,6 +78,8 @@ fun NewsEditScreen(
                         publishedAt = item?.publishedAt ?: LocalDateTime.now(),
                         imageUrl = imageUrl.ifBlank { null },
                         category = category.ifBlank { null },
+                        location = location.ifBlank { null },
+                        tags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                     )
                 )
             }) {
