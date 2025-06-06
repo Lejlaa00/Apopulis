@@ -3,6 +3,7 @@ const Comment = require('../models/commentModel');
 const Vote = require('../models/voteModel');
 const Category = require('../models/categoryModel');
 const Source = require('../models/sourceModel'); 
+const Location = require('../models/locationModel');
 const { getUserTopInterests } = require('../helpers/userRecommendations');
 const { calculatePopularity } = require('../utils/popularity');
 const jwt = require('jsonwebtoken');
@@ -85,7 +86,7 @@ exports.getNewsById = async (req, res) => {
 // Create a new news item
 exports.createNews = async (req, res) => {
     try {
-        const { title, summary, content, publishedAt, source, sourceId, locationId, category, url , imageUrl, author, tags} = req.body;
+        const { title, summary, content, publishedAt, source, location, category, url , imageUrl, author, tags} = req.body;
 
         const categoryDoc = await Category.findOne({ name: category });
         if (!categoryDoc) {
@@ -97,13 +98,18 @@ exports.createNews = async (req, res) => {
             return res.status(400).json({ msg: `Source '${source}' does not exist.` });
         }
 
+        const locationDoc = await Location.findOne({ name: location });
+        if (!locationDoc) {
+            return res.status(400).json({ msg: `Location '${location}' does not exist.` });
+        }
+
         const newsItem = new NewsItem({
             title,
             summary,
             content,
             publishedAt: publishedAt || new Date(),
             sourceId: sourceDoc._id,
-            locationId,
+            locationId: locationDoc._id,
             categoryId: categoryDoc._id,
             url,
             imageUrl: imageUrl || 'http://localhost:5001/images/default-image.jpg',

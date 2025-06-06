@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Line, Pie, Bar, Scatter, Radar } from 'react-chartjs-2';
+import { Line, Pie, Bar, PolarArea, Doughnut, Radar } from 'react-chartjs-2';
 //import { Chart as ChartJS } from 'chart.js/auto';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faChartPie, faChartBar, faChartColumn } from '@fortawesome/free-solid-svg-icons';
@@ -41,6 +41,7 @@ const Graphs = () => {
     'popularity-trend',
     'category-distribution',
     'engagement-by-source',
+    'news-by-location',
     ...(localStorage.getItem('token') ? [
       'user-interest-compass',
       'user-interest-compass-radar'
@@ -165,36 +166,63 @@ const Graphs = () => {
             }];
             break;
 
-          case 'user-interest-compass':
-            if (!data.pieData || !data.pieData.labels || !data.pieData.counts) {
-              console.warn('No user interest pie data found');
-              throw new Error('No interest data available');
+          case 'news-by-location':
+            if (!data.labels || !data.counts || data.labels.length === 0) {
+              throw new Error('No location data available');
             }
-            
-            setChartData({ labels: data.pieData.labels, datasets });
 
             datasets = [{
-              data: data.pieData.counts,
-              backgroundColor: [
-                  'rgba(255, 99, 132, 0.6)',   
-                  'rgba(255, 159, 64, 0.6)',  
-                  'rgba(255, 206, 86, 0.6)',   
-                  'rgba(75, 192, 192, 0.6)',   
-                  'rgba(54, 162, 235, 0.6)',   
-                  'rgba(153, 102, 255, 0.6)',  
-
-                  'rgba(201, 203, 207, 0.6)', 
-                  'rgba(255, 140, 180, 0.6)',  
-                  'rgba(100, 200, 255, 0.6)',  
-                  'rgba(255, 220, 100, 0.6)',  
-                  'rgba(120, 180, 200, 0.6)',  
-                  'rgba(180, 150, 255, 0.6)'   
-              ],
+              label: 'Number of News Items',
+              data: data.counts,
+              backgroundColor: data.labels.map((_, i) =>
+                `hsl(270, 80%, ${60 + i * 3}%)` 
+              ),
               borderColor: 'white',
               borderWidth: 1,
-              hoverOffset: 6
+              barThickness: 40,
+              borderRadius: 4
             }];
-            break;
+
+            setChartData({ labels: data.labels, datasets });
+              return;
+
+          case 'user-interest-compass':
+            if (!data.pieData || !data.pieData.labels || !data.pieData.counts) {
+              throw new Error('Invalid pie data');
+            }
+
+            const pieLabels = data.pieData.labels;
+            const pieCounts = data.pieData.counts;
+
+            setChartData({
+              labels: pieLabels,
+              datasets: [{
+                label: 'User Interests',
+                data: pieCounts,
+                backgroundColor: [
+                  'rgba(255, 140, 180, 0.6)',
+                  'rgba(100, 200, 255, 0.6)',
+                  'rgba(180, 150, 255, 0.6)', 
+                  'rgba(120, 180, 200, 0.6)',
+                  'rgba(255, 220, 100, 0.6)',
+                  'rgba(201, 203, 207, 0.6)',
+
+                  'rgba(255, 99, 132, 0.6)',     
+                  'rgba(255, 159, 64, 0.6)',     
+                  'rgba(255, 206, 86, 0.6)',     
+                  'rgba(75, 192, 192, 0.6)',     
+                  'rgba(54, 162, 235, 0.6)',     
+                  'rgba(153, 102, 255, 0.6)',    
+
+                     
+                ],
+                borderColor: 'white',
+                borderWidth: 1,
+                hoverOffset: 6
+              }]
+            });
+
+            return;     
 
 
           case 'user-interest-compass-radar':
@@ -252,6 +280,7 @@ const Graphs = () => {
     'popularity-trend': Line,
     'category-distribution': Pie,
     'engagement-by-source': Bar,
+    'news-by-location': Doughnut,
     'user-interest-compass': Pie,
     'user-interest-compass-radar': Radar
 
@@ -295,8 +324,9 @@ const Graphs = () => {
         cornerRadius: 4,
         callbacks: {
           label: function (context) {
-            const label = chartData.labels?.[context.dataIndex] || '';
-            return `${label}: ${context.parsed}`;
+            const label = context.label || '';
+            const value = context.raw !== undefined ? context.raw : context.parsed;
+            return `${label}: ${value}`;
           }
         }
       }
@@ -335,7 +365,8 @@ const Graphs = () => {
               'category-distribution': 'News by Category',
               'engagement-by-source': 'Engagement by Source',
               'user-interest-compass': 'Your Interests Breakdown',
-              'user-interest-compass-radar': 'Your Interest Radar'
+              'user-interest-compass-radar': 'Your Interest Radar',
+              'news-by-location': 'News Count by Location',
             }[chartType]}
           </h3>
           <div className={`fade-chart ${showChart ? '' : 'hidden'}`}>

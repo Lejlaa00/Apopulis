@@ -4,6 +4,7 @@ const Source = require('../models/sourceModel');
 const Vote = require('../models/voteModel');
 const Comment = require('../models/commentModel');
 const User = require('../models/userModel');
+const Location = require('../models/locationModel');
 
 async function getStats(req, res) {
     const { type } = req.params;
@@ -21,7 +22,10 @@ async function getStats(req, res) {
                 break;
             case 'engagement-by-source':
                 data = await getEngagementBySource();
-                break;     
+                break;   
+            case 'news-by-location':
+                data = await getNewsByLocation();
+                break;  
             default:
                 return res.status(400).json({ error: 'Invalid stats type' });
         }
@@ -219,6 +223,45 @@ async function getEngagementBySource() {
     }
 }
 
+async function getNewsByLocation() {
+    try {
+        const result = await NewsItem.aggregate([
+            {
+                $lookup: {
+                    from: 'locations',
+                    localField: 'locationId',
+                    foreignField: '_id',
+                    as: 'location'
+                }
+            },
+            { $unwind: { path: '$location', preserveNullAndEmptyArrays: true } },
+            {
+                $group: {
+                    _id: '$location.name',
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } }
+        ]);
+
+        const labels = result.map(item => item._id || 'Unknown');
+        const counts = result.map(item => item.count);
+
+        return {
+            labels,
+            counts
+        };
+    } catch (error) {
+        console.error('Error in getNewsByLocation:', error);
+        return {
+            labels: [],
+            counts: []
+        };
+    }
+}
+  
+  
+
 async function getCombinedUserCategoryData(userId, startDate, endDate) {
     try {
         const dateMatch = {};
@@ -305,6 +348,7 @@ async function getCombinedUserCategoryData(userId, startDate, endDate) {
         }));
 
         console.log('Radar data:', radarData);
+        console.log('Pie data:', pieData);
         return { pieData, radarData };
 
     } catch (err) {
