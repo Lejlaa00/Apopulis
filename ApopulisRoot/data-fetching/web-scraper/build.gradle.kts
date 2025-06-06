@@ -1,5 +1,6 @@
 plugins {
-    kotlin("jvm") version "1.9.22"
+    kotlin("jvm") version "1.9.10"
+    kotlin("plugin.serialization") version "1.9.10"
 }
 
 group = "org.example"
@@ -15,10 +16,10 @@ dependencies {
     
     // Kotlin coroutines for async operations
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-    
+
     // skrape{it} for web scraping
     implementation("it.skrape:skrapeit:1.2.0")
-    
+
     // Testing
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")

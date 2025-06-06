@@ -1,8 +1,7 @@
 package org.example
 
 import kotlinx.coroutines.runBlocking
-import scraper.U24urScraper
-import scraper.N1infoScraper
+import org.example.scraper.N1infoScraper
 
 fun main() = runBlocking {
     val scraper = N1infoScraper()

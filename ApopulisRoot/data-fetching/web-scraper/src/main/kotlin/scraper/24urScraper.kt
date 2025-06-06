@@ -1,6 +1,6 @@
-package scraper
+package org.example.scraper
 
-import model.NewsItem
+import org.example.model.NewsItem
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.time.LocalDateTime
