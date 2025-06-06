@@ -3,7 +3,7 @@ package ui.util
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.*
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import org.example.model.NewsItem
+import model.NewsItem
 import java.io.File
 
 object Storage {

@@ -6,7 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.serpro69.kfaker.Faker
-import org.example.model.NewsItem
+import model.NewsItem
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -46,7 +46,7 @@ fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (Strin
                 val items = (1..(count.toIntOrNull() ?: 0)).map {
                     val randomTime = from.plusSeconds(Random.nextLong(0, to.toEpochSecond(ZoneOffset.UTC) - from.toEpochSecond(ZoneOffset.UTC)))
                     NewsItem(
-                        heading = faker.book.title(),
+                        title = faker.book.title(),
                         content = faker.lorem.words(),
                         author = faker.name.name(),
                         source = "generator.si",

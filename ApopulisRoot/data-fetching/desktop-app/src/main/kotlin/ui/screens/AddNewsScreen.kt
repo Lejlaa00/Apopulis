@@ -1,7 +1,7 @@
 package ui.ui.screens
 
 import androidx.compose.runtime.Composable
-import org.example.model.NewsItem
+import model.NewsItem
 
 @Composable
 fun AddNewsScreen(

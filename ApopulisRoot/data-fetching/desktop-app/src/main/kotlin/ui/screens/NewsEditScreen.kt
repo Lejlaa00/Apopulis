@@ -7,7 +7,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.example.model.NewsItem
+import model.NewsItem
 import java.time.LocalDateTime
 
 @Composable
@@ -20,7 +20,7 @@ fun NewsEditScreen(
     SidebarWrapper(currentScreen = "editNews", onNavigate = onNavigate) {
         val scrollState = rememberScrollState()
 
-        var heading by remember { mutableStateOf(item?.heading ?: "") }
+        var heading by remember { mutableStateOf(item?.title ?: "") }
         var content by remember { mutableStateOf(item?.content ?: "") }
         var author by remember { mutableStateOf(item?.author ?: "") }
         var source by remember { mutableStateOf(item?.source ?: "") }
@@ -63,7 +63,7 @@ fun NewsEditScreen(
             Button(onClick = {
                 onSave(
                     NewsItem(
-                        heading = heading,
+                        title = heading,
                         content = content,
                         author = author.ifBlank { null },
                         source = source,

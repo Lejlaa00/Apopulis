@@ -12,6 +12,7 @@ import it.skrape.selects.html5.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+
 class N1infoScraper : BaseScraper(
     baseUrl = "https://n1info.si/novice/slovenija/",
     sourceName = "n1info"

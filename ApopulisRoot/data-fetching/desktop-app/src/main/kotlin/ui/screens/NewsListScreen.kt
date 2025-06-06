@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.font.FontWeight
-import org.example.model.NewsItem
+import model.NewsItem
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -83,7 +83,7 @@ fun NewsListScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 // Naslov
-                                Text(item.heading, style = MaterialTheme.typography.h6)
+                                Text(item.title, style = MaterialTheme.typography.h6)
 
                                 Spacer(Modifier.height(4.dp))
 

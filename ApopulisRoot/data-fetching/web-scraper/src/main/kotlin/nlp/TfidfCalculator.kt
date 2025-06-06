@@ -1,6 +1,6 @@
 package org.example.nlp
 
-import org.example.model.NewsItem
+import model.NewsItem
 import kotlin.math.ln
 
 object TfidfCalculator {

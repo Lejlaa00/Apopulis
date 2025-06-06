@@ -9,10 +9,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import kotlinx.coroutines.launch
-import org.example.model.NewsItem
+import model.NewsItem
 import org.example.nlp.Categorizer
-import org.example.scraper.N1infoScraper
-import org.example.scraper.U24urScraper
+import scraper.N1infoScraper
+import scraper.U24urScraper
 import ui.ui.screens.*
 import ui.util.Storage
 
@@ -61,10 +61,15 @@ fun App() {
                     onRefresh = { source ->
                         coroutineScope.launch {
                             val scraped = when (source) {
-                                "24ur" -> listOf(U24urScraper())
-                                "N1info" -> listOf(N1infoScraper())
-                                else -> listOf(U24urScraper(), N1infoScraper())
-                            }.flatMap { it.scrape() }
+                                "24ur" -> U24urScraper().scrape()
+                                "N1info" -> N1infoScraper().scrape()
+                                else -> {
+                                    val u24News = U24urScraper().scrape()
+                                    val n1News = N1infoScraper().scrape()
+                                    u24News + n1News
+                                }
+                            }
+
 
                             val enrichedNews = scraped.map { item ->
                                 item.copy(

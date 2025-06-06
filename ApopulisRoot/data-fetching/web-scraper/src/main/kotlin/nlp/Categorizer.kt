@@ -1,6 +1,6 @@
 package org.example.nlp
 
-import org.example.model.NewsItem
+import model.NewsItem
 
 object Categorizer {
 
@@ -19,7 +19,7 @@ object Categorizer {
     }
 
     fun categorizeByText(item: NewsItem): String? {
-        val text = "${item.heading} ${item.content}".lowercase()
+        val text = "${item.title} ${item.content}".lowercase()
             .replace(Regex("[^a-zčšžđć ]"), " ")
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }
