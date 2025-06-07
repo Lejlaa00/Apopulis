@@ -21,7 +21,7 @@ const provinceRoutes = require('./routes/provinceRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect('mongodb+srv://ivanaailic:malodete167@cluster0.iemfweq.mongodb.net/Apopulis')
     .then(() => console.log("MongoDB connected"))
     .catch(err => console.error("MongoDB connection error:", err));
 
