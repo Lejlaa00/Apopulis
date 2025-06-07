@@ -139,19 +139,19 @@
 }
 
 .news-image-wrapper img {
-  width: 650px;          /* fiksna širina */
-  height: 500px;         /* fiksna visina */
+  width: 650px;          
+  height: 500px;        
   border-radius: 10px;
-  object-fit: cover;     /* popuni okvir bez razvučenja */
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* opcionalno za izgled */
+  object-fit: cover;   
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); 
 }
 
 .news-content-text {
   margin-top: 30px;
   text-align: justify;
-  line-height: 1.5;          /* povećano za udobnije čitanje */
-  letter-spacing: 0.3px;     /* malo više prostora između slova */
-  word-break: break-word;    /* da se ne prelama layout kod dugih riječi */
+  line-height: 1.5;        
+  letter-spacing: 0.3px; 
+  word-break: break-word;   
   color: var(--color-text-light-gray);
   font-size: 1.05rem;
 }
@@ -180,7 +180,7 @@
 }
 
 .news-action-item:hover {
-  background-color: var(--color-hover-bg); /* subtle purple background */
+  background-color: var(--color-hover-bg);
 }
 
 .news-action-item:last-child {
@@ -204,7 +204,7 @@
 }
 
 .news-action-item.active-vote .news-action-icon {
-  color: var(--color-primary); /* npr. #4caf50 za lajk, ili neka neutralna */
+  color: var(--color-primary); 
 }
 
 .news-action-icon {
@@ -533,7 +533,6 @@
   }
 }
 
-/* ✅ MOBILNI UREĐAJI */
 @media (max-width: 576px) {
   .news-detail-grid {
     padding: 12px;

@@ -24,10 +24,9 @@
 
 .map-area {
   grid-area: map;
-  overflow-y: auto;
+  overflow: auto;
 }
 
-/* ✅ Responsivnost za tablete */
 @media (max-width: 992px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -45,7 +44,6 @@
   }
 }
 
-/* ✅ Responsivnost za mobitele */
 @media (max-width: 576px) {
   .dashboard-grid {
     padding: 0.5rem;

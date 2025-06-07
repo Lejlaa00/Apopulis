@@ -55,7 +55,6 @@
   color: var(--color-text-light-gray);
 }
 
-/* ✅ TABLETI */
 @media (max-width: 768px) {
   .login-container {
     margin: 60px auto;
@@ -72,7 +71,6 @@
   }
 }
 
-/* ✅ MOBILNI UREĐAJI */
 @media (max-width: 480px) {
   .login-container {
     margin: 40px 1rem;

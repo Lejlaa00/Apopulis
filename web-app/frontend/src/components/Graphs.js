@@ -262,15 +262,15 @@ const Graphs = () => {
     fetchData();
 
     const interval = setInterval(() => {
-      setShowChart(false); // fade out
+      setShowChart(false); 
       setTimeout(() => {
         setChartType(prev => {
           const currentIndex = chartTypesToCycle.indexOf(prev);
           const nextIndex = (currentIndex + 1) % chartTypesToCycle.length;
           return chartTypesToCycle[nextIndex];
         });
-        setShowChart(true); // fade back in
-      }, 500); // match with CSS transition
+        setShowChart(true); 
+      }, 500);
     }, 5000);
 
     return () => clearInterval(interval);
@@ -359,7 +359,7 @@ const Graphs = () => {
           <div className="error-message">{error}</div>
         ) : (
          <div className="chart-container">
-          <h3 className="graph-title">
+          <h3 className={`graph-title ${showChart ? 'fade-in' : ''}`}>
             {{
               'popularity-trend': 'News Popularity Over Time',
               'category-distribution': 'News by Category',

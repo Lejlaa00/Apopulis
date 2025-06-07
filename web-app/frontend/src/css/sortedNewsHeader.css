@@ -133,7 +133,6 @@
   
 }
 
-/* ✅ TABLETI */
 @media (max-width: 992px) {
   .sorted-news-header {
   flex-direction: column;
@@ -161,6 +160,7 @@
     width: 100%;
     font-size: 0.85rem;
     padding: 0.4rem 2.2rem 0.4rem 2.2rem;
+    margin-left: 5px;
   }
 
   .header-box {
@@ -170,7 +170,6 @@
   }
 }
 
-/* ✅ MOBILNI UREĐAJI */
 @media (max-width: 576px) {
   .sorted-news-header {
     padding: 0.5rem 0.6rem;
@@ -193,6 +192,7 @@
   .sorted-news-header input[type="text"] {
     padding: 0.35rem 1.8rem;
     font-size: 0.8rem;
+    margin-left: 5px;
   }
 
   .header-box {

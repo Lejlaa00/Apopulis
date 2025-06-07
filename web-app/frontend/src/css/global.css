@@ -136,7 +136,6 @@ footer.footer {
   opacity: 0;
 }
 
-/* ✅ TABLETI */
 @media (max-width: 992px) {
   .content-area {
     flex-direction: column;
@@ -153,7 +152,6 @@ footer.footer {
   }
 }
 
-/* ✅ MOBILNI UREĐAJI */
 @media (max-width: 576px) {
   body {
     font-size: 15px;

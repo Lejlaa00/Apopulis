@@ -74,7 +74,6 @@
   color: var(--color-accent-red);
 }
 
-/* ✅ TABLETI */
 @media (max-width: 768px) {
   .profile-page {
     margin: 40px 20px;
@@ -96,7 +95,6 @@
   }
 }
 
-/* ✅ MOBILNI UREĐAJI */
 @media (max-width: 480px) {
   .profile-page {
     margin: 30px 12px;

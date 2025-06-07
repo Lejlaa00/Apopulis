@@ -19,7 +19,6 @@
   border-radius: 8px;
 }
 
-/* ✅ TABLETI */
 @media (max-width: 992px) {
   .map-container {
     margin-right: 0.5rem;
@@ -31,7 +30,6 @@
   }
 }
 
-/* ✅ MOBILNI UREĐAJI */
 @media (max-width: 576px) {
   .map-container {
     margin-right: 0;
