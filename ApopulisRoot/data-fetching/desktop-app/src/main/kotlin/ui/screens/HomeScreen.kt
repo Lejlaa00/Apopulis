@@ -4,18 +4,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Divider
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-
-val LightSidebarColor = Color(0xFFF7F7F8)
-val LightSidebarSelected = Color(0xFFE0E0E0)
-val LightTextColor = Color(0xFF333333)
-val LightInactiveTextColor = Color(0xFF333333)
-val LightBorderColor = Color(0xFFD0D0D0)
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import ui.ui.theme.AppColors
 
 @Composable
 fun SidebarWrapper(
@@ -28,47 +34,46 @@ fun SidebarWrapper(
     Row(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
-                .background(LightSidebarColor)
+                .background(AppColors.BgDarkest)
                 .width(if (sidebarVisible) 220.dp else 40.dp)
                 .fillMaxHeight()
         ) {
-            // Strelica gore desno
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
+                    .padding(top = 8.dp, end = 8.dp),
                 contentAlignment = Alignment.TopEnd
             ) {
-                Box(
-                    modifier = Modifier
-                        .clickable { sidebarVisible = !sidebarVisible }
-                        .padding(12.dp)
-                ) {
-                    Text(if (sidebarVisible) "←" else "→", color = LightTextColor)
+                IconButton(onClick = { sidebarVisible = !sidebarVisible }) {
+                    Icon(
+                        imageVector = if (sidebarVisible) Icons.Default.ArrowBack else Icons.Default.ArrowForward,
+                        contentDescription = "Toggle sidebar",
+                        tint = AppColors.Icon
+                    )
                 }
             }
 
-            if (sidebarVisible) {
-                Spacer(Modifier.height(8.dp))
-                SidebarItem("News List", "newsList", currentScreen, onNavigate)
-                SidebarItem("Add News", "addNews", currentScreen, onNavigate)
-                SidebarItem("Scraper", "scraper", currentScreen, onNavigate)
-                SidebarItem("Generate Data", "generator", currentScreen, onNavigate)
+            Spacer(Modifier.height(8.dp))
 
-                Divider(
-                    color = LightBorderColor,
-                    thickness = 1.dp,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
+            SidebarItem("Home", "home", Icons.Default.Home, currentScreen, onNavigate, sidebarVisible)
+            SidebarItem("News List", "newsList", Icons.Default.List, currentScreen, onNavigate, sidebarVisible)
 
-                SidebarItem("Home", "home", currentScreen, onNavigate)
-            }
+            Divider(
+                color = AppColors.Divider,
+                thickness = 1.dp,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            SidebarItem("Add News", "addNews", Icons.Default.Add, currentScreen, onNavigate, sidebarVisible)
+            SidebarItem("Scraper", "scraper", Icons.Default.Refresh, currentScreen, onNavigate, sidebarVisible)
+            SidebarItem("Generate Data", "generator", Icons.Default.Build, currentScreen, onNavigate, sidebarVisible)
+
         }
 
-        // Glavni sadržaj
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(AppColors.BgDarkest)
                 .padding(24.dp)
         ) {
             content()
@@ -80,22 +85,39 @@ fun SidebarWrapper(
 fun SidebarItem(
     label: String,
     screenKey: String,
+    icon: ImageVector,
     currentScreen: String,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    visible: Boolean
 ) {
     val isSelected = screenKey == currentScreen
-    val backgroundColor = if (isSelected) LightSidebarSelected else Color.Transparent
-    val textColor = if (isSelected) LightTextColor else LightInactiveTextColor
+    val backgroundColor = if (isSelected) AppColors.ActiveBg else Color.Transparent
+    val textColor = if (isSelected) AppColors.TextWhite else AppColors.TextMuted
+    val iconSize = if (visible) 23.dp else 23.dp
+    val rowModifier = Modifier
+        .fillMaxWidth()
+        .background(backgroundColor)
+        .clickable { onNavigate(screenKey) }
+        .padding(vertical = 12.dp, horizontal = if (visible) 16.dp else 0.dp)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(backgroundColor)
-            .clickable { onNavigate(screenKey) }
-            .padding(vertical = 12.dp, horizontal = 16.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (visible) Arrangement.Start else Arrangement.Center,
+        modifier = rowModifier
     ) {
-        Text(label, color = textColor)
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = AppColors.Icon,
+            modifier = Modifier.size(iconSize)
+        )
+
+        if (visible) {
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(label, color = textColor)
+        }
     }
+
 }
 
 @Composable

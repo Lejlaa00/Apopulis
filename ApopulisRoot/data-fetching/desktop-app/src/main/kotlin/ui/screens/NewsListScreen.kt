@@ -1,5 +1,6 @@
 package ui.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,11 +14,40 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.pointer.pointerMoveFilter
 import androidx.compose.ui.text.font.FontWeight
 import model.NewsItem
+import ui.ui.theme.AppColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.clip
+import java.net.URL
+import javax.imageio.ImageIO
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.jetbrains.skia.Image
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.unit.sp
+import androidx.compose.animation.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.ColorFilter
 
+
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun NewsListScreen(
     news: List<NewsItem>,
@@ -30,6 +60,8 @@ fun NewsListScreen(
         var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
         var toDeleteItem by remember { mutableStateOf<NewsItem?>(null) }
         var expandedId by remember { mutableStateOf<String?>(null) }
+        var selectedItem by remember { mutableStateOf<NewsItem?>(null) }
+
 
         val categories = listOf("All") + news.mapNotNull { it.category }.distinct()
 
@@ -38,28 +70,36 @@ fun NewsListScreen(
                     (selectedDate == null || item.publishedAt.toLocalDate() == selectedDate)
         }
 
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppColors.BgDarkest)
+                .padding(24.dp)
+        )
+        {
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = 4.dp
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                backgroundColor = AppColors.BgLight,
+                elevation = 8.dp,
+                shape = MaterialTheme.shapes.medium
             ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    DateInputField(
-                        value = selectedDate,
-                        onChange = { selectedDate = it },
-                        modifier = Modifier.weight(1f)
-                    )
-                    CategoryDropdownField(
-                        categories = categories,
-                        selected = selectedCategory,
-                        onSelect = { selectedCategory = it },
-                        modifier = Modifier.weight(1f)
-                    )
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        CategoryDropdownField(
+                            categories = categories,
+                            selected = selectedCategory,
+                            onSelect = { selectedCategory = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                        DateInputField(
+                            value = selectedDate,
+                            onChange = { selectedDate = it },
+                            modifier = Modifier.weight(1f),
+                        )
+
+                    }
                 }
             }
 
@@ -73,70 +113,133 @@ fun NewsListScreen(
                 LazyColumn {
                     items(filteredNews) { item ->
                         val isExpanded = expandedId == item.url
+                        var hovered by remember { mutableStateOf(false) }
 
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .clickable { expandedId = if (isExpanded) null else item.url },
-                            elevation = 6.dp
+                                .padding(vertical = 6.dp)
+                                .pointerMoveFilter(
+                                    onEnter = {
+                                        hovered = true
+                                        false
+                                    },
+                                    onExit = {
+                                        hovered = false
+                                        false
+                                    }
+                                )
+                                .clickable { selectedItem = item },
+                            backgroundColor = if (hovered) AppColors.HoverBg else AppColors.BgLight,
+                            elevation = if (hovered) 8.dp else 4.dp,
+                            shape = MaterialTheme.shapes.medium
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
+
                                 // Naslov
-                                Text(item.title, style = MaterialTheme.typography.h6)
+                                Text(
+                                    item.title,
+                                    style = MaterialTheme.typography.h6,
+                                    color = AppColors.TextWhite
+                                )
 
-                                Spacer(Modifier.height(4.dp))
+                                Spacer(Modifier.height(6.dp))
 
-                                // Osnovne informacije
-                                item.category?.let {
-                                    Text("Category: $it", style = MaterialTheme.typography.body2, color = Color.Gray)
+                                // Info i ikonice u istom redu
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        item.category?.let {
+                                            Text("Category: $it", style = MaterialTheme.typography.body2, color = AppColors.TextMuted)
+                                        }
+                                        Text(
+                                            "Published at: ${item.publishedAt.toLocalDate()}",
+                                            style = MaterialTheme.typography.body2,
+                                            color = AppColors.TextMuted
+                                        )
+                                        Text(
+                                            "Source: ${item.source}",
+                                            style = MaterialTheme.typography.body2,
+                                            color = AppColors.TextMuted
+                                        )
+                                        Text(
+                                            "Author: ${item.author}",
+                                            style = MaterialTheme.typography.body2,
+                                            color = AppColors.TextMuted
+                                        )
+                                    }
+
+                                    Row {
+                                        IconButton(onClick = { onEdit(item) }) {
+                                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = AppColors.Icon)
+                                        }
+                                        IconButton(onClick = { toDeleteItem = item }) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = AppColors.Icon)
+                                        }
+                                    }
                                 }
-                                Text("Published at: ${item.publishedAt.toLocalDate()}", style = MaterialTheme.typography.body2, color = Color.Gray)
-                                Text("Source: ${item.source}", style = MaterialTheme.typography.body2, color = Color.Gray)
 
+                                // Ekspanzivni dio
                                 if (isExpanded) {
-                                    Spacer(Modifier.height(8.dp))
-                                    Divider()
-                                    Spacer(Modifier.height(8.dp))
+                                    Spacer(Modifier.height(10.dp))
+                                    Divider(color = AppColors.Divider)
+                                    Spacer(Modifier.height(10.dp))
 
-                                    // Content
-                                    item.content?.let {
-                                        Text(it, style = MaterialTheme.typography.body2)
+                                    item.imageUrl?.let { imageUrl ->
                                         Spacer(Modifier.height(8.dp))
+                                        var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+
+                                        LaunchedEffect(imageUrl) {
+                                            imageBitmap = loadImageBitmapFromUrl(imageUrl)
+                                        }
+
+                                        imageBitmap?.let {
+                                            Image(
+                                                bitmap = it,
+                                                contentDescription = "News Image",
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier
+                                                    .size(width = 600.dp, height = 500.dp)
+                                                    .align(Alignment.CenterHorizontally)
+                                                    .clip(MaterialTheme.shapes.medium)
+                                            )
+                                            Spacer(Modifier.height(12.dp))
+                                        }
                                     }
 
-                                    item.author?.let {
-                                        InfoRow(label = "Author:", value = it)
-                                    }
-
-                                    InfoRow(label = "URL:", value = item.url)
-
-                                    item.imageUrl?.let {
-                                        InfoRow(label = "Image URL:", value = it)
-                                    }
-
-                                    if (!item.tags.isNullOrEmpty()) {
-                                        InfoRow(label = "Tags:", value = item.tags.joinToString(", "))
-                                    }
-                                }
-
-                                Spacer(Modifier.height(8.dp))
-
-                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                                    TextButton(onClick = { onEdit(item) }) {
-                                        Text("Edit")
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    TextButton(onClick = { toDeleteItem = item }) {
-                                        Text("Delete")
+                                    item.content?.let {
+                                        Text(
+                                            it,
+                                            style = MaterialTheme.typography.body1.copy(
+                                                color = AppColors.TextLight,
+                                                lineHeight = 20.sp
+                                            ),
+                                            modifier = Modifier
+                                                .padding(horizontal = 4.dp)
+                                        )
+                                        Spacer(Modifier.height(8.dp))
                                     }
                                 }
                             }
                         }
+
                     }
                 }
             }
         }
+
+        AnimatedVisibility(
+            visible = selectedItem != null,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut()
+        ) {
+            selectedItem?.let {
+                NewsDetailDialog(item = it, onClose = { selectedItem = null })
+            }
+        }
+
 
         if (toDeleteItem != null) {
             AlertDialog(
@@ -158,6 +261,137 @@ fun NewsListScreen(
                 }
             )
         }
+    }
+}
+@Composable
+fun NewsDetailDialog(item: NewsItem, onClose: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xDD000000)) // tamna pozadina
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            backgroundColor = AppColors.BgLight,
+            elevation = 12.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .fillMaxHeight(0.9f)
+                .padding(16.dp)
+        ) {
+            Box {
+                // Fiksirano X dugme
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                        .align(Alignment.TopEnd),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    val interactionSource = remember { MutableInteractionSource() }
+                    IconButton(
+                        onClick = onClose,
+                        interactionSource = interactionSource
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = AppColors.Accent
+                        )
+                    }
+                }
+
+                // Scrollable sadržaj
+                Column(
+                    modifier = Modifier
+                        .padding(top = 60.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.h6,
+                        color = AppColors.TextWhite,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+                    LaunchedEffect(item.imageUrl) {
+                        item.imageUrl?.let {
+                            imageBitmap = loadImageBitmapFromUrl(it)
+                        }
+                    }
+
+                    imageBitmap?.let {
+                        Image(
+                            bitmap = it,
+                            contentDescription = "News Image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(width = 600.dp, height = 500.dp)
+                                .align(Alignment.CenterHorizontally)
+                                .clip(MaterialTheme.shapes.medium)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    Column {
+                        item.author?.let { InfoRowGray("Author:", it) }
+                        InfoRowGray("Category:", item.category ?: "N/A")
+                        InfoRowGray("Published at:", item.publishedAt.toLocalDate().toString())
+                        InfoRowGray("Source:", item.source)
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                    Divider(color = AppColors.Divider)
+                    Spacer(Modifier.height(12.dp))
+
+                    item.content?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.body1.copy(
+                                color = AppColors.TextLight,
+                                lineHeight = 20.sp
+                            )
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoRowGray(label: String, value: String) {
+    Row(modifier = Modifier.padding(vertical = 2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.body2.copy(fontWeight = FontWeight.Bold),
+            color = AppColors.TextMuted
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.body2,
+            color = AppColors.TextMuted
+        )
+    }
+}
+
+suspend fun loadImageBitmapFromUrl(url: String): ImageBitmap? = withContext(Dispatchers.IO) {
+    return@withContext try {
+        val bytes = URL(url).readBytes()
+        val skiaImage = Image.makeFromEncoded(bytes)
+        skiaImage.toComposeImageBitmap()
+    } catch (e: Exception) {
+        println("Failed to load image: ${e.message}")
+        null
     }
 }
 
@@ -188,10 +422,20 @@ fun DateInputField(
                 }
             }
         },
-        modifier = modifier
+        modifier = modifier,
+        colors = TextFieldDefaults.outlinedTextFieldColors(
+            textColor = AppColors.TextWhite,
+            backgroundColor = AppColors.BgDarker,
+            cursorColor = AppColors.Accent,
+            focusedBorderColor = AppColors.Accent,
+            unfocusedBorderColor = AppColors.Divider,
+            focusedLabelColor = AppColors.TextLight,
+            unfocusedLabelColor = AppColors.TextMuted
+        )
     )
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun CategoryDropdownField(
     categories: List<String>,
@@ -209,25 +453,58 @@ fun CategoryDropdownField(
             label = { Text("Category") },
             trailingIcon = {
                 IconButton(onClick = { expanded = true }) {
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Open category menu")
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Open category menu",
+                        tint = AppColors.Icon // vidljivija strelica
+                    )
                 }
             },
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                textColor = AppColors.TextWhite,
+                backgroundColor = AppColors.BgDarker,
+                cursorColor = AppColors.Accent,
+                focusedBorderColor = AppColors.Accent,
+                unfocusedBorderColor = AppColors.Divider,
+                focusedLabelColor = AppColors.TextLight,
+                unfocusedLabelColor = AppColors.TextMuted
+            ),
             modifier = Modifier.fillMaxWidth()
         )
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .background(AppColors.BgDarker)
         ) {
-            categories.forEach {
-                DropdownMenuItem(onClick = {
-                    onSelect(it)
-                    expanded = false
-                }) {
-                    Text(it)
+            categories.forEach { category ->
+                var hovered by remember { mutableStateOf(false) }
+
+                DropdownMenuItem(
+                    onClick = {
+                        onSelect(category)
+                        expanded = false
+                    },
+                    modifier = Modifier
+                        .background(if (hovered) AppColors.HoverBg else Color.Transparent)
+                        .pointerMoveFilter(
+                            onEnter = {
+                                hovered = true
+                                false
+                            },
+                            onExit = {
+                                hovered = false
+                                false
+                            }
+                        )
+                ) {
+                    Text(category, color = AppColors.TextWhite)
                 }
             }
+
         }
+
     }
 }
 
@@ -252,3 +529,4 @@ fun InfoRow(label: String, value: String) {
         )
     }
 }
+
