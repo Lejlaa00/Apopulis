@@ -36,3 +36,11 @@ jobs:
           context: ./web-app/backend
           push: true
           tags: keno27/apopulis:backend-latest
+
+      - name: Send webhook to Azure VM
+        uses: distributhor/workflow-webhook@v3
+        with:
+          webhook_url: ${{ secrets.WEBHOOK_URL }}  # Corrected from 'url' to 'webhook_url'
+          webhook_auth: ${{ secrets.WEBHOOK_SECRET }}  # Use secret for authentication
+          # Method is not a direct input; handled implicitly as POST by default
+          # Headers are included via webhook_auth as a Bearer token
