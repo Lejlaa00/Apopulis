@@ -500,3 +500,94 @@
 .news-detail-enter {
   animation: fadeInUp 0.5s ease-out;
 }
+
+/* ✅ TABLETI */
+@media (max-width: 992px) {
+  .news-detail-grid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .side-panel {
+    border-left: none;
+    border-top: 2px solid var(--color-divider);
+    margin-top: 20px;
+  }
+
+  .news-popup-window {
+    width: 90vw;
+    height: 90vh;
+  }
+
+  .news-image-wrapper img {
+    width: 100%;
+    height: auto;
+  }
+
+  .news-content-text {
+    font-size: 1rem;
+  }
+
+  .recommended-news-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+/* ✅ MOBILNI UREĐAJI */
+@media (max-width: 576px) {
+  .news-detail-grid {
+    padding: 12px;
+    gap: 14px;
+  }
+
+  .news-popup-window {
+    padding: 14px;
+    width: 95vw;
+    height: 92vh;
+  }
+
+  .news-content-text {
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .news-image-wrapper img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  .news-meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .news-action-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .news-action-item {
+    font-size: 0.9rem;
+    padding: 8px;
+  }
+
+  .comment-input,
+  .comment-submit-btn {
+    font-size: 0.85rem;
+  }
+
+  .recommended-news-grid {
+    gap: 14px;
+    grid-template-columns: 1fr;
+  }
+
+  .recommended-news-title {
+    font-size: 0.95rem;
+  }
+
+  .recommended-news-date,
+  .recommended-news-source {
+    font-size: 0.8rem;
+  }
+}

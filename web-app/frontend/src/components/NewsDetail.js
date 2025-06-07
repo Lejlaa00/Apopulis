@@ -320,7 +320,7 @@ function NewsDetail({ id: propId, embedded = false }) {
         if (res.ok) setIsBookmarked(prev => !prev);
     };
 
-    if (loading) return <p>Loading...</p>;
+    if (loading) return <p> </p>;
     if (!news) return <p>Not found</p>;
 
     return (

@@ -2,21 +2,21 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows:
-  10fr 20fr 20fr  /* Map + Latest */
-  15fr 15fr       /* Sorted + Latest */
-  15fr 15fr       /* Sorted + Graphs */
-  20fr;           /* Graphs */
+    10fr 20fr 20fr     /* Map + Latest */
+    15fr 15fr          /* Sorted + Latest */
+    15fr 15fr          /* Sorted + Graphs */
+    20fr;              /* Graphs */
   grid-template-areas:
-  "map    latest"
-  "map    latest"
-  "map    latest"
-  "sorted latest"
-  "sorted latest"
-  "sorted graphs"
-  "sorted graphs"
-  "sorted graphs" 
-  ".      graphs";
-  height: 130vh; 
+    "map    latest"
+    "map    latest"
+    "map    latest"
+    "sorted latest"
+    "sorted latest"
+    "sorted graphs"
+    "sorted graphs"
+    "sorted graphs"
+    ".      graphs";
+  height: 140vh;
   gap: 1rem;
   padding: 1rem;
   box-sizing: border-box;
@@ -24,5 +24,35 @@
 
 .map-area {
   grid-area: map;
-  overflow-y: hidden;
+  overflow-y: auto;
+}
+
+/* ✅ Responsivnost za tablete */
+@media (max-width: 992px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "map"
+      "latest"
+      "sorted"
+      "graphs";
+    height: auto;
+  }
+
+  .map-area {
+    height: 300px;
+  }
+}
+
+/* ✅ Responsivnost za mobitele */
+@media (max-width: 576px) {
+  .dashboard-grid {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .map-area {
+    height: 250px;
+  }
 }

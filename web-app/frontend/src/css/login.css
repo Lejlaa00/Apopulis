@@ -54,3 +54,44 @@
   background-color: var(--color-active-bg);
   color: var(--color-text-light-gray);
 }
+
+/* ✅ TABLETI */
+@media (max-width: 768px) {
+  .login-container {
+    margin: 60px auto;
+    padding: 24px;
+  }
+
+  .login-title {
+    font-size: 1.4rem;
+  }
+
+  .login-button,
+  .login-input {
+    font-size: 0.95rem;
+  }
+}
+
+/* ✅ MOBILNI UREĐAJI */
+@media (max-width: 480px) {
+  .login-container {
+    margin: 40px 1rem;
+    padding: 20px;
+    border-radius: 10px;
+  }
+
+  .login-title {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+  }
+
+  .login-input {
+    padding: 6px;
+    font-size: 0.9rem;
+  }
+
+  .login-button {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+}

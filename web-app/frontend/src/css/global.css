@@ -4,11 +4,10 @@
 *::after {
   box-sizing: border-box;
 }
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
 
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
 
 body {
   margin: 0;
@@ -26,7 +25,6 @@ html, body, #root {
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* onemogućava scroll na cijeloj stranici */
 }
 
 /* Links */
@@ -44,6 +42,9 @@ a:focus {
 .sidebar {
   background-color: var(--color-bg-darker);
   color: var(--color-text-white);
+  width: 220px;
+  padding: 1rem;
+  overflow-y: hidden;
 }
 
 /* Main content area */
@@ -51,6 +52,7 @@ a:focus {
   background-color: var(--color-bg-darkest);
   color: var(--color-text-white);
   padding: 1.5rem;
+  overflow-y: auto;
 }
 
 /* Buttons */
@@ -102,25 +104,14 @@ footer.footer {
   height: 100vh;
 }
 
-/* header zauzima vrh */
 .header {
   flex-shrink: 0;
 }
 
-/* glavni deo sa sidebarom i sadržajem */
 .content-area {
   display: flex;
-  flex: 1; 
-  overflow: hidden; 
-}
-
-/* sidebar sa leve strane */
-.sidebar {
-  width: 220px;
-  background-color: var(--color-bg-darker);
-  color: var(--color-text-light);
-  padding: 1rem;
-  overflow-y: hidden;
+  flex: 1;
+  overflow: hidden;
 }
 
 .main-content::-webkit-scrollbar {
@@ -132,7 +123,7 @@ footer.footer {
 }
 
 .main-content::-webkit-scrollbar-thumb {
-  background: var(--color-active-scroll); 
+  background: var(--color-active-scroll);
   border-radius: 4px;
 }
 
@@ -143,4 +134,47 @@ footer.footer {
 
 .fade-chart.hidden {
   opacity: 0;
+}
+
+/* ✅ TABLETI */
+@media (max-width: 992px) {
+  .content-area {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    padding: 1rem 0.5rem;
+    overflow-y: auto;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+}
+
+/* ✅ MOBILNI UREĐAJI */
+@media (max-width: 576px) {
+  body {
+    font-size: 15px;
+  }
+
+  .sidebar {
+    font-size: 0.9rem;
+  }
+
+  .main-content {
+    padding: 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  button, input, textarea {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  footer.footer {
+    font-size: 0.8rem;
+    padding: 0.6rem;
+  }
 }
