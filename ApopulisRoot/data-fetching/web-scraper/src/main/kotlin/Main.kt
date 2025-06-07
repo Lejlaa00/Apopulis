@@ -1,15 +1,17 @@
 package org.example
 
 import kotlinx.coroutines.*
-
+import model.NewsItem
+import scraper.U24urScraper
 import scraper.N1infoScraper
+import scraper.*
 import org.example.nlp.TfidfCalculator
 import org.example.nlp.Categorizer
-import model.NewsItem
+
 
 fun main() = runBlocking {
     val scrapers = listOf(
-       // U24urScraper(),
+        U24urScraper(),
         N1infoScraper()
     )
 
@@ -27,28 +29,34 @@ fun main() = runBlocking {
                     val keywords = tfidfResults[item] ?: emptyList()
                     item.copy(
                         tags = keywords,
-                        category = Categorizer.categorizeByText(item)
+                        category = Categorizer.categorizeByText(item),
+                        location = Categorizer.extractLocationByText(item)
                     )
                 }
 
                 enrichedNews.forEachIndexed { idx, item ->
                     println("\nNews #${idx + 1}")
                     println("Heading: ${item.title}")
-                    println("Category: ${item.category ?: "unknown"}")
-                    println("Tags: ${item.tags.joinToString(", ")}")
-                    println("URL: ${item.url}")
-                    println("Image URL: ${item.imageUrl}")
-                    println("Published At: ${item.publishedAt}")
+                    println("Content: ${item.content}")
                     println("Source: ${item.source}")
+                    println("URL: ${item.url}")
+                    println("Published At: ${item.publishedAt}")
+                    println("Category: ${item.category}")
+                    println("Image URL: ${item.imageUrl}")
+                    println("Tags: ${item.tags}")
                     println("Author: ${item.author}")
-                    println("Content: ${item.content ?: "Unknown"}")
+                    println("")
+                    println("===> Location: ${item.location ?: "unknown"}")
+                    println("===> Category: ${item.category ?: "unknown"}")
+                    println("===> Tags: ${item.tags.joinToString(", ")}")
+                    println("-------------------------------------")
 
+                    NewsSender.send(item)
                 }
 
                 println("\n────────────────────────────────────────────")
             }
         }
-
         delay(10 * 60 * 1000L)  // 10 minues
     }
 }
