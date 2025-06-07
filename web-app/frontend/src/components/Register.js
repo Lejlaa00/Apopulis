@@ -1,0 +1,73 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import '../css/login.css'; 
+
+import { toast } from 'react-toastify';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+
+function Register() {
+    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const navigate = useNavigate(); 
+
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch(`${API_URL}/users/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                toast('Registration successful!');
+                navigate('/login');
+            } else {
+                toast(data.msg || 'Registration failed.');
+            }
+        } catch (err) {
+            console.error('Error:', err);
+        }
+    };
+
+    return (
+        <div className="login-container">
+            <h2 className="login-title">Create Account</h2>
+            <form onSubmit={handleRegister} className="login-form">
+                <label>Username:</label>
+                <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="login-input"
+                    placeholder="Enter your username"
+                />
+
+                <label>Email:</label>
+                <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="login-input"
+                    placeholder="Enter your email"
+                />
+
+                <label>Password:</label>
+                <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="login-input"
+                    placeholder="Enter your password"
+                />
+
+                <button type="submit" className="login-button">Register</button>
+            </form>
+        </div>
+    );
+}
+
+export default Register;
