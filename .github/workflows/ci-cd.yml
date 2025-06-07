@@ -10,8 +10,6 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    env:
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,11 +28,11 @@ jobs:
         with:
           context: ./web-app/frontend
           push: true
-          tags: ${{ env.DOCKER_USERNAME }}/apopulis-frontend:latest
+          tags: keno27/apopulis:frontend-latest
 
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
           context: ./web-app/backend
           push: true
-          tags: ${{ env.DOCKER_USERNAME }}/apopulis-backend:latest
+          tags: keno27/apopulis:backend-latest

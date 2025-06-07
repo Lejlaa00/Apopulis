@@ -1,9 +1,6 @@
 version: '3.8'
-services:
-  backend:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
+services:  backend:
+    image: keno27/apopulis:backend-latest
     ports:
       - "5001:5001"
     environment:
@@ -21,11 +18,8 @@ services:
     restart: unless-stopped
     networks:
       - apopulis-network
-
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: keno27/apopulis:frontend-latest
     ports:
       - "3000:80"
     environment:
