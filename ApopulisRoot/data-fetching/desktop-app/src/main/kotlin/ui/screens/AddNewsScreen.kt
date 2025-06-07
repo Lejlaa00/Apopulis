@@ -7,11 +7,13 @@ import model.NewsItem
 fun AddNewsScreen(
     onSave: (NewsItem) -> Unit,
     onNavigate: (String) -> Unit
+
 ) {
     NewsEditScreen(
         item = null,
         onSave = onSave,
         onNavigate = onNavigate,
-        showBackButton = false
+        showBackButton = false,
+        screenKey = "addNews" // dodano!
     )
 }

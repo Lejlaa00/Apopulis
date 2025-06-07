@@ -17,6 +17,7 @@ import ui.ui.screens.*
 import ui.util.Storage
 import scraper.NewsSender
 
+
 @Composable
 @Preview
 fun App() {
@@ -122,7 +123,7 @@ fun App() {
 }
 
 fun main() = application {
-    Window(onCloseRequest = ::exitApplication, title = "News App") {
+    Window(onCloseRequest = ::exitApplication, title = "Apopulis") {
         App()
     }
 }
