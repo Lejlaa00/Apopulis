@@ -9,11 +9,6 @@ require('dotenv').config();
 const cron = require('node-cron');
 const recalculateAndCachePopularity = require('./cron/popularityCron');
 
-
-mongoose.connect('mongodb+srv://ivanaailic:malodete167@cluster0.iemfweq.mongodb.net/Apopulis')
-    .then(() => console.log("MongoDB connected"))
-    .catch(err => console.error("MongoDB connection error:", err));
-
 // Import routes
 const userRoutes = require('./routes/userRoutes');
 const newsRoutes = require('./routes/newsRoutes');
@@ -24,10 +19,15 @@ const locationRoutes = require('./routes/locationRoutes');
 const sourceRoutes = require('./routes/sourceRoutes');
 const provinceRoutes = require('./routes/provinceRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const healthRoutes = require('./routes/healthRoutes');
+
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log("MongoDB connected"))
+    .catch(err => console.error("MongoDB connection error:", err));
 
 // Middleware
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -57,8 +57,6 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/api/users', userRoutes);
 app.use('/api/news', newsRoutes);
-//app.use('/api/comments', authMiddleware, commentRoutes); // Comments require authentication
-//app.use('/api/votes', authMiddleware, voteRoutes); // Votes require authentication
 app.use('/api/comments', commentRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -66,6 +64,7 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/sources', sourceRoutes);
 app.use('/api/provinces', provinceRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api', healthRoutes);
 
 // Protected test route
 app.get('/api/me', authMiddleware, (req, res) => {
