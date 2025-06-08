@@ -14,6 +14,6 @@ fun AddNewsScreen(
         onSave = onSave,
         onNavigate = onNavigate,
         showBackButton = false,
-        screenKey = "addNews" // dodano!
+        screenKey = "addNews"
     )
 }

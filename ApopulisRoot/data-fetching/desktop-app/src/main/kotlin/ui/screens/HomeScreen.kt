@@ -101,10 +101,10 @@ fun SidebarWrapper(
         }
 
         Divider(
-            color = AppColors.HoverBg, // ili neka specifična nijansa sive
+            color = AppColors.HoverBg,
             modifier = Modifier
                 .fillMaxHeight()
-                .width(1.dp) // tanje nego 1.dp
+                .width(1.dp)
         )
 
         Box(

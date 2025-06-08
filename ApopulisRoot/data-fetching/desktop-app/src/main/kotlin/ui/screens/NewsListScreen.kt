@@ -462,7 +462,7 @@ fun CategoryDropdownField(
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Open category menu",
-                        tint = AppColors.Icon // vidljivija strelica
+                        tint = AppColors.Icon
                     )
                 }
             },

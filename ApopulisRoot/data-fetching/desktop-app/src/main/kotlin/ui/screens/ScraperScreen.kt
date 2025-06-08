@@ -26,7 +26,6 @@ fun ScraperScreen(
 
         val options = listOf("All", "24ur", "N1info")
 
-        // Resetiraj broj kada počne skrejpanje
         LaunchedEffect(news) {
             if (isLoading) {
                 parsedCount = news.size
