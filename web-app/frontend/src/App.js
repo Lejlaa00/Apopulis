@@ -7,6 +7,7 @@ import Register from "./components/Register";
 import Home from "./components/Home";
 import NewsDetail from './components/NewsDetail';
 import Profile from './components/Profile';
+import AboutUs from "./components/AboutUs";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import 'leaflet/dist/leaflet.css';
@@ -30,6 +31,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/news/:id" element={<NewsDetail />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/about" element={<AboutUs />} />
           </Routes>
         </Layout>
 

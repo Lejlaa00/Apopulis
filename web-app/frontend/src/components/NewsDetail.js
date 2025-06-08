@@ -10,12 +10,13 @@ import { faThumbsUp, faThumbsDown, faStar, faLocationDot, faVolumeHigh, faVolume
 import { faComment } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { X } from "lucide-react";
 
 import '../css/newsDetail.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
-function NewsDetail({ id: propId, embedded = false }) {
+function NewsDetail({ id: propId, embedded = false, onClose }) {
     const { id: routeId } = useParams();
     const id = propId || routeId;
     const { user } = useContext(UserContext);

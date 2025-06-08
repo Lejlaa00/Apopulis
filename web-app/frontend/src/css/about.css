@@ -1,0 +1,24 @@
+.page-content {
+  max-width: 800px;
+  margin: 6rem auto;
+  padding: 3rem;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  color: var(--color-text-white);
+  line-height: 1.7;
+  text-align: center;
+}
+
+.page-content h1 {
+  font-size: 2.2rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-text-white);
+}
+
+.page-content p {
+  font-size: 1.05rem;
+  margin-bottom: 1rem;
+  color: var(--color-text-muted);
+}

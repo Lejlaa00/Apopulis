@@ -486,6 +486,23 @@
   letter-spacing: 0.3px;
 }
 
+.close-button {
+  position: fixed;
+  top: 24px;
+  right: 32px;
+  background: none;
+  border: none;
+  color: var(--color-text-light-gray);
+  cursor: pointer;
+  font-size: 1.2rem;
+  z-index: 1500;
+  transition: color 0.2s ease;
+}
+
+.close-button:hover {
+  color: var(--color-accent-red);
+}
+
 @keyframes fadeInUp {
   0% {
     opacity: 0;

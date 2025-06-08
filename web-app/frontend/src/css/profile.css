@@ -71,7 +71,7 @@
   margin-top: 15px;
   text-align: center;
   font-size: 0.95rem;
-  color: var(--color-accent-red);
+  color: var(--color-accent-purple);
 }
 
 @media (max-width: 768px) {
