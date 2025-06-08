@@ -29,6 +29,8 @@ jobs:
           context: ./web-app/frontend
           push: true
           tags: keno27/apopulis:frontend-latest
+          build-args: |
+            REACT_APP_API_URL=http://20.224.66.116:5001/api
 
       - name: Build and push Backend
         uses: docker/build-push-action@v5

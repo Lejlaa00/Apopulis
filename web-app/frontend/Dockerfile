@@ -1,5 +1,9 @@
 FROM node:18 AS build
 
+# Set production API URL during build
+ARG REACT_APP_API_URL=http://20.224.66.116:5001/api
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
