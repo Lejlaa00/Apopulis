@@ -26,12 +26,7 @@ mongoose.connect(process.env.MONGO_URI)
     .catch(err => console.error("MongoDB connection error:", err));
 
 // CORS configuration
-const allowedOrigins = [
-    'http://localhost:3000',
-    process.env.FRONTEND_URL,
-    'http://backend:5001',
-    'http://localhost:5001'
-].filter(Boolean);
+const allowedOrigins = ['http://20.224.66.116:3000', 'http://localhost:3000'].filter(Boolean);
 
 app.use(cors({
     origin: function(origin, callback) {
