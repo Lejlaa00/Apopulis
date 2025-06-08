@@ -17,11 +17,12 @@ RUN npm run build
 # Production environment
 FROM nginx:alpine
 
-# Copy custom nginx config (if you have one)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Create nginx directories and set permissions
+RUN mkdir -p /usr/share/nginx/html && \
+    chown -R nginx:nginx /usr/share/nginx/html
 
 # Copy built assets from builder stage
-COPY --from=build /app/build /usr/share/nginx/html
+COPY --from=build /app/build /usr/share/nginx/html/
 
 # Add nginx configuration to handle React Router
 RUN echo "server { \

@@ -1,4 +1,4 @@
-name: Build and Deploy Docker Images
+﻿name: Build and Deploy Docker Images
 
 on:
   push:
@@ -44,4 +44,6 @@ jobs:
         run: |
           curl -X POST ${{ secrets.WEBHOOK_URL }} \
           -H "Content-Type: application/json" \
+          -H "Authorization: Bearer ${{ secrets.WEBHOOK_SECRET }}" \
           -d '{"event": "deployment", "status": "success", "repository": "${{ github.repository }}", "commit": "${{ github.sha }}"}'
+          
