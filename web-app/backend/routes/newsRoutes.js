@@ -8,7 +8,8 @@ const {
     deleteNews,
     getNewsByLocation,
     trackView,
-    getPopularityScore
+    getPopularityScore,
+    getSummary
 } = require('../controllers/newsController');
 const NewsItem = require('../models/newsItemModel'); 
 const { getRecommendedNews } = require('../controllers/newsController');
@@ -39,6 +40,9 @@ router.get('/trending', async (req, res) => {
         res.status(500).json({ msg: 'Failed to load trending news' });
     }
 });
+
+// Get news summary
+router.get('/summary', getSummary);
 
 //Popularity score route for one newsItem
 router.get('/:id/popularity', getPopularityScore);

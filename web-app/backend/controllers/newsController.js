@@ -1,12 +1,76 @@
 const NewsItem = require('../models/newsItemModel');
 const Comment = require('../models/commentModel');
 const Vote = require('../models/voteModel');
-const Category = require('../models/categoryModel');
-const Source = require('../models/sourceModel'); 
-const Location = require('../models/locationModel');
 const { getUserTopInterests } = require('../helpers/userRecommendations');
 const { calculatePopularity } = require('../utils/popularity');
 const jwt = require('jsonwebtoken');
+const cron = require('node-cron');
+
+// Cache for news summary
+let summaryCache = {
+    summary: null,
+    timestamp: null,
+    newsCount: 0
+};
+
+// Function to generate summary
+async function generateNewsSummary() {
+    try {
+        const todaysNews = await NewsItem.find()
+            .sort({ publishedAt: -1 })
+            .select('title content')
+            .limit(10);
+
+        if (todaysNews.length === 0) {
+            summaryCache = {
+                summary: 'No news items found for today.',
+                timestamp: new Date(),
+                newsCount: 0
+            };
+            return;
+        }
+
+        const newsContent = todaysNews.map(news => 
+            `Title: ${news.title}\nContent: ${news.content || 'No content available'}\n`
+        ).join('\n');
+
+        const OpenAI = require('openai');
+        const client = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY || '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'
+        });
+
+        const completion = await client.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a professional news summarizer. Create a comprehensive summary of today\'s news articles. Focus on key details and maintain context while ensuring readability, write it in slovene language.'
+                },
+                {
+                    role: 'user',
+                    content: `Please create a detailed summary of these news articles. The summary should be around 500-600 words, divided into well-structured paragraphs. Cover the main points of each article while maintaining a coherent narrative:\n${newsContent}`
+                }
+            ],
+            max_tokens: 1000
+        });
+
+        summaryCache = {
+            summary: completion.choices[0].message.content,
+            timestamp: new Date(),
+            newsCount: todaysNews.length
+        };
+
+        console.log('News summary generated at:', new Date().toLocaleTimeString());
+    } catch (err) {
+        console.error('Error generating news summary:', err);
+    }
+}
+
+// Generate summary every 20 minutes
+cron.schedule('*/20 * * * *', generateNewsSummary);
+
+// Generate initial summary when server starts
+generateNewsSummary();
 
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'default_access_secret';
 
@@ -86,21 +150,12 @@ exports.getNewsById = async (req, res) => {
 // Create a new news item
 exports.createNews = async (req, res) => {
     try {
-        const { title, summary, content, publishedAt, source, location, category, url , imageUrl, author, tags} = req.body;
+        const { title, summary, content, publishedAt, sourceId, locationId, category, url } = req.body;
 
         const categoryDoc = await Category.findOne({ name: category });
+
         if (!categoryDoc) {
             return res.status(400).json({ msg: `Category '${category}' does not exist.` });
-        }
-
-        const sourceDoc = await Source.findOne({ name: source });
-        if (!sourceDoc) {
-            return res.status(400).json({ msg: `Source '${source}' does not exist.` });
-        }
-
-        const locationDoc = await Location.findOne({ name: location });
-        if (!locationDoc) {
-            return res.status(400).json({ msg: `Location '${location}' does not exist.` });
         }
 
         const newsItem = new NewsItem({
@@ -108,14 +163,11 @@ exports.createNews = async (req, res) => {
             summary,
             content,
             publishedAt: publishedAt || new Date(),
-            sourceId: sourceDoc._id,
-            locationId: locationDoc._id,
+            sourceId,
+            locationId,
             categoryId: categoryDoc._id,
-            url,
-            imageUrl: imageUrl || 'http://localhost:5001/images/default-image.jpg',
-            author,
-            tags
-            });
+            url
+        });
 
         await newsItem.save();
         res.status(201).json(newsItem);
@@ -297,5 +349,26 @@ exports.getRecommendedNews = async (req, res) => {
         res.status(500).json({ msg: 'Error fetching recommended news' });
     }
   };
+
+// Get summary of today's news using OpenAI
+exports.getSummary = async (req, res) => {
+    try {
+        // If no cache exists yet, generate one
+        if (!summaryCache.summary) {
+            await generateNewsSummary();
+        }
+
+        res.json({
+            ...summaryCache,
+            fromCache: true
+        });
+    } catch (err) {
+        console.error('Error getting news summary:', err);
+        res.status(500).json({ 
+            msg: 'Error getting news summary', 
+            error: err.message 
+        });
+    }
+};
 
 exports.updateNewsMetrics = updateNewsMetrics;
