@@ -5,14 +5,16 @@ export async function authFetch(url, options = {}) {
     
     // Public routes that don't require auth but can use it if available
     const publicRoutes = [
-        '/news$', // Main news endpoint
-        '/news/trending$', // Trending news
-        '/news/[^/]+$', // Individual news items
-        '/stats/', // Stats endpoints
-        '/categories$', // Categories list
-        '/locations$', // Locations list
-        '/comments/news/.+$', // Comments for a news item (reading)
-        '/votes/news/.+$', // Vote counts for a news item (reading)
+        '/api/news$', // Main news endpoint
+        '/api/news\\?.*$', // News with query parameters
+        '/api/news/trending$', // Trending news
+        '/api/news/[0-9a-fA-F]{24}$', // Individual news items by MongoDB ID
+        '/api/news/[0-9a-fA-F]{24}\\?.*$', // Individual news items with query params
+        '/api/stats/', // Stats endpoints
+        '/api/categories$', // Categories list
+        '/api/locations$', // Locations list
+        '/api/comments/news/.+$', // Comments for a news item (reading)
+        '/api/votes/news/.+$' // Vote counts for a news item (reading)
     ];
 
     // Check if the URL matches any public route patterns
