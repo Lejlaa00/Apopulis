@@ -24,7 +24,9 @@
 
 .map-area {
   grid-area: map;
-  overflow: auto;
+  overflow: hidden;
+  min-height: 0;
+  height: 100%;
 }
 
 @media (max-width: 992px) {

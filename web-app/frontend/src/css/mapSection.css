@@ -5,8 +5,7 @@
   margin-right: 1.5rem;
   width: 100%;
   box-sizing: border-box;
-  margin-bottom: 10px;
-  height: 500px;
+  height: 100%;
   border-radius: 8px;
   overflow: hidden;
   background-color: #000;
@@ -78,7 +77,7 @@
   .map-container {
     margin-right: 0.5rem;
     padding-top: 0.75rem;
-    height: 400px;
+    min-height: 400px;
   }
 }
 
@@ -86,7 +85,7 @@
   .map-container {
     margin-right: 0;
     padding-top: 0.5rem;
-    height: 300px;
+    min-height: 300px;
   }
 }
 
