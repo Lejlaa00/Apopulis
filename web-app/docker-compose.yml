@@ -7,22 +7,28 @@ services:
     environment:
       - NODE_ENV=production
       - HOST=0.0.0.0
-      - CORS_ORIGIN=http://20.224.66.116:3000
+      - PORT=5001
+      - CORS_ORIGIN=http://localhost:3000
+      - FRONTEND_URL=http://localhost:3000
       - MONGO_URI=mongodb+srv://ivanaailic:malodete167@cluster0.iemfweq.mongodb.net/Apopulis
       - ACCESS_TOKEN_SECRET=7a5d8f3e1b9c2a6d4f0e8c7b5a9d3e1f
       - REFRESH_TOKEN_SECRET=4e9f2c8a1d7b3e0f5c9a2d8b6e1f4c7a
       - JWT_EXPIRES_IN=1h
       - REFRESH_TOKEN_EXPIRES_IN=7d
-      - PORT=5001
     volumes:
       - backend_images:/app/images
       - backend_uploads:/app/uploads
     restart: unless-stopped
     networks:
-      - apopulis-network  frontend:
+      - apopulis-network
+      
+  frontend:
     image: keno27/apopulis:frontend-latest
     ports:
       - "3000:80"
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=http://localhost:5001/api
     depends_on:
       - backend
     restart: unless-stopped
