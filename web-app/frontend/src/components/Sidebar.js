@@ -1,97 +1,83 @@
-import React, { useContext, useState, useRef, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { UserContext } from '../userContext';
-import { FaHome, FaUserCircle } from 'react-icons/fa';
-import '../css/sidebar.css';
+import React from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { Home, LogIn, UserPlus, LogOut, User,  Mail, Info } from "lucide-react";
+import "../css/sidebar.css";
 
-export default function Sidebar() {
-  const { user, setUserContext } = useContext(UserContext);
+const Sidebar = () => {
   const navigate = useNavigate();
-
-  const [hovered, setHovered] = useState(false);
-  const dropdownRef = useRef(null);
+  const isAuthenticated = !!localStorage.getItem("token");
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUserContext(null);
-    navigate('/login');
+    localStorage.removeItem("token");
+    navigate("/login");
   };
-
-  const hoverTimeout = useRef(null);
-
-  useEffect(() => {
-  function handleClickOutside(event) {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setHovered(false);
-    }
-  }
-
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
-    clearTimeout(hoverTimeout.current);
-  };
-}, []);
 
   return (
-    <aside className="sidebar">
+    <div className="sidebar">
       <div className="sidebar-header">
-        <img src="/logo.png" alt="Apopulis Logo" className="sidebar-logo" />
+        <h2>Apopulis</h2>
       </div>
       <hr className="sidebar-divider" />
-
       <ul className="nav-list">
-        {/* HOME */}
         <li>
-          <NavLink
-            to="/"
-            className={({ isActive }) => (isActive ? 'active-link' : 'nav-link')}
-            title="Home"
-          >
-            <FaHome size={20} />
-            <span className="nav-text">Home</span>
+          <NavLink to="/" className={({ isActive }) => isActive ? "active-link" : ""}>
+            <Home size={18} />
+            Home
           </NavLink>
         </li>
 
-        {/* PROFILE */}
-        <li className="profile-container" ref={dropdownRef}>
-          <div
-            className="profile-hover-area"
-            onMouseEnter={() => {
-              clearTimeout(hoverTimeout.current);
-              setHovered(true);
-            }}
-            onMouseLeave={() => {
-              hoverTimeout.current = setTimeout(() => {
-                setHovered(false);
-              }, 150); 
-            }}
-          >
-            <NavLink to="/profile" className={({ isActive }) => (isActive ? 'active-link' : 'nav-link')} onClick={() => setHovered(false)}>
-              <div className="profile-dropdown-item">
-                <FaUserCircle size={20} style={{ color: user?.avatarColor || 'var(--color-text-white)' }} />
-                <span className="nav-text">Profile</span>
-              </div>
-            </NavLink>
-
-            {hovered && (
-              <div className="profile-dropdown">
-                {!user ? (
-                  <>
-                    <NavLink to="/login" className="dropdown-item" onClick={() => setHovered(false)}>Login</NavLink>
-                    <NavLink to="/register" className="dropdown-item" onClick={() => setHovered(false)}>Register</NavLink>
-                  </>
-                ) : (
-                  <>
-                    <button className="dropdown-item" onClick={handleLogout}>Logout</button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+        <li>
+          <a href="mailto:lejlagutic2019@gmail.com" className="profile-nav">
+            <Mail size={18} />
+            Contact Us
+          </a>
         </li>
+
+        <li>
+          <NavLink to="/about" className={({ isActive }) => isActive ? "active-link" : ""}>
+            <Info size={18} />
+            About Us
+          </NavLink>
+        </li>
+
+        <hr className="sidebar-divider" />
+
+        <div className="auth-section">
+        {!isAuthenticated ? (
+          <>
+            <li>
+              <NavLink to="/login" className={({ isActive }) => isActive ? "active-link" : ""}>
+                <LogIn size={18} />
+                Login
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/register" className={({ isActive }) => isActive ? "active-link" : ""}>
+                <UserPlus size={18} />
+                Register
+              </NavLink>
+            </li>
+          </>
+        ) : (
+          <>
+            <li>
+              <NavLink to="/profile" className={({ isActive }) => isActive ? "active-link" : ""}>
+                <User size={18} />
+                Profile
+              </NavLink>
+            </li>
+            <li>
+              <button onClick={handleLogout} className="profile-nav">
+                <LogOut size={18} />
+                Logout
+              </button>
+            </li>
+          </>
+        )}
+      </div>
       </ul>
-    </aside>
+    </div>
   );
-}
+};
+
+export default Sidebar;

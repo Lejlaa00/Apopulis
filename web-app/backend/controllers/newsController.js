@@ -5,6 +5,9 @@ const { getUserTopInterests } = require('../helpers/userRecommendations');
 const { calculatePopularity } = require('../utils/popularity');
 const jwt = require('jsonwebtoken');
 const cron = require('node-cron');
+const Category = require('../models/categoryModel');
+const Source = require('../models/sourceModel');
+const Location = require('../models/locationModel');
 
 // Cache for news summary
 let summaryCache = {
@@ -146,16 +149,24 @@ exports.getNewsById = async (req, res) => {
         res.status(500).json({ msg: 'Error fetching news item', error: err.message });
     }
 };
-
 // Create a new news item
 exports.createNews = async (req, res) => {
     try {
-        const { title, summary, content, publishedAt, sourceId, locationId, category, url } = req.body;
+        const { title, summary, content, publishedAt, source, location, category, url, imageUrl, author, tags } = req.body;
 
         const categoryDoc = await Category.findOne({ name: category });
-
         if (!categoryDoc) {
             return res.status(400).json({ msg: `Category '${category}' does not exist.` });
+        }
+
+        const sourceDoc = await Source.findOne({ name: source });
+        if (!sourceDoc) {
+            return res.status(400).json({ msg: `Source '${source}' does not exist.` });
+        }
+
+        const locationDoc = await Location.findOne({ name: location });
+        if (!locationDoc) {
+            return res.status(400).json({ msg: `Location '${location}' does not exist.` });
         }
 
         const newsItem = new NewsItem({
@@ -163,10 +174,13 @@ exports.createNews = async (req, res) => {
             summary,
             content,
             publishedAt: publishedAt || new Date(),
-            sourceId,
-            locationId,
+            sourceId: sourceDoc._id,
+            locationId: locationDoc._id,
             categoryId: categoryDoc._id,
-            url
+            url,
+            imageUrl: imageUrl || 'http://localhost:5001/images/default-image.jpg',
+            author,
+            tags
         });
 
         await newsItem.save();
@@ -180,26 +194,40 @@ exports.createNews = async (req, res) => {
 // Update a news item
 exports.updateNews = async (req, res) => {
     try {
-        const { title, summary, content, publishedAt, sourceId, locationId, categoryId, url } = req.body;
+        const {
+            title, summary, content, publishedAt,
+            source, location, category, url,
+            imageUrl, author, tags
+        } = req.body;
 
-        const newsItem = await NewsItem.findByIdAndUpdate(
-            req.params.id,
-            {
-                title,
-                summary,
-                content,
-                publishedAt,
-                sourceId,
-                locationId,
-                categoryId,
-                url
-            },
-            { new: true }
-        );
+        console.log("Updating news with: ", { title, category, source, location });
 
-        if (!newsItem) {
-            return res.status(404).json({ msg: 'News item not found' });
-        }
+        const categoryDoc = await Category.findOne({ name: new RegExp(`^${category}$`, 'i') });
+        if (!categoryDoc) return res.status(400).json({ msg: `Category '${category}' does not exist.` });
+
+        const sourceDoc = await Source.findOne({ name: source });
+        if (!sourceDoc) return res.status(400).json({ msg: `Source '${source}' does not exist.` });
+
+        const locationDoc = await Location.findOne({ name: location });
+        if (!locationDoc) return res.status(400).json({ msg: `Location '${location}' does not exist.` });
+
+        const newsItem = await NewsItem.findById(req.params.id);
+        if (!newsItem) return res.status(404).json({ msg: 'News item not found' });
+
+        // ručno ažuriramo polja
+        newsItem.title = title;
+        newsItem.summary = summary;
+        newsItem.content = content;
+        newsItem.publishedAt = publishedAt;
+        newsItem.sourceId = sourceDoc._id;
+        newsItem.locationId = locationDoc._id;
+        newsItem.categoryId = categoryDoc._id;
+        newsItem.url = url;
+        newsItem.imageUrl = imageUrl || 'http://localhost:5001/images/default-image.jpg';
+        newsItem.author = author;
+        newsItem.tags = tags;
+
+        await newsItem.save();
 
         res.json(newsItem);
     } catch (err) {
