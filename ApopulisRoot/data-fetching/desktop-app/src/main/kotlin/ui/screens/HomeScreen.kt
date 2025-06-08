@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.skia.Image
 import ui.ui.theme.AppColors
 import java.time.LocalDate
+import org.json.JSONObject
 
 @Composable
 fun SidebarWrapper(
@@ -172,6 +173,20 @@ fun SidebarItem(
 
 @Composable
 fun HomeScreen(onNavigate: (String) -> Unit) {
+
+    val summaryText = remember { mutableStateOf("Loading summary...") }
+
+    LaunchedEffect(Unit) {
+        try {
+            val url = java.net.URL("http://localhost:5001/api/news/summary")
+            val result = url.readText()
+            val json = JSONObject(result)  // Parsiraj JSON
+            summaryText.value = json.getString("summary")
+        } catch (e: Exception) {
+            summaryText.value = "Greška pri učitavanju: ${e.message}"
+        }
+    }
+
     SidebarWrapper(currentScreen = "home", onNavigate = onNavigate) {
         Column(
             modifier = Modifier
@@ -208,7 +223,7 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
                         .fillMaxWidth()
                 ) {
                     Text(
-                        text = "Summary of today's news will appear here...",
+                        text = summaryText.value,
                         style = MaterialTheme.typography.body1,
                         color = AppColors.TextLight
                     )
