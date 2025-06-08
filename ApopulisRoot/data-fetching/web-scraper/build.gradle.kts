@@ -27,6 +27,8 @@ dependencies {
     //Povezovanje
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("org.json:json:20210307")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0")
 
 }
 

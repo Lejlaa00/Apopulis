@@ -24,7 +24,7 @@ fun ScraperScreen(
         var isLoading by remember { mutableStateOf(false) }
         var parsedCount by remember { mutableStateOf(0) }
 
-        val options = listOf("All", "24ur", "N1info")
+        val options = listOf("All", "24ur", "n1info")
 
         LaunchedEffect(news) {
             if (isLoading) {

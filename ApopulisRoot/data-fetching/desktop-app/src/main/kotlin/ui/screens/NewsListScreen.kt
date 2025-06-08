@@ -19,22 +19,16 @@ import ui.ui.theme.AppColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.Image
-import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.*
 import androidx.compose.ui.draw.clip
 import java.net.URL
-import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Image
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.*
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -121,6 +115,7 @@ fun NewsListScreen(
                                 unfocusedLabelColor = AppColors.TextMuted
                             )
                         )
+
                     }
                 }
             }
@@ -296,8 +291,8 @@ fun NewsDetailDialog(item: NewsItem, onClose: () -> Unit) {
                         item.location?.let {
                             InfoRowIcon(Icons.Default.Place, "Location:", it)
                         }
-                        InfoRowIcon(Icons.Default.Link, "Source:", item.source)
-                    }
+                            InfoRowIcon(Icons.Default.Link, "Source:", item.source ?: "N/A")
+                        }
                         Box(
                             modifier = Modifier
                                 .width(1.dp)
@@ -374,7 +369,8 @@ fun InfoRowIcon(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-fun InfoRowGray(label: String, value: String) {
+fun InfoRowGray(label: String, value: String?) {
+    val safeValue = value ?: "N/A"
     Row(modifier = Modifier.padding(vertical = 2.dp)) {
         Text(
             text = label,
@@ -383,7 +379,7 @@ fun InfoRowGray(label: String, value: String) {
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = value,
+            text = safeValue,
             style = MaterialTheme.typography.body2,
             color = AppColors.TextMuted
         )

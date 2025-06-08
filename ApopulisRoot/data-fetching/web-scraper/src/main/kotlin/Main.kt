@@ -48,7 +48,7 @@ fun main() = runBlocking {
                     println("")
                     println("===> Location: ${item.location ?: "unknown"}")
                     println("===> Category: ${item.category ?: "unknown"}")
-                    println("===> Tags: ${item.tags.joinToString(", ")}")
+                    println("===> Tags: ${item.tags?.joinToString(", ")}")
                     println("-------------------------------------")
 
                     NewsSender.send(item)

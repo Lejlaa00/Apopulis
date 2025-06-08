@@ -111,7 +111,20 @@ fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (Strin
                             val to = try { LocalDateTime.parse(endDate, formatter) } catch (e: Exception) { LocalDateTime.now() }
 
                             val rawItems = (1..(count.toIntOrNull() ?: 0)).map {
-                                val randomTime = from.plusSeconds(Random.nextLong(0, to.toEpochSecond(ZoneOffset.UTC) - from.toEpochSecond(ZoneOffset.UTC)))
+
+                                val nowEpoch = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
+                                val fromEpoch = from.toEpochSecond(ZoneOffset.UTC)
+                                val toEpoch = minOf(to.toEpochSecond(ZoneOffset.UTC), nowEpoch)
+
+                                val randomEpoch = if (toEpoch > fromEpoch) {
+                                    Random.nextLong(fromEpoch, toEpoch)
+                                } else {
+                                    fromEpoch
+                                }
+
+                                val randomTime = LocalDateTime.ofEpochSecond(randomEpoch, 0, ZoneOffset.UTC)
+
+
                                 val fakeParagraphs = List(5) {
                                     List(50) { faker.lorem.words() }.joinToString(" ").replaceFirstChar { it.uppercaseChar() } + "."
                                 }.joinToString("\n\n")

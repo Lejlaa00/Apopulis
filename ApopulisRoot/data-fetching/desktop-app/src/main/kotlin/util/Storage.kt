@@ -7,7 +7,7 @@ import model.NewsItem
 import java.io.File
 
 object Storage {
-    private val mapper = ObjectMapper()
+    /*private val mapper = ObjectMapper()
         .registerModule(KotlinModule())
         .registerModule(JavaTimeModule())
 
@@ -21,5 +21,5 @@ object Storage {
         return if (file.exists()) {
             mapper.readValue(file)
         } else emptyList()
-    }
+    }*/
 }

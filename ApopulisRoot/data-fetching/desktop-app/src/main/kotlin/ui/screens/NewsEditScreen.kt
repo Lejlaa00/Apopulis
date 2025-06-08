@@ -136,7 +136,7 @@ fun NewsEditScreen(
                         )
                         InputField("Location", location) { location = it }
                         InputField("Author", author) { author = it }
-                        val sources = listOf("24Ur", "N1Info")
+                        val sources = listOf("24ur", "n1info")
                         var sourceExpanded by remember { mutableStateOf(false) }
 
                         ExposedDropdownMenuBox(

@@ -14,16 +14,24 @@ import org.example.nlp.Categorizer
 import scraper.N1infoScraper
 import scraper.U24urScraper
 import ui.ui.screens.*
-import ui.util.Storage
 import scraper.NewsSender
 
 @Composable
 @Preview
 fun App() {
     var currentScreen by remember { mutableStateOf("home") }
-    var allNews by remember { mutableStateOf(Storage.load()) }
+    var allNews by remember { mutableStateOf<List<NewsItem>>(emptyList()) }
     var editingItem by remember { mutableStateOf<NewsItem?>(null) }
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        allNews = NewsSender.fetchAllNews()
+            .filter {
+                val img = it.imageUrl
+                img.isNullOrBlank() || img.startsWith("http")
+            }
+    }
+
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -38,33 +46,45 @@ fun App() {
                     onDelete = { toDelete ->
                         scraper.NewsSender.delete(toDelete)
                         allNews = allNews.filter { it.url != toDelete.url }
-                        Storage.save(allNews)
+                        //Storage.save(allNews)
                     },
                     onNavigate = { currentScreen = it }
                 )
                 "addNews" -> AddNewsScreen(
                     onSave = { item ->
-                        NewsSender.send(item)
-                        allNews = allNews + item
-                        Storage.save(allNews)
-                        currentScreen = "newsList"
+                        coroutineScope.launch {
+                            val sent = NewsSender.sendAsync(item)
+                            if (sent) {
+                                allNews = allNews + item
+                                currentScreen = "newsList"
+                            } else {
+                                println("Not sended - not showed.")
+                            }
+                        }
                     },
                     onNavigate = { currentScreen = it }
                 )
+
                 "editNews" -> NewsEditScreen(
                     item = editingItem,
-                    onSave = {
-                        val enriched = it.copy(
+                    onSave = { editedItem ->
+                        val finalItem = editedItem.copy(
                             id = editingItem?.id,
-                            category = it.category ?: Categorizer.categorizeByText(it),
-                            location = Categorizer.extractLocationByText(it)
+                            category = editedItem.category?.ifBlank { null } ?: Categorizer.categorizeByText(editedItem),
+                            location = editedItem.location?.ifBlank { null } ?: Categorizer.extractLocationByText(editedItem)
                         )
-                        allNews = allNews.map { n -> if (n.url == enriched.url) enriched else n }
-                        scraper.NewsSender.update(enriched)
-                        currentScreen = "newsList"
+
+                        allNews = allNews.map { n -> if (n.id == finalItem.id) finalItem else n }
+                        coroutineScope.launch {
+                            scraper.NewsSender.update(finalItem)
+                            allNews = allNews.map { n -> if (n.id == finalItem.id) finalItem else n }
+                            currentScreen = "newsList"
+                        }
+
                     },
                     onNavigate = { currentScreen = it }
                 )
+
                 "scraper" -> ScraperScreen(
                     news = allNews,
                     onRefresh = { source ->
@@ -87,6 +107,7 @@ fun App() {
                                 )
                             }
 
+
                             enrichedNews.forEach {
                                 try {
                                     NewsSender.send(it)
@@ -100,7 +121,7 @@ fun App() {
                             }
 
                             allNews = allNews + newItems
-                            Storage.save(allNews)
+                            //Storage.save(allNews)
                             currentScreen = "newsList"
                         }
                     }
@@ -110,7 +131,7 @@ fun App() {
                 "generator" -> DataGeneratorScreen(
                     onGenerate = { generatedItems ->
                         allNews = allNews + generatedItems
-                        Storage.save(allNews)
+                        //Storage.save(allNews)
                         currentScreen = "newsList"
                     },
                     onNavigate = { currentScreen = it }

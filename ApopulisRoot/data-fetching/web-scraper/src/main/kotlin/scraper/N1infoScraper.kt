@@ -145,6 +145,7 @@ class N1infoScraper : BaseScraper(
                                 category = categoryText?.let { cleanText(it) },
                                 tags = emptyList()
                             )
+
                         } catch (e: ElementNotFoundException) {
                             println("Required elements not found for $url, skipping item.")
                             null

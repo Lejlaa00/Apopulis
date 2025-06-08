@@ -19,6 +19,9 @@ dependencies {
     implementation("io.github.serpro69:kotlin-faker:1.14.0")
     implementation("media.kamel:kamel-image:0.6.0")
 
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0")
+
+
 }
 
 kotlin {
