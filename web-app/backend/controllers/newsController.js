@@ -44,7 +44,7 @@ async function generateNewsSummary() {
             messages: [
                 {
                     role: 'system',
-                    content: 'You are a professional news summarizer. Create a comprehensive summary of today\'s news articles. Focus on key details and maintain context while ensuring readability.'
+                    content: 'You are a professional news summarizer. Create a comprehensive summary of today\'s news articles. Focus on key details and maintain context while ensuring readability, write it in slovene language.'
                 },
                 {
                     role: 'user',
