@@ -22,12 +22,24 @@ router.get('/recommended', authMiddleware, getRecommendedNews);
 
 //Trending route
 router.get('/trending', async (req, res) => {
-    try {
-        const { category } = req.query;
+   try {
+        const { category, search } = req.query;
+
         const filter = {
-            publishedAt: { $gte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) }
+            publishedAt: { $gte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) } // poslednja 2 dana
         };
-        if (category) filter.category = category;
+
+        if (category) {
+            filter.category = category;
+        }
+
+        if (search && search.trim() !== '') {
+            filter.$or = [
+                { title: { $regex: new RegExp(search, 'i') } },
+                { description: { $regex: new RegExp(search, 'i') } },
+                { summary: { $regex: new RegExp(search, 'i') } },
+            ];
+        }
 
         const trendingNews = await NewsItem.find(filter)
             .sort({ cachedPopularityScore: -1 })

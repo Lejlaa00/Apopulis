@@ -35,6 +35,12 @@ export default function SortedNews({ onSelect }) {
 
         if (filter === 'trending') {
           url = `${API_URL}/news/trending`;
+          if (selectedCategory !== 'all') {
+            const categoryObj = categories.find(c => c._id === selectedCategory || c.name === selectedCategory);
+            if (categoryObj) {
+              params.push(`category=${categoryObj._id}`);
+            }
+          }
         } else if (filter === 'bookmark') {
           url = `${API_URL}/users/bookmarks`;
         } else if (filter === 'category') {

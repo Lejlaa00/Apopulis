@@ -10,7 +10,7 @@
   font-size: 0.85rem;
   transition: background-color 0.2s ease;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
   border-bottom: 1px solid var(--color-divider, #333);
 }
@@ -62,13 +62,15 @@
 .sorted-news {
   padding-top: 1rem;
   grid-area: sorted;
-  overflow-y: auto;
+  overflow-y: visible;
+  overflow-x: visible;
   height: 102.07%;
 }
 
 .sorted-news-header {
   position: sticky;
   top: 0;
+  overflow: visible;
   z-index: 100; 
   background-color: var(--color-bg-darkest); 
   padding: 0.5rem 1rem;
@@ -80,16 +82,18 @@
   padding-top: 3rem;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   height: auto;
   max-height: 100%;
+  overflow: visible;
 }
 
 .sorted-news-content {
-  overflow-y: auto;
+  overflow-y: visible;
   flex-grow: 1;
   padding-top: 1rem;
   padding-right: 0.5rem;
+  overflow-x: hidden;
+  position: relative;
 }
 
 @media (max-width: 992px) {

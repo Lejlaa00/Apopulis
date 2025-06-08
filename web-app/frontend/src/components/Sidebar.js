@@ -37,7 +37,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h2>Apopulis</h2>
+        <img src="/logo.png" alt="Apopulis Logo" className="sidebar-logo" />
       </div>
       <hr className="sidebar-divider" />
 
