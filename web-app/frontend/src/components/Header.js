@@ -5,12 +5,11 @@ import { UserContext } from '../userContext';
 export default function Header() {
   const { user, setUserContext } = useContext(UserContext);
   const navigate = useNavigate();
-
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    AuthService.logout();
     setUserContext(null);
     navigate('/login');
+    toast.info('Logged out successfully');
   };
 
   return (

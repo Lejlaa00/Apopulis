@@ -98,11 +98,10 @@ export default function Home() {
   }, [newsList, user]);
 
   useEffect(() => {
-    async function fetchComments() {
-      try {
+    async function fetchComments() {      try {
         const map = {};
         for (const news of newsList) {
-          const res = await fetch(`${API_URL}/comments/${news._id}?limit=3&page=1`);
+          const res = await fetch(`${API_URL}/comments/news/${news._id}?limit=3&page=1`);
           if (res.ok) {
             const data = await res.json();
             map[news._id] = data.comments;
@@ -118,18 +117,21 @@ export default function Home() {
     fetchComments();
   }, [newsList]);
 
-  useEffect(() => {
-    async function fetchBookmarks() {
+  useEffect(() => {      async function fetchBookmarks() {
       if (!user) return;
       try {
         const res = await authFetch(`${API_URL}/users/bookmarks`);
         if (res.ok) {
           const data = await res.json();
-          const ids = data.bookmarks.map(b => b._id);
+          const ids = Array.isArray(data.news) ? data.news.map(b => b._id) : [];
           setBookmarkedIds(new Set(ids));
+        } else {
+          console.error('Failed to fetch bookmarks:', await res.text());
+          setBookmarkedIds(new Set());
         }
       } catch (err) {
         console.error('Error fetching bookmarks', err);
+        setBookmarkedIds(new Set());
       }
     }
     fetchBookmarks();

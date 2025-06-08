@@ -1,26 +1,33 @@
-const jwt = require('jsonwebtoken');
-
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'default_access_secret';
+const { verifyToken } = require('../utils/auth');
 
 const authMiddleware = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ msg: 'No token provided' });
-    }
-
-    const token = authHeader.split(' ')[1];
-
     try {
-        const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET);
+        const authHeader = req.headers['authorization'];
+        if (!authHeader?.startsWith('Bearer ')) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Authentication required' 
+            });
+        }
+
+        const token = authHeader.split(' ')[1];
+        const decoded = verifyToken(token);
+        
+        if (!decoded) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid or expired token' 
+            });
+        }
+
         req.user = decoded;
-        // TEMPORARY: skip verification check for seeding
-        // if (!req.user.isVerified) {
-        //     return res.status(403).json({ msg: 'Account not verified.' });
-        // }
         next();
-    } catch (err) {
-        return res.status(401).json({ msg: 'Invalid or expired token' });
+    } catch (error) {
+        console.error('Auth middleware error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
+        });
     }
 };
 

@@ -1,14 +1,8 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const validator = require('validator');
-const { v4: uuidv4 } = require('uuid');
+const { generateToken } = require('../utils/auth');
 
-
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'default_access_secret';
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'default_refresh_secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
-const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d';
 const PASSWORD_MIN_LENGTH = 8;
 
 // Helper function for email validation
@@ -139,65 +133,34 @@ exports.login = async (req, res) => {
         const { username, password } = req.body;
 
         if (!username || !password) {
-            return res.status(400).json({ msg: 'Please provide both username and password' });
+            return res.status(400).json({
+                success: false,
+                message: 'Username and password are required'
+            });
         }
 
         const user = await User.findOne({ username });
-
-        if (!user) {
-            return res.status(401).json({ msg: 'Invalid credentials' });
-        }
-
-        // Password check
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ msg: 'Invalid credentials' });
-        }
-
-       
-        /*if (!user.isVerified) {
-            return res.status(403).json({
-                msg: 'Account not verified. Please check your email for verification instructions.',
-                needsVerification: true
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
             });
-        }*/
+        }
 
-        // Generate JWT token
-        const token = jwt.sign(
-            {
-                id: user._id,
-                isVerified: true, // TEMPORARY: Set to true for development
-                role: user.role || 'user'
-            },
-            ACCESS_TOKEN_SECRET,
-            { expiresIn: JWT_EXPIRES_IN }
-        );
-
-        // Refresh tokens as HTTP-only cookie
-        const refreshToken = jwt.sign(
-            { id: user._id },
-            REFRESH_TOKEN_SECRET,
-            { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
-        );
-
-        res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dana
-        });
-
-        res.json({
+        const token = generateToken(user);
+          res.json({
+            success: true,
             token,
             user: {
                 id: user._id,
                 username: user.username,
                 email: user.email,
                 avatarColor: user.avatarColor,
-                isVerified: user.isVerified,
                 role: user.role || 'user'
             }
-        });
+        });        // For development, we're not using refresh tokens
+        // but in production you might want to implement them
+        console.log('User logged in successfully:', user.username);
 
     } catch (err) {
         console.error('Login error:', err);

@@ -1,35 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../css/login.css'; 
-
 import { toast } from 'react-toastify';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+import AuthService from '../services/authService';
+import '../css/login.css';
 
 function Register() {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const navigate = useNavigate(); 
-
-    const handleRegister = async (e) => {
+    const navigate = useNavigate();     const handleRegister = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${API_URL}/users/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, email, password })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                toast('Registration successful!');
-                navigate('/login');
-            } else {
-                toast(data.msg || 'Registration failed.');
-            }
+            await AuthService.register(username, email, password);
+            toast.success('Registration successful! Please log in.');
+            navigate('/login');
         } catch (err) {
-            console.error('Error:', err);
+            toast.error(err.message || 'Registration failed');
+            console.error('Registration error:', err);
         }
     };
 
