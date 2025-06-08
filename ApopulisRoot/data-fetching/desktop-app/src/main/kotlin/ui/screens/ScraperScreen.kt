@@ -106,15 +106,17 @@ fun ScraperScreen(
 
                     Spacer(Modifier.height(20.dp))
 
-                    Button(
-                        onClick = {
-                            isLoading = true
-                            parsedCount = 0
-                            onRefresh(selected)
-                        },
-                        colors = ButtonDefaults.buttonColors(backgroundColor = AppColors.Accent)
-                    ) {
-                        Text("Get Latest News")
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        Button(
+                            onClick = {
+                                isLoading = true
+                                parsedCount = 0
+                                onRefresh(selected)
+                            },
+                            colors = ButtonDefaults.buttonColors(backgroundColor = AppColors.Accent)
+                        ) {
+                            Text("Get Latest News")
+                        }
                     }
 
                     Spacer(Modifier.height(12.dp))

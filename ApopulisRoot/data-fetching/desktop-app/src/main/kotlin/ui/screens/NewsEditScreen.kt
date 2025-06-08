@@ -13,7 +13,10 @@ import model.NewsItem
 import java.time.LocalDateTime
 import ui.ui.theme.AppColors
 import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun NewsEditScreen(
     item: NewsItem?,
@@ -46,7 +49,7 @@ fun NewsEditScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .widthIn(min = 0.dp, max = 700.dp) // bolje za responsivnost
+                    .widthIn(min = 0.dp, max = 700.dp)
             )
             {
                 Text(
@@ -64,14 +67,127 @@ fun NewsEditScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
+                        val categories = listOf("gospodarstvo", "splošno", "politika", "vreme", "biznis", "kultura", "lifestyle", "šport", "tehnologija")
+                        var categoryExpanded by remember { mutableStateOf(false) }
+
+                        ExposedDropdownMenuBox(
+                            expanded = categoryExpanded,
+                            onExpandedChange = { categoryExpanded = !categoryExpanded }
+                        ) {
+                            OutlinedTextField(
+                                value = category,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Category") },
+                                trailingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Dropdown",
+                                        tint = AppColors.TextLight
+                                    )
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(
+                                    textColor = AppColors.TextWhite,
+                                    backgroundColor = AppColors.BgDarker,
+                                    focusedBorderColor = AppColors.Accent,
+                                    unfocusedBorderColor = AppColors.Divider,
+                                    focusedLabelColor = AppColors.TextLight,
+                                    unfocusedLabelColor = AppColors.TextMuted,
+                                    cursorColor = AppColors.Accent
+                                )
+                            )
+                            ExposedDropdownMenu(
+                                expanded = categoryExpanded,
+                                onDismissRequest = { categoryExpanded = false },
+                                modifier = Modifier.background(AppColors.BgDarkest)
+                            ) {
+                                categories.forEach {
+                                    DropdownMenuItem(onClick = {
+                                        category = it
+                                        categoryExpanded = false
+                                    }) {
+                                        Text(it, color = AppColors.TextWhite)
+                                    }
+                                }
+                            }
+                        }
                         InputField("Title", heading) { heading = it }
-                        InputField("Content", content, lines = 4) { content = it }
+                        OutlinedTextField(
+                            value = content,
+                            onValueChange = { content = it },
+                            label = { Text("Content") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                                .heightIn(min = 180.dp),
+                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                textColor = AppColors.TextWhite,
+                                backgroundColor = AppColors.BgDarker,
+                                focusedBorderColor = AppColors.Accent,
+                                unfocusedBorderColor = AppColors.Divider,
+                                focusedLabelColor = AppColors.TextLight,
+                                unfocusedLabelColor = AppColors.TextMuted,
+                                cursorColor = AppColors.Accent
+                            ),
+                            maxLines = 15
+                        )
+                        InputField("Location", location) { location = it }
                         InputField("Author", author) { author = it }
-                        InputField("Source", source) { source = it }
+                        val sources = listOf("24Ur", "N1Info")
+                        var sourceExpanded by remember { mutableStateOf(false) }
+
+                        ExposedDropdownMenuBox(
+                            expanded = sourceExpanded,
+                            onExpandedChange = { sourceExpanded = !sourceExpanded }
+                        ) {
+                            OutlinedTextField(
+                                value = source,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Source") },
+                                trailingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Dropdown",
+                                        tint = AppColors.TextLight
+                                    )
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(
+                                    textColor = AppColors.TextWhite,
+                                    backgroundColor = AppColors.BgDarkest,
+                                    focusedBorderColor = AppColors.Accent,
+                                    unfocusedBorderColor = AppColors.Divider,
+                                    focusedLabelColor = AppColors.TextLight,
+                                    unfocusedLabelColor = AppColors.TextMuted,
+                                    cursorColor = AppColors.Accent
+                                )
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = sourceExpanded,
+                                onDismissRequest = { sourceExpanded = false },
+                                modifier = Modifier.background(AppColors.BgDarkest)
+                            ) {
+                                sources.forEach {
+                                    DropdownMenuItem(
+                                        onClick = {
+                                            source = it
+                                            sourceExpanded = false
+                                        }
+                                    ) {
+                                        Text(it, color = AppColors.TextWhite)
+                                    }
+                                }
+                            }
+                        }
                         InputField("URL", url) { url = it }
                         InputField("Image URL", imageUrl) { imageUrl = it }
-                        InputField("Category", category) { category = it }
-                        InputField("Location", location) { location = it }
 
                         Spacer(Modifier.height(24.dp))
 

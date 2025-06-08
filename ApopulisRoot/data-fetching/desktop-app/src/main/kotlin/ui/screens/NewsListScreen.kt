@@ -6,8 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,8 +18,6 @@ import model.NewsItem
 import ui.ui.theme.AppColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.ImageBitmap
@@ -42,10 +38,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.ColorFilter
-
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -164,7 +158,6 @@ fun NewsListScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
 
-                                // Naslov
                                 Text(
                                     item.title,
                                     style = MaterialTheme.typography.h6,
@@ -173,7 +166,6 @@ fun NewsListScreen(
 
                                 Spacer(Modifier.height(6.dp))
 
-                                // Info i ikonice u istom redu
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
@@ -187,16 +179,6 @@ fun NewsListScreen(
                                         item.category?.let {
                                             Text("Category: $it", style = MaterialTheme.typography.body2, color = AppColors.TextMuted)
                                         }
-                                        Text(
-                                            "Source: ${item.source}",
-                                            style = MaterialTheme.typography.body2,
-                                            color = AppColors.TextMuted
-                                        )
-                                        Text(
-                                            "Author: ${item.author}",
-                                            style = MaterialTheme.typography.body2,
-                                            color = AppColors.TextMuted
-                                        )
                                     }
 
                                     Row {
@@ -206,48 +188,6 @@ fun NewsListScreen(
                                         IconButton(onClick = { toDeleteItem = item }) {
                                             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = AppColors.Icon)
                                         }
-                                    }
-                                }
-
-                                // Ekspanzivni dio
-                                if (isExpanded) {
-                                    Spacer(Modifier.height(10.dp))
-                                    Divider(color = AppColors.Divider)
-                                    Spacer(Modifier.height(10.dp))
-
-                                    val imageUrl = item.imageUrl ?: "https://picsum.photos/600/500"
-
-                                    Spacer(Modifier.height(8.dp))
-                                    var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-
-                                    LaunchedEffect(imageUrl) {
-                                        imageBitmap = loadImageBitmapFromUrl(imageUrl)
-                                    }
-
-                                    imageBitmap?.let {
-                                        Image(
-                                            bitmap = it,
-                                            contentDescription = "News Image",
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .size(width = 600.dp, height = 500.dp)
-                                                .align(Alignment.CenterHorizontally)
-                                                .clip(MaterialTheme.shapes.medium)
-                                        )
-                                        Spacer(Modifier.height(12.dp))
-                                    }
-
-                                    item.content?.let {
-                                        Text(
-                                            it,
-                                            style = MaterialTheme.typography.body1.copy(
-                                                color = AppColors.TextLight,
-                                                lineHeight = 20.sp
-                                            ),
-                                            modifier = Modifier
-                                                .padding(horizontal = 4.dp)
-                                        )
-                                        Spacer(Modifier.height(8.dp))
                                     }
                                 }
                             }
@@ -291,12 +231,13 @@ fun NewsListScreen(
         }
     }
 }
+
 @Composable
 fun NewsDetailDialog(item: NewsItem, onClose: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xDD000000)) // tamna pozadina
+            .background(Color(0xDD000000))
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -309,7 +250,6 @@ fun NewsDetailDialog(item: NewsItem, onClose: () -> Unit) {
                 .padding(16.dp)
         ) {
             Box {
-                // Fiksirano X dugme
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -330,7 +270,6 @@ fun NewsDetailDialog(item: NewsItem, onClose: () -> Unit) {
                     }
                 }
 
-                // Scrollable sadržaj
                 Column(
                     modifier = Modifier
                         .padding(top = 60.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
@@ -346,6 +285,31 @@ fun NewsDetailDialog(item: NewsItem, onClose: () -> Unit) {
                     )
 
                     Spacer(Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                        item.author?.let {
+                            InfoRowIcon(Icons.Default.Person, "Author:", it)
+                        }
+                        item.location?.let {
+                            InfoRowIcon(Icons.Default.Place, "Location:", it)
+                        }
+                        InfoRowIcon(Icons.Default.Link, "Source:", item.source)
+                    }
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .fillMaxHeight()
+                                .padding(horizontal = 8.dp)
+                                .background(AppColors.Divider)
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                    Divider(color = AppColors.Divider)
+                    Spacer(Modifier.height(12.dp))
 
                     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
                     val imageUrl = item.imageUrl ?: "https://picsum.photos/600/500"
@@ -367,31 +331,45 @@ fun NewsDetailDialog(item: NewsItem, onClose: () -> Unit) {
                         Spacer(Modifier.height(16.dp))
                     }
 
-                    Column {
-                        InfoRowGray("Published at:", item.publishedAt.toLocalDate().toString())
-                        InfoRowGray("Category:", item.category ?: "N/A")
-                        InfoRowGray("Source:", item.source)
-                        item.author?.let { InfoRowGray("Author:", it) }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    Divider(color = AppColors.Divider)
-                    Spacer(Modifier.height(12.dp))
-
                     item.content?.let {
                         Text(
                             it,
                             style = MaterialTheme.typography.body1.copy(
                                 color = AppColors.TextLight,
-                                lineHeight = 20.sp
-                            )
+                                lineHeight = 20.sp,
+                                letterSpacing = 0.15.sp
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            softWrap = true
                         )
                     }
 
                     Spacer(Modifier.height(12.dp))
+
                 }
             }
         }
+    }
+}
+
+@Composable
+fun InfoRowIcon(icon: ImageVector, label: String, value: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 4.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = AppColors.Icon,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = "$label $value",
+            style = MaterialTheme.typography.body2,
+            color = AppColors.TextLight
+        )
     }
 }
 

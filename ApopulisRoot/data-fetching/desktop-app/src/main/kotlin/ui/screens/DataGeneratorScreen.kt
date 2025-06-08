@@ -62,7 +62,7 @@ fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (Strin
                                 .fillMaxWidth()
                                 .padding(vertical = 6.dp)
                                 .clickable { expanded = true },
-                            enabled = false, // disable direct typing
+                            enabled = false,
                             readOnly = true,
                             trailingIcon = {
                                 Icon(
@@ -80,12 +80,11 @@ fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (Strin
                                 cursorColor = AppColors.Accent
                             )
                         )
-
                         DropdownMenu(
                             expanded = expanded,
                             onDismissRequest = { expanded = false },
                             modifier = Modifier
-                                .background(AppColors.BgDarkest) // dark background for dropdown
+                                .background(AppColors.BgDarkest)
                         ) {
                             categories.forEach { cat ->
                                 DropdownMenuItem(

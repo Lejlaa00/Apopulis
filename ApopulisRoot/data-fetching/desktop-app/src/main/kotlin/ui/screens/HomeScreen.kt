@@ -53,8 +53,8 @@ fun SidebarWrapper(
                                 bitmap = it,
                                 contentDescription = "App Logo",
                                 modifier = Modifier
-                                    .height(80.dp)
-                                    .width(180.dp)
+                                    .height(60.dp)
+                                    .width(160.dp)
                             )
                         }
 
