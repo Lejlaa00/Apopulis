@@ -21,7 +21,7 @@ object AppColors {
     val ActiveNew = Color(0xFF202124)
 
     val ActiveScroll = Color.White.copy(alpha = 0.2f)
-    val Divider = Color.White.copy(alpha = 0.1f)
+    val Divider = Color(0x1AFFFFFF)
     val BgIcon = Color(0xFF3A3F4B)
     val Icon = Color(0xFFBBBBBB)
 }

@@ -1,7 +1,11 @@
 package ui.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -26,6 +30,7 @@ fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (Strin
         var endDate by remember { mutableStateOf("2025-12-31T23:59") }
         var isGenerating by remember { mutableStateOf(false) }
         var generatedCount by remember { mutableStateOf(0) }
+        val categories = listOf("gospodarstvo", "splošno", "politika", "vreme", "biznis", "kultura", "lifestyle", "šport", "tehnologija")
 
         Column(
             modifier = Modifier
@@ -47,7 +52,54 @@ fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (Strin
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     InputField("Number of news", count) { count = it }
-                    InputField("Category (optional)", category) { category = it }
+                    var expanded by remember { mutableStateOf(false) }
+                    Text("Category (optional)", color = AppColors.TextLight)
+                    Box {
+                        OutlinedTextField(
+                            value = category,
+                            onValueChange = { },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                                .clickable { expanded = true },
+                            enabled = false, // disable direct typing
+                            readOnly = true,
+                            trailingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Dropdown",
+                                    tint = AppColors.TextLight
+                                )
+                            },
+                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                textColor = AppColors.TextWhite,
+                                backgroundColor = AppColors.BgDarker,
+                                disabledTextColor = AppColors.TextWhite,
+                                disabledBorderColor = AppColors.Divider,
+                                disabledLabelColor = AppColors.TextMuted,
+                                cursorColor = AppColors.Accent
+                            )
+                        )
+
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier
+                                .background(AppColors.BgDarkest) // dark background for dropdown
+                        ) {
+                            categories.forEach { cat ->
+                                DropdownMenuItem(
+                                    onClick = {
+                                        category = cat
+                                        expanded = false
+                                    },
+                                    modifier = Modifier.background(AppColors.BgDarkest)
+                                ) {
+                                    Text(cat, color = AppColors.TextWhite)
+                                }
+                            }
+                        }
+                    }
 
                     Spacer(Modifier.height(24.dp))
 
@@ -61,16 +113,19 @@ fun DataGeneratorScreen(onGenerate: (List<NewsItem>) -> Unit, onNavigate: (Strin
 
                             val rawItems = (1..(count.toIntOrNull() ?: 0)).map {
                                 val randomTime = from.plusSeconds(Random.nextLong(0, to.toEpochSecond(ZoneOffset.UTC) - from.toEpochSecond(ZoneOffset.UTC)))
+                                val fakeParagraphs = List(5) {
+                                    List(50) { faker.lorem.words() }.joinToString(" ").replaceFirstChar { it.uppercaseChar() } + "."
+                                }.joinToString("\n\n")
                                 NewsItem(
                                     title = faker.book.title(),
-                                    content = faker.lorem.words(),
-                                    author = faker.name.name(),
+                                    content = "${faker.book.title()}\n\n$fakeParagraphs",
+                                    author = faker.book.author(),
                                     source = "generator.si",
                                     url = "http://generator.si/$it",
+                                    imageUrl = "https://picsum.photos/seed/${it}/600/400",
                                     publishedAt = randomTime,
-                                    imageUrl = "https://placekitten.com/${300 + it}/200",
                                     category = category,
-                                    tags = listOf(faker.animal.name(), faker.color.name())
+                                    tags = listOf(faker.color.name(), faker.animal.name())
                                 )
                             }
 

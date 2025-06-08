@@ -57,17 +57,24 @@ fun NewsListScreen(
 ) {
     SidebarWrapper(currentScreen = "newsList", onNavigate = onNavigate) {
         var selectedCategory by remember { mutableStateOf("All") }
-        var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
         var toDeleteItem by remember { mutableStateOf<NewsItem?>(null) }
         var expandedId by remember { mutableStateOf<String?>(null) }
         var selectedItem by remember { mutableStateOf<NewsItem?>(null) }
-
+        var keyword by remember { mutableStateOf("") }
 
         val categories = listOf("All") + news.mapNotNull { it.category }.distinct()
 
+        val keywordsMap = remember(news) { org.example.nlp.TfidfCalculator.computeTopKeywords(news) }
+
         val filteredNews = news.filter { item ->
-            (selectedCategory == "All" || item.category == selectedCategory) &&
-                    (selectedDate == null || item.publishedAt.toLocalDate() == selectedDate)
+            val keywordMatch = keyword.isBlank() ||
+                    item.title.contains(keyword, ignoreCase = true) ||
+                    item.content?.contains(keyword, ignoreCase = true) == true ||
+                    keywordsMap[item]?.any { it.contains(keyword, ignoreCase = true) } == true
+
+            val categoryMatch = selectedCategory == "All" || item.category == selectedCategory
+
+            keywordMatch && categoryMatch
         }
 
         Column(
@@ -93,12 +100,33 @@ fun NewsListScreen(
                             onSelect = { selectedCategory = it },
                             modifier = Modifier.weight(1f)
                         )
-                        DateInputField(
-                            value = selectedDate,
-                            onChange = { selectedDate = it },
+                        OutlinedTextField(
+                            value = keyword,
+                            onValueChange = { keyword = it },
+                            label = { Text("Search by keyword") },
+                            singleLine = true,
+                            trailingIcon = {
+                                if (keyword.isNotEmpty()) {
+                                    IconButton(onClick = { keyword = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear keyword",
+                                            tint = AppColors.Icon
+                                        )
+                                    }
+                                }
+                            },
                             modifier = Modifier.weight(1f),
+                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                textColor = AppColors.TextWhite,
+                                backgroundColor = AppColors.BgDarker,
+                                cursorColor = AppColors.Accent,
+                                focusedBorderColor = AppColors.Accent,
+                                unfocusedBorderColor = AppColors.Divider,
+                                focusedLabelColor = AppColors.TextLight,
+                                unfocusedLabelColor = AppColors.TextMuted
+                            )
                         )
-
                     }
                 }
             }
@@ -151,14 +179,14 @@ fun NewsListScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        item.category?.let {
-                                            Text("Category: $it", style = MaterialTheme.typography.body2, color = AppColors.TextMuted)
-                                        }
                                         Text(
                                             "Published at: ${item.publishedAt.toLocalDate()}",
                                             style = MaterialTheme.typography.body2,
                                             color = AppColors.TextMuted
                                         )
+                                        item.category?.let {
+                                            Text("Category: $it", style = MaterialTheme.typography.body2, color = AppColors.TextMuted)
+                                        }
                                         Text(
                                             "Source: ${item.source}",
                                             style = MaterialTheme.typography.body2,
@@ -187,26 +215,26 @@ fun NewsListScreen(
                                     Divider(color = AppColors.Divider)
                                     Spacer(Modifier.height(10.dp))
 
-                                    item.imageUrl?.let { imageUrl ->
-                                        Spacer(Modifier.height(8.dp))
-                                        var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+                                    val imageUrl = item.imageUrl ?: "https://picsum.photos/600/500"
 
-                                        LaunchedEffect(imageUrl) {
-                                            imageBitmap = loadImageBitmapFromUrl(imageUrl)
-                                        }
+                                    Spacer(Modifier.height(8.dp))
+                                    var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
-                                        imageBitmap?.let {
-                                            Image(
-                                                bitmap = it,
-                                                contentDescription = "News Image",
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier
-                                                    .size(width = 600.dp, height = 500.dp)
-                                                    .align(Alignment.CenterHorizontally)
-                                                    .clip(MaterialTheme.shapes.medium)
-                                            )
-                                            Spacer(Modifier.height(12.dp))
-                                        }
+                                    LaunchedEffect(imageUrl) {
+                                        imageBitmap = loadImageBitmapFromUrl(imageUrl)
+                                    }
+
+                                    imageBitmap?.let {
+                                        Image(
+                                            bitmap = it,
+                                            contentDescription = "News Image",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(width = 600.dp, height = 500.dp)
+                                                .align(Alignment.CenterHorizontally)
+                                                .clip(MaterialTheme.shapes.medium)
+                                        )
+                                        Spacer(Modifier.height(12.dp))
                                     }
 
                                     item.content?.let {
@@ -320,10 +348,10 @@ fun NewsDetailDialog(item: NewsItem, onClose: () -> Unit) {
                     Spacer(Modifier.height(16.dp))
 
                     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-                    LaunchedEffect(item.imageUrl) {
-                        item.imageUrl?.let {
-                            imageBitmap = loadImageBitmapFromUrl(it)
-                        }
+                    val imageUrl = item.imageUrl ?: "https://picsum.photos/600/500"
+
+                    LaunchedEffect(imageUrl) {
+                        imageBitmap = loadImageBitmapFromUrl(imageUrl)
                     }
 
                     imageBitmap?.let {
@@ -340,10 +368,10 @@ fun NewsDetailDialog(item: NewsItem, onClose: () -> Unit) {
                     }
 
                     Column {
-                        item.author?.let { InfoRowGray("Author:", it) }
-                        InfoRowGray("Category:", item.category ?: "N/A")
                         InfoRowGray("Published at:", item.publishedAt.toLocalDate().toString())
+                        InfoRowGray("Category:", item.category ?: "N/A")
                         InfoRowGray("Source:", item.source)
+                        item.author?.let { InfoRowGray("Author:", it) }
                     }
 
                     Spacer(Modifier.height(12.dp))

@@ -17,7 +17,6 @@ import ui.ui.screens.*
 import ui.util.Storage
 import scraper.NewsSender
 
-
 @Composable
 @Preview
 fun App() {
@@ -79,7 +78,6 @@ fun App() {
                                     u24News + n1News
                                 }
                             }
-
 
                             val enrichedNews = scraped.map { item ->
                                 item.copy(
