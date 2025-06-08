@@ -66,8 +66,8 @@ async function generateNewsSummary() {
     }
 }
 
-// Generate summary every 20 minutes
-cron.schedule('*/20 * * * *', generateNewsSummary);
+// Generate summary every 50 minutes
+cron.schedule('*/50 * * * *', generateNewsSummary);
 
 // Generate initial summary when server starts
 generateNewsSummary();

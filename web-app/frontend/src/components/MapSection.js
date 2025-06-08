@@ -74,7 +74,7 @@ export default function MapSection() {
         {locations.map((location) => (
           <CircleMarker
             key={location._id}
-            center={[location.latitude, location.longitude]}radius={Math.min(30, Math.max(5, location.newsCount * 3))}
+            center={[location.latitude, location.longitude]}radius={Math.min(20, Math.max(5, location.newsCount * 2))}
             fillColor="#8a2be2"
             color="white"
             weight={1}
