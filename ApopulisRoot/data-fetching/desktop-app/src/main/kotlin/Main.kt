@@ -16,6 +16,7 @@ import scraper.U24urScraper
 import ui.ui.screens.*
 import scraper.NewsSender
 
+
 @Composable
 @Preview
 fun App() {
