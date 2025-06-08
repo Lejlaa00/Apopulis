@@ -9,7 +9,8 @@ const {
     getNewsByLocation,
     trackView,
     getPopularityScore,
-    getSummary
+    getSummary,
+    getLocationNewsStats
 } = require('../controllers/newsController');
 const NewsItem = require('../models/newsItemModel'); 
 const { getRecommendedNews } = require('../controllers/newsController');
@@ -55,6 +56,9 @@ router.get('/', getNews);
 
 // Get news by location
 router.get('/location/:locationId', getNewsByLocation);
+
+// Get location news statistics
+router.get('/location-stats', getLocationNewsStats);
 
 // Get a single news item
 router.get('/:id', getNewsById);

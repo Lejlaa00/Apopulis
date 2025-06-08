@@ -371,4 +371,52 @@ exports.getSummary = async (req, res) => {
     }
 };
 
+// Get news counts by location for the last 24 hours
+exports.getLocationNewsStats = async (req, res) => {
+    try {
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          const locationStats = await NewsItem.aggregate([
+            {
+                $match: {
+                    publishedAt: { $gte: oneDayAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: "$locationId",
+                    newsCount: { $sum: 1 }
+                }
+            },
+            {
+                $lookup: {
+                    from: "locations",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "locationInfo"
+                }
+            },
+            {
+                $unwind: "$locationInfo"
+            },
+            {
+                $project: {
+                    _id: "$_id",
+                    name: "$locationInfo.name",
+                    latitude: "$locationInfo.latitude",
+                    longitude: "$locationInfo.longitude",
+                    newsCount: 1
+                }
+            },
+            {
+                $sort: { newsCount: -1 }
+            }
+        ]);
+
+        res.json(locationStats);
+    } catch (err) {
+        console.error('Error fetching location news stats:', err);
+        res.status(500).json({ msg: 'Error fetching location statistics', error: err.message });
+    }
+};
+
 exports.updateNewsMetrics = updateNewsMetrics;

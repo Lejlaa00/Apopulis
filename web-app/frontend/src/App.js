@@ -9,6 +9,7 @@ import NewsDetail from './components/NewsDetail';
 import Profile from './components/Profile';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import 'leaflet/dist/leaflet.css';
 
 
 function App() {
