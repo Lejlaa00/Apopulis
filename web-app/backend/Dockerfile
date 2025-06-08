@@ -16,9 +16,10 @@ RUN mkdir -p /app/images /app/uploads && \
     chmod 755 /app/images /app/uploads
 
 # Set environment variables
-ENV NODE_ENV=production
-ENV PORT=5001
-ENV HOST=0.0.0.0  # Make sure Node.js listens on all interfaces
+# Make sure Node.js listens on all interfaces
+ENV NODE_ENV=production \
+    PORT=5001 \
+    HOST=0.0.0.0
 
 # Expose the port
 EXPOSE 5001
