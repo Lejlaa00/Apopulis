@@ -258,77 +258,87 @@
   padding: 4px;
 }
 
-@media (max-width: 992px) {
+.hamburger-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
   .sidebar {
-    width: 100%;
-    height: 60px;
-    position: fixed;
-    bottom: 0;
-    top: auto;
+    left: -100%;
+    transition: left 0.3s ease-in-out;
+    width: 70vw;
+    max-width: 300px;
+    z-index: 1000;
+  }
+
+  .sidebar.open {
     left: 0;
-    right: 0;
-    flex-direction: row;
-    justify-content: space-around;
-    align-items: center;
-    padding: 0;
-    overflow-x: auto;
-    border-right: none;
-    border-top: 1px solid var(--color-divider);
-    background-color: var(--color-bg-darker);
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
     z-index: 999;
   }
 
-  .sidebar-header,
-  .sidebar-divider,
-  .sidebar-section,
-  .profile-section {
-    display: none;
-  }
-
-  .nav-list {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-evenly; 
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0.4rem 0;
-  width: 100%;
-}
-
-  .nav-list li {
-    margin: 0;
-  }
-
-  .nav-list li a {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8rem;
-  text-align: center;
-  white-space: nowrap;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-  .profile-container {
-    display: none;
+  .hamburger-btn {
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1100;
+    background: none;
+    border: none;
+    color: var(--color-text-white);
+    cursor: pointer;
+    display: block;
   }
 }
 
-@media (max-width: 576px) {
-  .nav-list {
-    gap: 0.5rem;
+
+@media (max-width: 1024px) {
+  .sidebar {
+    left: -100%;
+    transition: left 0.3s ease-in-out;
+    width: 250px;
+    max-width: 80vw;
+    z-index: 1000;
   }
 
-  .nav-list li a {
-    font-size: 0.75rem;
-    padding: 0.3rem 0.5rem;
+  .sidebar.open {
+    left: 0;
   }
 
-  .dropdown-item {
-    font-size: 0.75rem;
-    padding: 4px 8px;
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+
+  .hamburger-btn {
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1100;
+    color: var(--color-text-white);
+    cursor: pointer;
+    display: block;
   }
 }
-
