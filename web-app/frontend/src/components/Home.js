@@ -259,7 +259,7 @@ export default function Home() {
       {selectedNewsId && (
         <div className="news-popup-overlay" onClick={() => setSelectedNewsId(null)}>
           <div className="news-popup-window" onClick={(e) => e.stopPropagation()}>
-            <NewsDetail id={selectedNewsId} embedded={true} />
+            <NewsDetail id={selectedNewsId} embedded={true} onClose={() => setSelectedNewsId(null)} />
           </div>
         </div>
       )}

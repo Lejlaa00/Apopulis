@@ -10,6 +10,7 @@
 
 .news-content {
   padding: 10px;
+    position: relative; 
 }
 
 .side-panel {
@@ -487,21 +488,33 @@
 }
 
 .close-button {
-  position: fixed;
-  top: 24px;
-  right: 32px;
-  background: none;
-  border: none;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  position: absolute;
+  top: 12px;
+  right: 16px;
   color: var(--color-text-light-gray);
   cursor: pointer;
-  font-size: 1.2rem;
-  z-index: 1500;
+  font-size: 1.5rem;
+  z-index: 10;
   transition: color 0.2s ease;
+  line-height: 1;
 }
 
-.close-button:hover {
-  color: var(--color-accent-red);
+.close-button:hover,
+.close-button:focus {
+  outline: none;
+  box-shadow: none;
+  color: var(--color-active-bg);
 }
+
 
 @keyframes fadeInUp {
   0% {
@@ -531,10 +544,19 @@
     margin-top: 20px;
   }
 
-  .news-popup-window {
-    width: 90vw;
-    height: 90vh;
-  }
+.news-popup-window {
+  background-color: var(--color-bg-light);
+  max-width: 95vw;
+  width: 80vw;
+  max-height: 95vh;
+  height: 90vh;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.3);
+  position: relative; /* ➕ Dodaj ovo */
+}
+
 
   .news-image-wrapper img {
     width: 100%;

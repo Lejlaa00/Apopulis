@@ -261,28 +261,30 @@ function NewsDetail({ id: propId, embedded = false, onClose }) {
       };
 
     //Adding comment
-    const handleSubmitComment = async () => {
-        if (!user) {
-            toast('You must be logged in to comment.');
-            return;
-        }
-        if (!newComment.trim()) {
-            toast('Comment cannot be empty.');
-            return;
-        }
-        const res = await authFetch(`${API_URL}/comments/news/${id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: newComment }),
-        });
+   const handleSubmitComment = async () => {
+    if (!user) {
+        toast('You must be logged in to comment.');
+        return;
+    }
+    if (!newComment.trim()) {
+        toast('Comment cannot be empty.');
+        return;
+    }
+    const res = await authFetch(`${API_URL}/comments/news/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newComment }),
+    });
 
-        console.log("Submitting comment for news ID:", id);
-        console.log("Comment content:", newComment);
-        if (res.ok) {
-            const newCommentData = await res.json();
-            setComments(prev => [newCommentData, ...prev]); 
-        }
-    };
+    console.log("Submitting comment for news ID:", id);
+    console.log("Comment content:", newComment);
+    if (res.ok) {
+        const newCommentData = await res.json();
+        setComments(prev => [newCommentData, ...prev]);
+        setNewComment('');  // 👈 OVA LINIJA JE KLJUČNA
+    }
+};
+
     
 
     //Deleting comment
@@ -323,10 +325,16 @@ function NewsDetail({ id: propId, embedded = false, onClose }) {
 
     if (loading) return <p> </p>;
     if (!news) return <p>Not found</p>;
+    
 
     return (
         <div className="news-detail-grid news-detail-enter">
             <div className="news-content">
+                {embedded && (
+                <button className="close-button inside" onClick={(e) => { e.stopPropagation(); onClose?.(); }}>
+                    <X />
+                </button>
+                )}
                 <h2>{news.title}</h2>
                 <p className="news-meta-published">
                     Published: {new Date(news.publishedAt).toLocaleString()}
