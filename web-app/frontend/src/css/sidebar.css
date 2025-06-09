@@ -261,14 +261,21 @@
 @media (max-width: 992px) {
   .sidebar {
     width: 100%;
-    height: auto;
-    position: relative;
+    height: 60px;
+    position: fixed;
+    bottom: 0;
+    top: auto;
+    left: 0;
+    right: 0;
     flex-direction: row;
-    justify-content: space-between;
-    padding: 0.5rem 1rem;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
     overflow-x: auto;
     border-right: none;
-    border-bottom: 1px solid var(--color-divider);
+    border-top: 1px solid var(--color-divider);
+    background-color: var(--color-bg-darker);
+    z-index: 999;
   }
 
   .sidebar-header,
@@ -279,47 +286,49 @@
   }
 
   .nav-list {
-    display: flex;
-    flex-direction: row;
-    gap: 0.75rem;
-    margin: 0;
-    padding: 0;
-    width: auto;
-  }
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-evenly; 
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.4rem 0;
+  width: 100%;
+}
 
   .nav-list li {
-    margin-bottom: 0;
+    margin: 0;
   }
 
   .nav-list li a {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
-    white-space: nowrap;
-  }
-
-  .active-link {
-    font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  text-align: center;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+  .profile-container {
+    display: none;
   }
 }
 
 @media (max-width: 576px) {
-  .sidebar {
-    flex-wrap: wrap;
-    padding: 0.5rem;
-  }
-
   .nav-list {
-    flex-wrap: wrap;
     gap: 0.5rem;
   }
 
   .nav-list li a {
-    font-size: 0.8rem;
-    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.5rem;
   }
 
   .dropdown-item {
-    font-size: 0.8rem;
-    padding: 5px 10px;
+    font-size: 0.75rem;
+    padding: 4px 8px;
   }
 }
+
