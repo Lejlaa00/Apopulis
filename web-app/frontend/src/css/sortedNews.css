@@ -68,9 +68,7 @@
 }
 
 .sorted-news-header {
-  position: sticky;
-  top: 0;
-  overflow: visible;
+   overflow: visible;
   z-index: 100; 
   background-color: var(--color-bg-darkest); 
   padding: 0.5rem 1rem;
