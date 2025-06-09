@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../css/mapSection.css';
 
+
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 // Slovenia bounds
