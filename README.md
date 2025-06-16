@@ -4,6 +4,8 @@
 
 ##
 
+<br>
+
 **Apopulis** je pametna platforma za zbiranje, analizo in prikaz slovenskih novic z uporabo NLP in geolokacije.  
 Povezuje spletno in namizno aplikacijo, omogoča personalizacijo vsebin, interakcijo z novicami ter vizualizacijo podatkov na zemljevidu.  
 Projekt je bil razvit kot multidisciplinarna rešitev v okviru študija Računalništva in informatike na FERI.
