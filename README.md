@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="[Images/Apopulis_logo.png](https://github.com/Lejlaa00/Apopulis/blob/13d52d648433c95b515a988b148259ac5fa93b60/Images/Apopulis_logo.png)" alt="Apopulis Logo" width="300"/>
+  <img src="https://github.com/Lejlaa00/Apopulis/blob/4d9f5554228981e827c5f31cfcd1826667f0a0ba/Images/Apopulis_logo.png" alt="Apopulis Logo" width="300"/>
 </p>
 
 ##
@@ -8,6 +8,7 @@
 Povezuje spletno in namizno aplikacijo, omogoča personalizacijo vsebin, interakcijo z novicami ter vizualizacijo podatkov na zemljevidu.  
 Projekt je bil razvit kot multidisciplinarna rešitev v okviru študija Računalništva in informatike na FERI.
 
+<br>
 
 ## 🧠 Cilj projekta
 
@@ -20,6 +21,7 @@ Razviti pametno platformo za zbiranje, analizo in vizualizacijo slovenskih novic
 - Personalizirano izkušnjo glede na interese uporabnika  
 - Upravljanje in urejanje novic prek namizne aplikacije 
 
+<br>
 
 ## ⚙️ Funkcionalnosti
 
@@ -53,6 +55,7 @@ Razviti pametno platformo za zbiranje, analizo in vizualizacijo slovenskih novic
 - Uporaba Docker okolja za razvoj, testiranje in produkcijo  
 - Webhook podpora za posodobitve v realnem času na Azure VM  
 
+<br>
 
 ## 🧩 Uporabljene tehnologije
 
@@ -79,6 +82,7 @@ Razviti pametno platformo za zbiranje, analizo in vizualizacijo slovenskih novic
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 ![Azure](https://img.shields.io/badge/Azure-0078D4?style=for-the-badge&logo=Microsoft%20Azure&logoColor=white)
 
+<br>
 
 ## 🛠️ Namestitev 
 
@@ -112,6 +116,7 @@ Backend teče na: http://localhost:5001
 - Poišči Main.kt
 - Zaženi aplikacijo
 
+<br>
 
 ## 🔐 Prijava in registracija
 
@@ -122,6 +127,8 @@ Uporabniki lahko brez prijave berejo javne novice.
 - Prilagojene novice
 - Statistika uporabe
 - Všečkanje, komentiranje in shranjevanje novic
+
+<br>
 
 ## 👥 Ekipa
 - Lejla Gutić
