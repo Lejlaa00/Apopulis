@@ -94,7 +94,7 @@ class LoginFragment : Fragment() {
                     ).show()
 
                     findNavController().navigate(
-                        R.id.action_loginFragment_to_welcomeFragment
+                        R.id.action_loginFragment_to_mapFragment
                     )
 
                 } else {
