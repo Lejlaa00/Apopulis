@@ -5,7 +5,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.example.apopulis.R
+import android.widget.TextView
 
 class LoginFragment : Fragment() {
 
@@ -14,6 +16,16 @@ class LoginFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_login, container, false)
+        val view = inflater.inflate(R.layout.fragment_login, container, false)
+
+        // Sign up text click
+        val tvSignUp = view.findViewById<TextView>(R.id.tvSignUp)
+        tvSignUp.setOnClickListener {
+            findNavController().navigate(
+                R.id.action_loginFragment_to_registerFragment
+            )
+        }
+
+        return view
     }
 }

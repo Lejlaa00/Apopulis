@@ -1,6 +1,7 @@
 <resources>
     <!-- Purple -->
-    <color name="apopulis_purple">#9063ED</color>
+    <color name="apopulis_purple">#845CD9</color>
+   <!-- <color name="apopulis_purple">#a85df5</color> -->
 
     <!-- Dark -->
     <color name="dark_bg">#161520</color>

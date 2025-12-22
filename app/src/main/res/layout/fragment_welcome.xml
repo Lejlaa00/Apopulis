@@ -32,7 +32,7 @@
             android:id="@+id/imgLogo"
             android:layout_width="350dp"
             android:layout_height="280dp"
-            android:layout_marginTop="33dp"
+            android:layout_marginTop="60dp"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:contentDescription="Apopulis logo"
@@ -54,7 +54,7 @@
             app:layout_constraintTop_toBottomOf="@id/imgLogo"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            android:layout_marginTop="100dp"/>
+            android:layout_marginTop="70dp"/>
 
         <TextView
             android:id="@+id/tvTaglineSecondary"
@@ -75,7 +75,7 @@
             android:layout_height="52dp"
             android:layout_marginTop="40dp"
             android:background="@drawable/btn_outline_white"
-            android:text="SING IN"
+            android:text="SIGN IN"
             android:textColor="@android:color/white"
             android:textAllCaps="true"
             app:layout_constraintTop_toBottomOf="@id/tvTaglineSecondary"
