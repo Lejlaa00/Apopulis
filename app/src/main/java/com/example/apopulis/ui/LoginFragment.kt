@@ -93,9 +93,9 @@ class LoginFragment : Fragment() {
                         Toast.LENGTH_SHORT
                     ).show()
 
-                    /*findNavController().navigate(
+                    findNavController().navigate(
                         R.id.action_loginFragment_to_welcomeFragment
-                    )*/
+                    )
 
                 } else {
                     Toast.makeText(

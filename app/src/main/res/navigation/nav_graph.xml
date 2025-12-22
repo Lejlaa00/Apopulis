@@ -24,15 +24,24 @@
         android:name="com.example.apopulis.ui.LoginFragment"
         android:label="Login">
 
-    <action
-        android:id="@+id/action_loginFragment_to_registerFragment"
-        app:destination="@id/registerFragment" />
+        <action
+            android:id="@+id/action_loginFragment_to_registerFragment"
+            app:destination="@id/registerFragment" />
+
+        <action
+            android:id="@+id/action_loginFragment_to_welcomeFragment"
+            app:destination="@id/welcomeFragment" />
 
     </fragment>
 
     <fragment
         android:id="@+id/registerFragment"
         android:name="com.example.apopulis.ui.RegisterFragment"
-        android:label="Register" />
+        android:label="Register" >
+
+    <action
+        android:id="@+id/action_registerFragment_to_welcomeFragment"
+        app:destination="@id/welcomeFragment" />
+    </fragment>
 
 </navigation>
