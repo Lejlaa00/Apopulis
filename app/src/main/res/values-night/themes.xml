@@ -2,7 +2,7 @@
 <resources>
 
     <style name="Theme.Apopulis" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="android:windowBackground">@color/light_bg</item>
+        <item name="android:windowBackground">@color/dark_bg</item>
         <item name="colorPrimary">@color/apopulis_purple</item>
     </style>
 

@@ -1,4 +1,4 @@
-package com.example.apopulis.ui.theme
+package com.example.apopulis.theme
 
 import androidx.compose.ui.graphics.Color
 
