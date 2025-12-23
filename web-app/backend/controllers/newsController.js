@@ -70,10 +70,10 @@ async function generateNewsSummary() {
 }
 
 // Generate summary every 50 minutes
-cron.schedule('*/50 * * * *', generateNewsSummary);
+//cron.schedule('*/50 * * * *', generateNewsSummary);
 
 // Generate initial summary when server starts
-generateNewsSummary();
+//generateNewsSummary();
 
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'default_access_secret';
 

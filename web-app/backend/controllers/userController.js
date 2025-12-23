@@ -5,6 +5,12 @@ const { generateToken } = require('../utils/auth');
 
 const PASSWORD_MIN_LENGTH = 8;
 
+const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
+
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || 'default_access_secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
+
 // Helper function for email validation
 const validateEmail = (email) => {
     return validator.isEmail(email) &&
