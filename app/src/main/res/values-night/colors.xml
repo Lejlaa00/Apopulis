@@ -1,0 +1,16 @@
+<resources>
+    <color name="apopulis_purple">#845CD9</color>
+    <color name="apopulis_gray">#2D2D35</color>
+
+    <color name="color_background">#161520</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B3B3C2</color>
+
+    <color name="input_underline">#A01717</color>   <!-- tamna crta na crnoj -->
+    <color name="input_underline_focused">#B9A7FF</color>
+
+    <color name="photo_placeholder_bg">#0DF2F2F6</color>
+
+    <color name="photo_card_bg">#2D2D35</color>
+
+</resources>

@@ -33,7 +33,7 @@ class LoginFragment : Fragment() {
 
         binding.tvSignUp.setOnClickListener {
             findNavController().navigate(
-                R.id.action_loginFragment_to_registerFragment
+                R.id.action_loginFragment_to_createPostFragment
             )
         }
 

@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Apopulis" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="android:windowBackground">@color/dark_bg</item>
+    <style name="Theme.Apopulis"
+        parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
         <item name="colorPrimary">@color/apopulis_purple</item>
+        <item name="colorPrimaryVariant">@color/apopulis_purple</item>
+
+        <item name="android:windowBackground">@color/color_background</item>
+
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+
     </style>
+
 
 </resources>

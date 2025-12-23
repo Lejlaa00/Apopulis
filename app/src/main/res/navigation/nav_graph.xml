@@ -33,6 +33,10 @@
             app:destination="@id/welcomeFragment" />
 
         <action
+            android:id="@+id/action_loginFragment_to_createPostFragment"
+            app:destination="@id/createPost" />
+
+        <action
             android:id="@+id/action_loginFragment_to_mapFragment"
             app:destination="@id/mapFragment"
             app:popUpTo="@id/loginFragment"
@@ -53,6 +57,11 @@
     <fragment
         android:id="@+id/mapFragment"
         android:name="com.example.apopulis.ui.MapFragment"
+        android:label="Map" />
+
+    <fragment
+        android:id="@+id/createPost"
+        android:name="com.example.apopulis.ui.CreatePostFragment"
         android:label="Map" />
 
 

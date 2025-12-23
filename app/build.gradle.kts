@@ -62,6 +62,8 @@ dependencies {
     //Google maps
     implementation("com.google.android.gms:play-services-maps:18.2.0")
 
+    implementation("androidx.core:core-ktx:1.12.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

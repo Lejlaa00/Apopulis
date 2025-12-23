@@ -1,16 +1,16 @@
 <resources>
-    <!-- Purple -->
     <color name="apopulis_purple">#845CD9</color>
-   <!-- <color name="apopulis_purple">#a85df5</color> -->
+    <color name="apopulis_gray">#2D2D35</color>
 
-    <!-- Dark -->
-    <color name="dark_bg">#161520</color>
-    <color name="dark_surface">#1A1A22</color>
-    <color name="dark_text_primary">#FFFFFF</color>
-    <color name="dark_text_secondary">#B3B3C2</color>
+    <color name="color_background">#FFFFFF</color>
+    <color name="text_primary">#111111</color>
+    <color name="text_secondary">#666666</color>
 
-    <!-- Light -->
-    <color name="light_bg">#FFFFFF</color>
-    <color name="light_text_primary">#111111</color>
-    <color name="light_text_secondary">#666666</color>
+    <color name="input_underline">#D0D0D0</color>
+    <color name="input_underline_focused">#7B4EFF</color>
+
+    <color name="photo_placeholder_bg">#F2F2F6</color>
+
+    <color name="photo_card_bg">#F2F2F6</color>
+
 </resources>
