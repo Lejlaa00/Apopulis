@@ -13,4 +13,7 @@
 
     <color name="photo_card_bg">#2D2D35</color>
 
+    <color name="text_box_outline">#B3B3C2</color>
+    <color name="title_text">#80FFFFFF</color>
+
 </resources>

@@ -2,6 +2,7 @@ package com.example.apopulis.ui
 
 import android.net.Uri
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +19,7 @@ class CreatePostFragment : Fragment() {
     private val binding get() = _binding!!
 
     private var selectedImageUri: Uri? = null
+    private var hasSelectedImage: Boolean = false
     private val uiScope = CoroutineScope(Dispatchers.Main)
 
     /* IMAGE PICKERS */
@@ -33,8 +35,9 @@ class CreatePostFragment : Fragment() {
         registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
             bitmap?.let {
                 binding.imgPhoto.setImageBitmap(it)
-                binding.imgPhoto.visibility = View.VISIBLE
-                binding.addPhotoLayout.visibility = View.GONE
+                selectedImageUri = null // Camera doesn't provide URI, only bitmap
+                hasSelectedImage = true
+                updateImageState()
             }
         }
 
@@ -67,9 +70,21 @@ class CreatePostFragment : Fragment() {
 
     private fun setupClicks() {
 
-        // Add photo (Camera / Gallery)
+        // Add photo (Camera / Gallery) - only when no image is selected
         binding.photoContainer.setOnClickListener {
+            if (!hasSelectedImage) {
+                openImageSourceDialog()
+            }
+        }
+
+        // Edit photo - opens image selection dialog
+        binding.iconEdit.setOnClickListener {
             openImageSourceDialog()
+        }
+
+        // Delete photo - removes image and returns to initial state
+        binding.iconDelete.setOnClickListener {
+            removeImage()
         }
 
         // Publish
@@ -110,9 +125,47 @@ class CreatePostFragment : Fragment() {
 
     private fun showImage(uri: Uri) {
         selectedImageUri = uri
+        hasSelectedImage = true
         binding.imgPhoto.setImageURI(uri)
-        binding.imgPhoto.visibility = View.VISIBLE
-        binding.addPhotoLayout.visibility = View.GONE
+        updateImageState()
+    }
+
+    private fun updateImageState() {
+        val paddingDp = 16
+        val paddingPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            paddingDp.toFloat(),
+            resources.displayMetrics
+        ).toInt()
+
+        if (hasSelectedImage) {
+            // Show image, hide add layout
+            binding.imgPhoto.visibility = View.VISIBLE
+            binding.addPhotoLayout.visibility = View.GONE
+            // Show edit and delete icons
+            binding.iconEdit.visibility = View.VISIBLE
+            binding.iconDelete.visibility = View.VISIBLE
+            // Remove padding so image fills entire card area
+            binding.photoContainer.setPadding(0, 0, 0, 0)
+        } else {
+            // Hide image, show add layout
+            binding.imgPhoto.visibility = View.GONE
+            binding.addPhotoLayout.visibility = View.VISIBLE
+            // Hide edit and delete icons
+            binding.iconEdit.visibility = View.GONE
+            binding.iconDelete.visibility = View.GONE
+            // Restore padding for add layout
+            binding.photoContainer.setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
+            // Clear image data
+            selectedImageUri = null
+            binding.imgPhoto.setImageURI(null)
+            binding.imgPhoto.setImageBitmap(null)
+        }
+    }
+
+    private fun removeImage() {
+        hasSelectedImage = false
+        updateImageState()
     }
 
     /* PUBLISH + AI*/
