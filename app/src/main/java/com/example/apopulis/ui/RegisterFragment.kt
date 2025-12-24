@@ -74,7 +74,7 @@ class RegisterFragment : Fragment() {
         // Backend register
         lifecycleScope.launch {
             try {
-                val response = RetrofitInstance.api.register(
+                val response = RetrofitInstance.authApi.register(
                     RegisterRequest(username, email, password)
                 )
 

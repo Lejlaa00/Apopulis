@@ -73,7 +73,7 @@ class LoginFragment : Fragment() {
         // Backend login request
         lifecycleScope.launch {
             try {
-                val response = RetrofitInstance.api.login(
+                val response = RetrofitInstance.authApi.login(
                     LoginRequest(
                         username = username,
                         password = password
