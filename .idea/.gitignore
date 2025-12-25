@@ -1,0 +1,60 @@
+# =========================
+# Android Studio / IntelliJ
+# =========================
+.idea/
+*.iml
+shelf/
+workspace.xml
+
+# =========================
+# Android SDK / Local config
+# =========================
+local.properties
+
+# =========================
+# Build outputs
+# =========================
+build/
+app/build/
+
+# =========================
+# Gradle
+# =========================
+.gradle/
+.gradle-cache/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Kotlin / Java
+# =========================
+*.class
+
+# =========================
+# Generated files
+# =========================
+captures/
+.externalNativeBuild/
+.cxx/
+
+# =========================
+# Node (ako imate web-app u istom repo-u)
+# =========================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.local

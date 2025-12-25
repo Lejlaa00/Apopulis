@@ -226,18 +226,13 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun updateBottomSheetNews() {
-        // Apply the same filtering logic as map pins:
-        // 1. Filter by category if one is selected
-        // 2. Filter by region if one is selected (using the same point-in-polygon check)
         val filteredNews = newsList.filter { news ->
-            // Filter by category if one is selected
             if (selectedCategoryId != null) {
                 if (news.categoryId?._id != selectedCategoryId) {
                     return@filter false
                 }
             }
 
-            // Filter by region if one is selected (same logic as redrawPins)
             val feature = selectedFeature
             if (feature != null) {
                 val loc = news.locationId ?: return@filter false
@@ -254,7 +249,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         newsAdapter.submitList(filteredNews)
         bottomSheetBinding.tvNewsCount.text = "${filteredNews.size} items"
 
-        // Update title based on region selection
         updateBottomSheetTitle()
     }
 
@@ -336,12 +330,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     .position(position)
                     .title(news.title)
                     .snippet(loc.name)
-                    .icon(
-                        com.google.android.gms.maps.model.BitmapDescriptorFactory
-                            .defaultMarker(
-                                com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_VIOLET
-                            )
-                    )
+                    .icon(MarkerIconGenerator.createNewsMarker(requireContext()))
+                    .anchor(0.5f, 1.0f)
             )
 
             marker?.let { newsMarkers.add(it) }
@@ -661,11 +651,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    /**
-     * Calculates LatLngBounds for a GeoJSON feature.
-     * Handles both Polygon and MultiPolygon geometries.
-     * This is an expensive operation and should run on a background thread.
-     */
     private fun calculateBounds(feature: GeoJsonFeature): LatLngBounds? {
         val geometry = feature.geometry ?: return null
         val boundsBuilder = LatLngBounds.Builder()
@@ -703,10 +688,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    /**
-     * Shows all of Slovenia by setting the camera to a default position.
-     * Only called when map is fully loaded.
-     */
     private fun showAllSlovenia() {
         if (!isMapLoaded) return
 
@@ -716,10 +697,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         )
     }
 
-    /**
-     * Returns the currently selected region ID (SR_ID from GeoJSON properties).
-     * Can be used by other parts of the app to filter news by region.
-     */
     fun getSelectedRegionId(): String? = selectedRegionId
 
     override fun onDestroyView() {

@@ -31,7 +31,6 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Bottom Sheet -->
     <LinearLayout
         android:id="@+id/bottomSheet"
         android:layout_width="match_parent"
