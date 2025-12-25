@@ -112,7 +112,7 @@ exports.getNews = async (req, res) => {
 
         const news = await NewsItem.find(query)
             .populate('sourceId', 'name url')
-            .populate('locationId', 'name')
+            .populate('locationId', 'name latitude longitude')
             .populate('categoryId', 'name')
             .sort({ publishedAt: -1 })
             .skip(skip)
@@ -446,5 +446,42 @@ exports.getLocationNewsStats = async (req, res) => {
         res.status(500).json({ msg: 'Error fetching location statistics', error: err.message });
     }
 };
+
+
+// Get news by province
+exports.getNewsByProvince = async (req, res) => {
+    try {
+        const provinceCode = req.params.provinceCode.toUpperCase();
+
+        const province = await Province.findOne({ code: provinceCode });
+        if (!province) {
+            return res.status(404).json({ message: 'Province not found' });
+        }
+
+        const locations = await Location.find(
+            { province: province._id },
+            '_id'
+        );
+
+        if (locations.length === 0) {
+            return res.json({ count: 0, news: [] });
+        }
+
+        const locationIds = locations.map(l => l._id);
+
+        const news = await NewsItem.find({
+            locationId: { $in: locationIds }
+        }).sort({ publishedAt: -1 });
+
+        res.json({
+            count: news.length,
+            news
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error fetching news by province' });
+    }
+};
+
 
 exports.updateNewsMetrics = updateNewsMetrics;
