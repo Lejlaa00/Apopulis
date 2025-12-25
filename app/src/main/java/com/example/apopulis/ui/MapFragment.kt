@@ -8,11 +8,18 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.apopulis.R
+import com.example.apopulis.databinding.BottomSheetNewsBinding
+import com.example.apopulis.databinding.FragmentMapBinding
 import com.example.apopulis.network.RetrofitInstance
 import com.example.apopulis.repository.NewsRepository
+import com.example.apopulis.ui.adapter.CategoryAdapter
+import com.example.apopulis.ui.adapter.CategoryItem
+import com.example.apopulis.ui.adapter.NewsAdapter
 import com.example.apopulis.viewmodel.MapViewModel
 import com.example.apopulis.viewmodel.MapViewModelFactory
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -36,8 +43,17 @@ import com.google.maps.android.PolyUtil
 
 class MapFragment : Fragment(), OnMapReadyCallback {
 
+    private var _binding: FragmentMapBinding? = null
+    private val binding get() = _binding!!
+
+    private lateinit var bottomSheetBinding: BottomSheetNewsBinding
+
     private lateinit var viewModel: MapViewModel
     private lateinit var googleMap: GoogleMap
+    private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+    private lateinit var newsAdapter: NewsAdapter
+    private lateinit var categoryAdapter: CategoryAdapter
+    private var selectedCategoryId: String? = null
 
     private var geoJsonLayer: GeoJsonLayer? = null
     private var selectedFeature: GeoJsonFeature? = null
@@ -68,11 +84,21 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_map, container, false)
+        _binding = FragmentMapBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Initialize bottom sheet binding
+        bottomSheetBinding = BottomSheetNewsBinding.bind(binding.bottomSheetContent.root)
+
+        // Setup UI components
+        setupViewModel()
+        setupCategoryChips()
+        setupBottomSheet()
+        setupNewsRecyclerView()
 
         val mapFragment = SupportMapFragment.newInstance()
         childFragmentManager.beginTransaction()
@@ -80,22 +106,168 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             .commit()
 
         mapFragment.getMapAsync(this)
+    }
 
+    private fun setupViewModel() {
         val repository = NewsRepository(RetrofitInstance.newsApi)
         val factory = MapViewModelFactory(repository)
+        viewModel = ViewModelProvider(this, factory).get(MapViewModel::class.java)
 
-        viewModel = ViewModelProvider(this, factory)
-            .get(MapViewModel::class.java)
-
+        // Observe news data - update both markers and bottom sheet
         viewModel.news.observe(viewLifecycleOwner) { list ->
             newsList = list
 
             Log.e("PIN_DEBUG", "Observer received ${list.size} news")
 
+            // Update markers
             if (isMapLoaded) {
                 redrawPins(googleMap.cameraPosition.zoom)
             }
+
+            // Update bottom sheet
+            updateBottomSheetNews()
         }
+    }
+
+    private fun setupCategoryChips() {
+        // Define categories
+        val categories = listOf(
+            CategoryItem("biznis", "Biznis"),
+            CategoryItem("gospodarstvo", "Gospodarstvo"),
+            CategoryItem("kultura", "Kultura"),
+            CategoryItem("lifestyle", "Lifestyle"),
+            CategoryItem("politika", "Politika"),
+            CategoryItem("splosno", "Splošno"),
+            CategoryItem("tehnologija", "Tehnologija"),
+            CategoryItem("vreme", "Vreme")
+        )
+
+        categoryAdapter = CategoryAdapter { category ->
+            handleCategoryClick(category)
+        }
+
+        binding.rvCategories.apply {
+            layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+            adapter = categoryAdapter
+        }
+
+        categoryAdapter.submitList(categories)
+    }
+
+    private fun handleCategoryClick(category: CategoryItem) {
+        // If clicking the same category, deselect it
+        if (selectedCategoryId == category.id) {
+            selectedCategoryId = null
+            categoryAdapter.clearSelection()
+        } else {
+            // Select new category
+            selectedCategoryId = category.id
+            val position = categoryAdapter.currentList.indexOfFirst { it.id == category.id }
+            if (position != -1) {
+                categoryAdapter.selectCategory(position)
+            }
+        }
+
+        // Update displayed news based on category filter
+        updateBottomSheetNews()
+
+        // Update markers based on category filter
+        if (isMapLoaded) {
+            redrawPins(googleMap.cameraPosition.zoom)
+        }
+    }
+
+    private fun setupBottomSheet() {
+        bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
+
+        bottomSheetBehavior.apply {
+            // Set peek height explicitly
+            peekHeight = resources.getDimensionPixelSize(R.dimen.bottom_sheet_peek_height)
+
+            // Configure behavior
+            isHideable = false
+            isDraggable = true
+            isFitToContents = false
+            halfExpandedRatio = 0.5f
+
+            // Set initial state to COLLAPSED (this makes it visible with peek height)
+            state = BottomSheetBehavior.STATE_COLLAPSED
+        }
+
+        // Ensure the bottom sheet is visible by posting state set after layout
+        binding.bottomSheet.post {
+            if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            }
+        }
+
+        // Make header clickable to expand
+        bottomSheetBinding.headerLayout.setOnClickListener {
+            when (bottomSheetBehavior.state) {
+                BottomSheetBehavior.STATE_COLLAPSED -> {
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                }
+                BottomSheetBehavior.STATE_HALF_EXPANDED -> {
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                }
+                else -> {
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                }
+            }
+        }
+    }
+
+    private fun setupNewsRecyclerView() {
+        newsAdapter = NewsAdapter()
+        bottomSheetBinding.rvNews.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = newsAdapter
+        }
+    }
+
+    private fun updateBottomSheetNews() {
+        // Apply the same filtering logic as map pins:
+        // 1. Filter by category if one is selected
+        // 2. Filter by region if one is selected (using the same point-in-polygon check)
+        val filteredNews = newsList.filter { news ->
+            // Filter by category if one is selected
+            if (selectedCategoryId != null) {
+                if (news.categoryId?._id != selectedCategoryId) {
+                    return@filter false
+                }
+            }
+
+            // Filter by region if one is selected (same logic as redrawPins)
+            val feature = selectedFeature
+            if (feature != null) {
+                val loc = news.locationId ?: return@filter false
+                if (loc.latitude == 0.0 && loc.longitude == 0.0) return@filter false
+
+                val realPoint = LatLng(loc.latitude, loc.longitude)
+                val inside = isPointInsideFeature(realPoint, feature)
+                if (!inside) return@filter false
+            }
+
+            true
+        }
+
+        newsAdapter.submitList(filteredNews)
+        bottomSheetBinding.tvNewsCount.text = "${filteredNews.size} items"
+
+        // Update title based on region selection
+        updateBottomSheetTitle()
+    }
+
+    private fun updateBottomSheetTitle() {
+        val title = when {
+            selectedFeature != null -> {
+                // Try to get region name from feature properties
+                val regionName = selectedFeature?.getProperty("SR_UIME") as? String
+                regionName ?: "Selected Region"
+            }
+            else -> "All News"
+        }
+        bottomSheetBinding.tvBottomSheetTitle.text = title
     }
 
 
@@ -135,6 +307,12 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         )
 
         newsList.forEach { news ->
+            // Filter by category if one is selected
+            if (selectedCategoryId != null) {
+                if (news.categoryId?._id != selectedCategoryId) {
+                    return@forEach
+                }
+            }
 
             val loc = news.locationId ?: return@forEach
             if (loc.latitude == 0.0 && loc.longitude == 0.0) return@forEach
@@ -308,6 +486,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         selectedFeature = feature
         highlightFeature(feature)
 
+        // Update bottom sheet to show only news from selected region
+        updateBottomSheetNews()
+
         lifecycleScope.launch {
             val bounds = withContext(Dispatchers.Default) {
                 calculateBounds(feature)
@@ -443,6 +624,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         selectedRegionId = null
         selectedFeature = null
         viewModel.loadNews()
+
+        // Update bottom sheet to show all news again
+        updateBottomSheetNews()
     }
 
     private suspend fun zoomToFeatureAsync(feature: GeoJsonFeature, regionId: String) {
@@ -547,5 +731,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         newsMarkers.clear()
         boundsCache.clear()
         isMapLoaded = false
+        _binding = null
     }
 }
