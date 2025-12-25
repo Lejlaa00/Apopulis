@@ -28,16 +28,25 @@ import com.google.maps.android.data.geojson.GeoJsonPolygonStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.util.Log
+import com.example.apopulis.model.NewsItem
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
+import com.google.maps.android.PolyUtil
 
 class MapFragment : Fragment(), OnMapReadyCallback {
 
     private lateinit var viewModel: MapViewModel
+    private lateinit var googleMap: GoogleMap
 
-    private var googleMap: GoogleMap? = null
     private var geoJsonLayer: GeoJsonLayer? = null
     private var selectedFeature: GeoJsonFeature? = null
     private var selectedRegionId: String? = null
     private var isMapLoaded = false
+
+    private var newsList: List<NewsItem> = emptyList()
+    private val newsMarkers = mutableListOf<Marker>()
+
 
     private val boundsCache = mutableMapOf<String, LatLngBounds>()
 
@@ -66,13 +75,29 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         super.onViewCreated(view, savedInstanceState)
 
         val mapFragment = SupportMapFragment.newInstance()
-
         childFragmentManager.beginTransaction()
             .replace(R.id.map_container, mapFragment)
             .commit()
 
         mapFragment.getMapAsync(this)
+
+        val repository = NewsRepository(RetrofitInstance.newsApi)
+        val factory = MapViewModelFactory(repository)
+
+        viewModel = ViewModelProvider(this, factory)
+            .get(MapViewModel::class.java)
+
+        viewModel.news.observe(viewLifecycleOwner) { list ->
+            newsList = list
+
+            Log.e("PIN_DEBUG", "Observer received ${list.size} news")
+
+            if (isMapLoaded) {
+                redrawPins(googleMap.cameraPosition.zoom)
+            }
+        }
     }
+
 
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
@@ -82,8 +107,133 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             loadGeoJsonLayer()
             showAllSlovenia()
         }
+
+        googleMap.setOnCameraIdleListener {
+            redrawPins(googleMap.cameraPosition.zoom)
+        }
+
+        googleMap.setOnMarkerClickListener { marker ->
+            marker.showInfoWindow()
+            true
+        }
+
+        viewModel.loadNews()
     }
 
+    // Pins
+    private fun redrawPins(zoom: Float) {
+        if (!isMapLoaded) return
+
+        newsMarkers.forEach { it.remove() }
+        newsMarkers.clear()
+
+        val feature = selectedFeature
+
+        Log.e(
+            "PIN_DEBUG",
+            "REDRAW news=${newsList.size}, regionSelected=${feature != null}"
+        )
+
+        newsList.forEach { news ->
+
+            val loc = news.locationId ?: return@forEach
+            if (loc.latitude == 0.0 && loc.longitude == 0.0) return@forEach
+
+            val realPoint = LatLng(loc.latitude, loc.longitude)
+
+            if (feature != null) {
+                val inside = isPointInsideFeature(realPoint, feature)
+                if (!inside) return@forEach
+            }
+
+            // Pin positon random in region
+            val position = if (feature != null) {
+                randomPointInsideFeature(feature)
+            } else {
+                realPoint
+            }
+
+            val marker = googleMap.addMarker(
+                MarkerOptions()
+                    .position(position)
+                    .title(news.title)
+                    .snippet(loc.name)
+                    .icon(
+                        com.google.android.gms.maps.model.BitmapDescriptorFactory
+                            .defaultMarker(
+                                com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_VIOLET
+                            )
+                    )
+            )
+
+            marker?.let { newsMarkers.add(it) }
+        }
+
+        Log.e("PIN_DEBUG", "DRAWN markers=${newsMarkers.size}")
+    }
+
+    private fun randomPointInsideFeature(feature: GeoJsonFeature): LatLng {
+        val geometry = feature.geometry ?: error("No geometry")
+
+        val bounds = calculateBounds(feature) ?: error("No bounds")
+
+        val polygons: List<List<LatLng>> = when (geometry) {
+            is GeoJsonPolygon -> {
+                listOf(geometry.coordinates[0])
+            }
+            is GeoJsonMultiPolygon -> {
+                geometry.polygons.map { it.coordinates[0] }
+            }
+            else -> emptyList()
+        }
+
+        repeat(300) {
+            val point = randomPointInBounds(bounds)
+
+            if (polygons.any { polygon ->
+                    PolyUtil.containsLocation(point, polygon, true)
+                }) {
+                return point
+            }
+        }
+
+        return bounds.center
+    }
+
+    private fun randomPointInBounds(bounds: LatLngBounds): LatLng {
+        val lat = bounds.southwest.latitude +
+                Math.random() * (bounds.northeast.latitude - bounds.southwest.latitude)
+
+        val lng = bounds.southwest.longitude +
+                Math.random() * (bounds.northeast.longitude - bounds.southwest.longitude)
+
+        return LatLng(lat, lng)
+    }
+
+    private fun isPointInsideFeature(
+        point: LatLng,
+        feature: GeoJsonFeature
+    ): Boolean {
+        return when (val geometry = feature.geometry) {
+
+            is GeoJsonPolygon -> {
+                val polygon = geometry.coordinates[0]
+                PolyUtil.containsLocation(point, polygon, true)
+            }
+
+            is GeoJsonMultiPolygon -> {
+                geometry.polygons.any { polygon ->
+                    val outerRing = polygon.coordinates[0]
+                    PolyUtil.containsLocation(point, outerRing, true)
+                }
+            }
+
+            else -> false
+        }
+    }
+
+
+    //Geo JSON
     private fun loadGeoJsonLayer() {
         val map = googleMap ?: return
 
@@ -145,15 +295,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-        private fun handleFeatureClick(feature: GeoJsonFeature) {
-        val regionIdObj = feature.getProperty("SR_ID") ?: return
-        val regionId = when (regionIdObj) {
-            is String -> regionIdObj
-            is Number -> regionIdObj.toString()
-            else -> return
-        }
+    private fun handleFeatureClick(feature: GeoJsonFeature) {
 
-        if (selectedRegionId == regionId) {
+        if (selectedFeature === feature) {
             deselectRegion()
             showAllSlovenia()
             return
@@ -162,12 +306,29 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         selectedFeature?.let { resetStyle(it) }
 
         selectedFeature = feature
-        selectedRegionId = regionId
-
         highlightFeature(feature)
 
         lifecycleScope.launch {
-            zoomToFeatureAsync(feature, regionId)
+            val bounds = withContext(Dispatchers.Default) {
+                calculateBounds(feature)
+            }
+
+            if (bounds != null) {
+                withContext(Dispatchers.Main) {
+                    if (isMapLoaded) {
+                        try {
+                            googleMap.animateCamera(
+                                CameraUpdateFactory.newLatLngBounds(bounds, 120)
+                            )
+                        } catch (e: IllegalStateException) {
+                            // fallback — SIGURAN
+                            googleMap.moveCamera(
+                                CameraUpdateFactory.newLatLngZoom(bounds.center, 8f)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -281,6 +442,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         selectedFeature?.let { resetStyle(it) }
         selectedRegionId = null
         selectedFeature = null
+        viewModel.loadNews()
     }
 
     private suspend fun zoomToFeatureAsync(feature: GeoJsonFeature, regionId: String) {
@@ -381,7 +543,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         // Clean up resources
         geoJsonLayer?.removeLayerFromMap()
         geoJsonLayer = null
-        googleMap = null
+        newsMarkers.forEach { it.remove() }
+        newsMarkers.clear()
         boundsCache.clear()
         isMapLoaded = false
     }

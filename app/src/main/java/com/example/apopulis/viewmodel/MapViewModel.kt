@@ -16,10 +16,10 @@ class MapViewModel(
     private val _news = MutableLiveData<List<NewsItem>>()
     val news: LiveData<List<NewsItem>> = _news
 
-    fun loadNews(locationId: String?) {
+    fun loadNews() {
         viewModelScope.launch {
             try {
-                _news.value = repository.fetchNews(locationId)
+                _news.value = repository.fetchNews()
             } catch (e: Exception) {
                 _news.value = emptyList()
             }

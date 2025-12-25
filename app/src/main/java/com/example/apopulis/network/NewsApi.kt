@@ -6,10 +6,9 @@ import retrofit2.http.Query
 
 interface NewsApi {
 
-    @GET("api/news")
+    @GET("news")
     suspend fun getNews(
-        @Query("location") locationId: String? = null,
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 50
+        @Query("limit") limit: Int = 300
     ): NewsResponse
 }
