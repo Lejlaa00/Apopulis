@@ -69,6 +69,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     private var newsList: List<NewsItem> = emptyList()
     private val newsMarkers = mutableListOf<Marker>()
+    // Map to store marker -> news item relationship
+    private val markerToNewsMap = mutableMapOf<Marker, NewsItem>()
 
     // Cache for stable marker positions: key = "newsId_regionId" or "newsId_null"
     private val markerPositionCache = mutableMapOf<String, LatLng>()
@@ -241,11 +243,19 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun setupNewsRecyclerView() {
-        newsAdapter = NewsAdapter()
+        newsAdapter = NewsAdapter { newsItem ->
+            // Handle news item click from bottom sheet
+            openNewsDetailDialog(newsItem)
+        }
         bottomSheetBinding.rvNews.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = newsAdapter
         }
+    }
+
+    private fun openNewsDetailDialog(newsItem: NewsItem) {
+        val dialog = NewsDetailDialogFragment.newInstance(newsItem)
+        dialog.show(parentFragmentManager, "NewsDetailDialog")
     }
     private fun setupFloatingActionButton() {
         val fab = binding.fabCreatePost
@@ -392,8 +402,11 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
 
         googleMap.setOnMarkerClickListener { marker ->
-            marker.showInfoWindow()
-            true
+            // Find the news item associated with this marker
+            markerToNewsMap[marker]?.let { newsItem ->
+                openNewsDetailDialog(newsItem)
+            }
+            true // Consume the event to prevent region click
         }
 
         viewModel.loadNews()
@@ -405,6 +418,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
         newsMarkers.forEach { it.remove() }
         newsMarkers.clear()
+        markerToNewsMap.clear()
 
         val feature = selectedFeature
 
@@ -443,7 +457,10 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     .anchor(0.5f, 1.0f) // Anchor at bottom center (pin tip)
             )
 
-            marker?.let { newsMarkers.add(it) }
+            marker?.let {
+                newsMarkers.add(it)
+                markerToNewsMap[it] = news // Store marker -> news mapping
+            }
         }
 
         Log.e("PIN_DEBUG", "DRAWN markers=${newsMarkers.size}")
@@ -848,6 +865,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         geoJsonLayer = null
         newsMarkers.forEach { it.remove() }
         newsMarkers.clear()
+        markerToNewsMap.clear()
         markerPositionCache.clear()
         boundsCache.clear()
         isMapLoaded = false

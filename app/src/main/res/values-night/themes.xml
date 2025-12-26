@@ -9,6 +9,10 @@
 
         <item name="android:windowBackground">@color/color_background</item>
 
+        <!-- Surface colors for Material Design (Material 2 compatible, dark mode) -->
+        <item name="colorSurface">@color/color_background</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
 

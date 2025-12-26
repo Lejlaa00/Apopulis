@@ -1,5 +1,9 @@
 package com.example.apopulis.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
 data class NewsItem(
     val _id: String,
     val title: String,
@@ -14,4 +18,4 @@ data class NewsItem(
     val bookmarks: Int,
     val locationId: Location?,
     val categoryId: Category?
-)
+) : Parcelable
