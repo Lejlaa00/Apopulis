@@ -17,5 +17,7 @@ data class NewsItem(
     val commentsCount: Int,
     val bookmarks: Int,
     val locationId: Location?,
-    val categoryId: Category?
+    val categoryId: Category?,
+    val createdAt: String?,
+    val updatedAt: String?
 ) : Parcelable

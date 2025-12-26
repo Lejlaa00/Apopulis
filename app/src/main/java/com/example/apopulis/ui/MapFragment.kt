@@ -46,6 +46,7 @@ import android.util.TypedValue
 import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.content.ContextCompat
 import androidx.navigation.fragment.findNavController
+import com.example.apopulis.repository.CategoryRepository
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MapFragment : Fragment(), OnMapReadyCallback {
@@ -107,6 +108,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
         // Setup UI components
         setupViewModel()
+        viewModel.loadCategories()
         setupCategoryChips()
         setupBottomSheet()
         setupNewsRecyclerView()
@@ -121,8 +123,13 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun setupViewModel() {
-        val repository = NewsRepository(RetrofitInstance.newsApi)
-        val factory = MapViewModelFactory(repository)
+        val newsRepository = NewsRepository(RetrofitInstance.newsApi)
+        val categoryRepository = CategoryRepository(RetrofitInstance.categoryApi)
+
+        val factory = MapViewModelFactory(
+            newsRepository = newsRepository,
+            categoryRepository = categoryRepository
+        )
         viewModel = ViewModelProvider(this, factory).get(MapViewModel::class.java)
 
         // Observe news data - update both markers and bottom sheet
@@ -139,20 +146,11 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             // Update bottom sheet
             updateBottomSheetNews()
         }
+        viewModel.loadNews()
+        viewModel.loadCategories()
     }
 
     private fun setupCategoryChips() {
-        // Define categories
-        val categories = listOf(
-            CategoryItem("biznis", "Biznis"),
-            CategoryItem("gospodarstvo", "Gospodarstvo"),
-            CategoryItem("kultura", "Kultura"),
-            CategoryItem("lifestyle", "Lifestyle"),
-            CategoryItem("politika", "Politika"),
-            CategoryItem("splosno", "Splošno"),
-            CategoryItem("tehnologija", "Tehnologija"),
-            CategoryItem("vreme", "Vreme")
-        )
 
         categoryAdapter = CategoryAdapter { category ->
             handleCategoryClick(category)
@@ -163,7 +161,17 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             adapter = categoryAdapter
         }
 
-        categoryAdapter.submitList(categories)
+        viewModel.categories.observe(viewLifecycleOwner) { list ->
+            val items = list.map {
+                CategoryItem(
+                    id = it._id,
+                    name = it.name.replaceFirstChar { ch ->
+                        if (ch.isLowerCase()) ch.titlecase() else ch.toString()
+                    }
+                )
+            }
+            categoryAdapter.submitList(items)
+        }
     }
 
     private fun handleCategoryClick(category: CategoryItem) {
