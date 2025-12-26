@@ -49,4 +49,17 @@
 
     </LinearLayout>
 
+
+    <!-- Floating Action Button for creating new post -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabCreatePost"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginRight="16dp"
+        android:layout_marginBottom="150dp"
+        android:contentDescription="@string/create_post"
+        android:elevation="8dp"
+        app:fabSize="normal" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

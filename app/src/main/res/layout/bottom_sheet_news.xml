@@ -17,7 +17,6 @@
         android:background="?android:textColorSecondary"
         android:alpha="0.4"/>
 
-    <!-- Header -->
     <LinearLayout
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
@@ -48,7 +47,6 @@
             android:textColor="?android:textColorSecondary"/>
     </LinearLayout>
 
-    <!-- RecyclerView for news items -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvNews"
         android:layout_width="match_parent"

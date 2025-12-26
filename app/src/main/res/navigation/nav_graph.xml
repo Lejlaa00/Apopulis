@@ -49,15 +49,20 @@
         android:name="com.example.apopulis.ui.RegisterFragment"
         android:label="Register" >
 
-    <action
-        android:id="@+id/action_registerFragment_to_welcomeFragment"
-        app:destination="@id/welcomeFragment" />
+        <action
+            android:id="@+id/action_registerFragment_to_welcomeFragment"
+            app:destination="@id/welcomeFragment" />
     </fragment>
 
     <fragment
         android:id="@+id/mapFragment"
         android:name="com.example.apopulis.ui.MapFragment"
-        android:label="Map" />
+        android:label="Map">
+
+        <action
+            android:id="@+id/action_mapFragment_to_createPost"
+            app:destination="@id/createPost" />
+    </fragment>
 
     <fragment
         android:id="@+id/createPost"

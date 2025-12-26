@@ -1,5 +1,6 @@
 package com.example.apopulis.ui
 
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -40,6 +41,12 @@ import com.example.apopulis.model.NewsItem
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.maps.android.PolyUtil
+import android.content.res.Configuration
+import android.util.TypedValue
+import android.view.animation.AccelerateDecelerateInterpolator
+import androidx.core.content.ContextCompat
+import androidx.navigation.fragment.findNavController
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MapFragment : Fragment(), OnMapReadyCallback {
 
@@ -101,6 +108,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         setupCategoryChips()
         setupBottomSheet()
         setupNewsRecyclerView()
+        setupFloatingActionButton()
 
         val mapFragment = SupportMapFragment.newInstance()
         childFragmentManager.beginTransaction()
@@ -194,6 +202,19 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
             // Set initial state to COLLAPSED (this makes it visible with peek height)
             state = BottomSheetBehavior.STATE_COLLAPSED
+
+            // Add callback to animate FAB based on bottom sheet state
+            addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+                override fun onStateChanged(bottomSheet: View, newState: Int) {
+                    updateFabVisibility(newState)
+                }
+
+                override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                    // slideOffset: -1 (fully collapsed) to 1 (fully expanded)
+                    // We want to hide FAB when sheet is expanded (slideOffset > 0)
+                    animateFabVisibility(slideOffset)
+                }
+            })
         }
 
         // Ensure the bottom sheet is visible by posting state set after layout
@@ -226,20 +247,105 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             adapter = newsAdapter
         }
     }
+    private fun setupFloatingActionButton() {
+        val fab = binding.fabCreatePost
+        val context = requireContext()
+
+        // Detect dark/light mode
+        val isDarkMode = isDarkMode(context)
+
+        // Set icon based on theme
+        val iconRes = if (isDarkMode) {
+            R.drawable.ic_news_dark
+
+        } else {
+            R.drawable.ic_news_light
+        }
+        fab.setImageResource(iconRes)
+
+        val iconTint = if (isDarkMode) {
+            Color.WHITE
+        } else {
+            Color.BLACK
+        }
+        fab.imageTintList = ColorStateList.valueOf(iconTint)
+
+        val backgroundColor = if (isDarkMode) {
+            ContextCompat.getColor(context, R.color.apopulis_gray)
+        } else {
+            Color.WHITE
+        }
+        fab.backgroundTintList = android.content.res.ColorStateList.valueOf(backgroundColor)
+
+        fab.setOnClickListener {
+            findNavController().navigate(R.id.action_mapFragment_to_createPost)
+        }
+
+        fab.alpha = 1f
+        fab.scaleX = 1f
+        fab.scaleY = 1f
+    }
+
+    private fun isDarkMode(context: android.content.Context): Boolean {
+        val nightModeFlags = context.resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK
+        return nightModeFlags == Configuration.UI_MODE_NIGHT_YES
+    }
+
+    private fun updateFabVisibility(state: Int) {
+        val fab = binding.fabCreatePost
+        when (state) {
+            BottomSheetBehavior.STATE_COLLAPSED -> {
+                // Show FAB when collapsed
+                fab.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(200)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .start()
+            }
+            BottomSheetBehavior.STATE_HALF_EXPANDED,
+            BottomSheetBehavior.STATE_EXPANDED -> {
+                // Hide FAB when half-expanded or expanded
+                fab.animate()
+                    .alpha(0f)
+                    .scaleX(0.8f)
+                    .scaleY(0.8f)
+                    .setDuration(200)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .start()
+            }
+        }
+    }
+
+    private fun animateFabVisibility(slideOffset: Float) {
+        val fab = binding.fabCreatePost
+        // slideOffset: -1 (fully collapsed) to 1 (fully expanded)
+        // We want FAB visible when collapsed (slideOffset = -1) and hidden when expanded (slideOffset > 0)
+
+        // Normalize offset: 0 = collapsed, 1 = expanded
+        val normalizedOffset = (slideOffset + 1f) / 2f // Maps -1..1 to 0..1
+
+        // Calculate alpha: 1 when collapsed (normalizedOffset = 0), 0 when expanded (normalizedOffset = 1)
+        val alpha = 1f - normalizedOffset.coerceIn(0f, 1f)
+
+        // Calculate scale: 1 when collapsed, 0.8 when expanded
+        val scale = 1f - (normalizedOffset * 0.2f).coerceIn(0f, 0.2f)
+
+        fab.alpha = alpha
+        fab.scaleX = scale
+        fab.scaleY = scale
+    }
 
     private fun updateBottomSheetNews() {
-        // Apply the same filtering logic as map pins:
-        // 1. Filter by category if one is selected
-        // 2. Filter by region if one is selected (using the same point-in-polygon check)
         val filteredNews = newsList.filter { news ->
-            // Filter by category if one is selected
             if (selectedCategoryId != null) {
                 if (news.categoryId?._id != selectedCategoryId) {
                     return@filter false
                 }
             }
 
-            // Filter by region if one is selected (same logic as redrawPins)
             val feature = selectedFeature
             if (feature != null) {
                 val loc = news.locationId ?: return@filter false
@@ -256,7 +362,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         newsAdapter.submitList(filteredNews)
         bottomSheetBinding.tvNewsCount.text = "${filteredNews.size} items"
 
-        // Update title based on region selection
         updateBottomSheetTitle()
     }
 
@@ -287,9 +392,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
 
         googleMap.setOnMarkerClickListener { marker ->
-            // Show info window and consume the event to prevent region click
             marker.showInfoWindow()
-            true // Return true to consume the event and prevent map/region click
+            true
         }
 
         viewModel.loadNews()
@@ -345,12 +449,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         Log.e("PIN_DEBUG", "DRAWN markers=${newsMarkers.size}")
     }
 
-    /**
-     * Gets a stable marker position for a news item.
-     * When a region is selected, uses a deterministic random position based on newsId + regionId.
-     * When no region is selected, uses the real location.
-     * Positions are cached to ensure they remain stable across redraws.
-     */
     private fun getStableMarkerPosition(
         news: NewsItem,
         feature: GeoJsonFeature?,
@@ -375,10 +473,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         return position
     }
 
-    /**
-     * Generates a deterministic random point inside a feature using a seed based on newsId + regionId.
-     * This ensures the same news item always gets the same position in the same region.
-     */
     private fun generateDeterministicPointInFeature(
         feature: GeoJsonFeature,
         newsId: String,
@@ -416,9 +510,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         return bounds.center
     }
 
-    /**
-     * Generates a deterministic random point within bounds using a seeded Random.
-     */
     private fun deterministicPointInBounds(bounds: LatLngBounds, random: java.util.Random): LatLng {
         val lat = bounds.southwest.latitude +
                 random.nextDouble() * (bounds.northeast.latitude - bounds.southwest.latitude)
@@ -702,11 +793,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    /**
-     * Calculates LatLngBounds for a GeoJSON feature.
-     * Handles both Polygon and MultiPolygon geometries.
-     * This is an expensive operation and should run on a background thread.
-     */
     private fun calculateBounds(feature: GeoJsonFeature): LatLngBounds? {
         val geometry = feature.geometry ?: return null
         val boundsBuilder = LatLngBounds.Builder()
@@ -744,10 +830,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    /**
-     * Shows all of Slovenia by setting the camera to a default position.
-     * Only called when map is fully loaded.
-     */
     private fun showAllSlovenia() {
         if (!isMapLoaded) return
 
@@ -757,10 +839,6 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         )
     }
 
-    /**
-     * Returns the currently selected region ID (SR_ID from GeoJSON properties).
-     * Can be used by other parts of the app to filter news by region.
-     */
     fun getSelectedRegionId(): String? = selectedRegionId
 
     override fun onDestroyView() {
