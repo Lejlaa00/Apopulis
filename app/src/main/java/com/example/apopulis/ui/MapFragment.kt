@@ -63,6 +63,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     private var newsList: List<NewsItem> = emptyList()
     private val newsMarkers = mutableListOf<Marker>()
 
+    // Cache for stable marker positions: key = "newsId_regionId" or "newsId_null"
+    private val markerPositionCache = mutableMapOf<String, LatLng>()
 
     private val boundsCache = mutableMapOf<String, LatLngBounds>()
 
@@ -226,13 +228,18 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun updateBottomSheetNews() {
+        // Apply the same filtering logic as map pins:
+        // 1. Filter by category if one is selected
+        // 2. Filter by region if one is selected (using the same point-in-polygon check)
         val filteredNews = newsList.filter { news ->
+            // Filter by category if one is selected
             if (selectedCategoryId != null) {
                 if (news.categoryId?._id != selectedCategoryId) {
                     return@filter false
                 }
             }
 
+            // Filter by region if one is selected (same logic as redrawPins)
             val feature = selectedFeature
             if (feature != null) {
                 val loc = news.locationId ?: return@filter false
@@ -249,6 +256,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         newsAdapter.submitList(filteredNews)
         bottomSheetBinding.tvNewsCount.text = "${filteredNews.size} items"
 
+        // Update title based on region selection
         updateBottomSheetTitle()
     }
 
@@ -279,8 +287,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
 
         googleMap.setOnMarkerClickListener { marker ->
+            // Show info window and consume the event to prevent region click
             marker.showInfoWindow()
-            true
+            true // Return true to consume the event and prevent map/region click
         }
 
         viewModel.loadNews()
@@ -318,12 +327,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                 if (!inside) return@forEach
             }
 
-            // Pin positon random in region
-            val position = if (feature != null) {
-                randomPointInsideFeature(feature)
-            } else {
-                realPoint
-            }
+            // Get stable position for this news item
+            val position = getStableMarkerPosition(news, feature, realPoint)
 
             val marker = googleMap.addMarker(
                 MarkerOptions()
@@ -331,7 +336,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     .title(news.title)
                     .snippet(loc.name)
                     .icon(MarkerIconGenerator.createNewsMarker(requireContext()))
-                    .anchor(0.5f, 1.0f)
+                    .anchor(0.5f, 1.0f) // Anchor at bottom center (pin tip)
             )
 
             marker?.let { newsMarkers.add(it) }
@@ -340,9 +345,46 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         Log.e("PIN_DEBUG", "DRAWN markers=${newsMarkers.size}")
     }
 
-    private fun randomPointInsideFeature(feature: GeoJsonFeature): LatLng {
-        val geometry = feature.geometry ?: error("No geometry")
+    /**
+     * Gets a stable marker position for a news item.
+     * When a region is selected, uses a deterministic random position based on newsId + regionId.
+     * When no region is selected, uses the real location.
+     * Positions are cached to ensure they remain stable across redraws.
+     */
+    private fun getStableMarkerPosition(
+        news: NewsItem,
+        feature: GeoJsonFeature?,
+        realPoint: LatLng
+    ): LatLng {
+        // When no region is selected, use the real location
+        if (feature == null) {
+            val cacheKey = "${news._id}_null"
+            return markerPositionCache.getOrPut(cacheKey) { realPoint }
+        }
 
+        // When a region is selected, use deterministic random position
+        val regionId = feature.getProperty("SR_ID")?.toString() ?: "unknown"
+        val cacheKey = "${news._id}_$regionId"
+
+        // Return cached position if available
+        markerPositionCache[cacheKey]?.let { return it }
+
+        // Generate new deterministic position and cache it
+        val position = generateDeterministicPointInFeature(feature, news._id, regionId)
+        markerPositionCache[cacheKey] = position
+        return position
+    }
+
+    /**
+     * Generates a deterministic random point inside a feature using a seed based on newsId + regionId.
+     * This ensures the same news item always gets the same position in the same region.
+     */
+    private fun generateDeterministicPointInFeature(
+        feature: GeoJsonFeature,
+        newsId: String,
+        regionId: String
+    ): LatLng {
+        val geometry = feature.geometry ?: error("No geometry")
         val bounds = calculateBounds(feature) ?: error("No bounds")
 
         val polygons: List<List<LatLng>> = when (geometry) {
@@ -355,8 +397,13 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             else -> emptyList()
         }
 
+        // Create a deterministic seed from newsId + regionId
+        val seed = (newsId + regionId).hashCode().toLong()
+        val random = java.util.Random(seed)
+
+        // Try up to 300 times to find a valid point inside the polygon
         repeat(300) {
-            val point = randomPointInBounds(bounds)
+            val point = deterministicPointInBounds(bounds, random)
 
             if (polygons.any { polygon ->
                     PolyUtil.containsLocation(point, polygon, true)
@@ -365,15 +412,19 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             }
         }
 
+        // Fallback to bounds center if no valid point found
         return bounds.center
     }
 
-    private fun randomPointInBounds(bounds: LatLngBounds): LatLng {
+    /**
+     * Generates a deterministic random point within bounds using a seeded Random.
+     */
+    private fun deterministicPointInBounds(bounds: LatLngBounds, random: java.util.Random): LatLng {
         val lat = bounds.southwest.latitude +
-                Math.random() * (bounds.northeast.latitude - bounds.southwest.latitude)
+                random.nextDouble() * (bounds.northeast.latitude - bounds.southwest.latitude)
 
         val lng = bounds.southwest.longitude +
-                Math.random() * (bounds.northeast.longitude - bounds.southwest.longitude)
+                random.nextDouble() * (bounds.northeast.longitude - bounds.southwest.longitude)
 
         return LatLng(lat, lng)
     }
@@ -651,6 +702,11 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
+    /**
+     * Calculates LatLngBounds for a GeoJSON feature.
+     * Handles both Polygon and MultiPolygon geometries.
+     * This is an expensive operation and should run on a background thread.
+     */
     private fun calculateBounds(feature: GeoJsonFeature): LatLngBounds? {
         val geometry = feature.geometry ?: return null
         val boundsBuilder = LatLngBounds.Builder()
@@ -688,6 +744,10 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
+    /**
+     * Shows all of Slovenia by setting the camera to a default position.
+     * Only called when map is fully loaded.
+     */
     private fun showAllSlovenia() {
         if (!isMapLoaded) return
 
@@ -697,6 +757,10 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         )
     }
 
+    /**
+     * Returns the currently selected region ID (SR_ID from GeoJSON properties).
+     * Can be used by other parts of the app to filter news by region.
+     */
     fun getSelectedRegionId(): String? = selectedRegionId
 
     override fun onDestroyView() {
@@ -706,6 +770,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         geoJsonLayer = null
         newsMarkers.forEach { it.remove() }
         newsMarkers.clear()
+        markerPositionCache.clear()
         boundsCache.clear()
         isMapLoaded = false
         _binding = null
