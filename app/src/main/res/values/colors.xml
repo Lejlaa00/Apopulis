@@ -3,6 +3,7 @@
     <color name="apopulis_gray">#2D2D35</color>
 
     <color name="color_background">#FFFFFF</color>
+    <color name="color_background_tr">#A0FFFFFF</color>
     <color name="text_primary">#111111</color>
     <color name="text_secondary">#666666</color>
 
@@ -15,5 +16,8 @@
 
     <color name="text_box_outline">#666666</color>
     <color name="title_text">#80000000</color>
+
+    <color name="dialog_glass_bg">#E6FFFFFF</color>
+
 
 </resources>

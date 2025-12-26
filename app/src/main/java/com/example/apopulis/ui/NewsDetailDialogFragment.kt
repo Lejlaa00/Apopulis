@@ -56,6 +56,7 @@ class NewsDetailDialogFragment : DialogFragment() {
         val newsItem = arguments?.getParcelable<NewsItem>(ARG_NEWS_ITEM)
         if (newsItem != null) {
             setupViews(newsItem)
+            setupAnimation()
         } else {
             dismiss()
             return
@@ -64,6 +65,20 @@ class NewsDetailDialogFragment : DialogFragment() {
         binding.btnClose.setOnClickListener {
             dismiss()
         }
+    }
+
+    private fun setupAnimation() {
+        // Start with dialog content invisible and translated down
+        binding.root.alpha = 0f
+        binding.root.translationY = 100f
+
+        // Animate in with fade + slide up
+        binding.root.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(300)
+            .setInterpolator(android.view.animation.DecelerateInterpolator())
+            .start()
     }
 
     override fun onStart() {
@@ -81,15 +96,26 @@ class NewsDetailDialogFragment : DialogFragment() {
         // Title
         binding.tvTitle.text = newsItem.title
 
+        // Author (if available in future API updates)
+        // For now, this will be hidden since NewsItem doesn't have author field
+        // When author field is added to NewsItem, uncomment and use:
+        // newsItem.author?.let { author ->
+        //     binding.tvAuthor.text = author
+        //     binding.tvAuthor.visibility = View.VISIBLE
+        // } ?: run {
+        //     binding.tvAuthor.visibility = View.GONE
+        // }
+        binding.tvAuthor.visibility = View.GONE
+
         // Published time
         binding.tvPublishedTime.text = DateFormatter.formatRelativeTime(newsItem.publishedAt)
 
         // Location
         newsItem.locationId?.name?.let { locationName ->
             binding.tvLocation.text = locationName
-            binding.tvLocation.visibility = View.VISIBLE
+            binding.layoutLocation.visibility = View.VISIBLE
         } ?: run {
-            binding.tvLocation.visibility = View.GONE
+            binding.layoutLocation.visibility = View.GONE
         }
 
         // Category
