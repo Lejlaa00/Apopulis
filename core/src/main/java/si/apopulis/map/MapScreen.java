@@ -10,6 +10,8 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.EarClippingTriangulator;
 import com.badlogic.gdx.utils.ShortArray;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.Intersector;
 
 import java.util.List;
 
@@ -23,6 +25,9 @@ public class MapScreen implements Screen {
     private static final float WORLD_HEIGHT = 600;
 
     private List<Region> regions;
+    private Region hoveredRegion = null;
+    private Region selectedRegion = null;
+
     private EarClippingTriangulator triangulator = new EarClippingTriangulator();
 
 
@@ -50,28 +55,88 @@ public class MapScreen implements Screen {
         camera.update();
         shapeRenderer.setProjectionMatrix(camera.combined);
 
-        // Regions
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(new Color(0.75f, 0.6f, 0.85f, 1f));
+        // Mouse position in world coordinates
+        Vector3 mousePos = new Vector3(
+            Gdx.input.getX(),
+            Gdx.input.getY(),
+            0
+        );
+        camera.unproject(mousePos);
+
+        // Update hover state
+        updateHover(mousePos);
+
+        if (Gdx.input.justTouched() && hoveredRegion != null) {
+            selectedRegion = hoveredRegion;
+            System.out.println("Clicked region: " + selectedRegion.id);
+        }
+
+        Color regionColor = new Color(0.75f, 0.6f, 0.85f, 1f);
+        Color hoverColor  = new Color(0.6f, 0.45f, 0.75f, 1f);
+
+        // Draw all regions
+        drawRegions(regionColor);
+
+        // Draw hovered region
+        if (hoveredRegion != null) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(hoverColor);
+            drawRegion(hoveredRegion, hoveredRegion.vertices);
+            shapeRenderer.end();
+        }
+
+        // Draw borders
+        drawBorders();
+    }
+
+    private void updateHover(Vector3 mousePos) {
+        hoveredRegion = null;
 
         for (Region region : regions) {
-            ShortArray triangles = triangulator.computeTriangles(region.vertices);
 
-            for (int i = 0; i < triangles.size; i += 3) {
-                int i1 = triangles.get(i) * 2;
-                int i2 = triangles.get(i + 1) * 2;
-                int i3 = triangles.get(i + 2) * 2;
+            if (mousePos.x < region.minX || mousePos.x > region.maxX ||
+                mousePos.y < region.minY || mousePos.y > region.maxY) {
+                continue;
+            }
 
-                shapeRenderer.triangle(
-                    region.vertices[i1],     region.vertices[i1 + 1],
-                    region.vertices[i2],     region.vertices[i2 + 1],
-                    region.vertices[i3],     region.vertices[i3 + 1]
-                );
+            if (Intersector.isPointInPolygon(
+                region.vertices, 0, region.vertices.length,
+                mousePos.x, mousePos.y)) {
+
+                hoveredRegion = region;
+                break;
             }
         }
-        shapeRenderer.end();
+    }
 
-        // Borders
+    private void drawRegions(Color color) {
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(color);
+
+        for (Region region : regions) {
+            drawRegion(region, region.vertices);
+        }
+
+        shapeRenderer.end();
+    }
+
+    private void drawRegion(Region region, float[] verts) {
+        ShortArray triangles = triangulator.computeTriangles(verts);
+
+        for (int i = 0; i < triangles.size; i += 3) {
+            int i1 = triangles.get(i) * 2;
+            int i2 = triangles.get(i + 1) * 2;
+            int i3 = triangles.get(i + 2) * 2;
+
+            shapeRenderer.triangle(
+                verts[i1], verts[i1 + 1],
+                verts[i2], verts[i2 + 1],
+                verts[i3], verts[i3 + 1]
+            );
+        }
+    }
+
+    private void drawBorders() {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         shapeRenderer.setColor(Color.BLACK);
 
