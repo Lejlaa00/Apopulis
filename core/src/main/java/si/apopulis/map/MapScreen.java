@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.badlogic.gdx.math.EarClippingTriangulator;
+import com.badlogic.gdx.utils.ShortArray;
 
 import java.util.List;
 
@@ -21,6 +23,8 @@ public class MapScreen implements Screen {
     private static final float WORLD_HEIGHT = 600;
 
     private List<Region> regions;
+    private EarClippingTriangulator triangulator = new EarClippingTriangulator();
+
 
     @Override
     public void show() {
@@ -46,8 +50,30 @@ public class MapScreen implements Screen {
         camera.update();
         shapeRenderer.setProjectionMatrix(camera.combined);
 
+        // Regions
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(new Color(0.75f, 0.6f, 0.85f, 1f));
+
+        for (Region region : regions) {
+            ShortArray triangles = triangulator.computeTriangles(region.vertices);
+
+            for (int i = 0; i < triangles.size; i += 3) {
+                int i1 = triangles.get(i) * 2;
+                int i2 = triangles.get(i + 1) * 2;
+                int i3 = triangles.get(i + 2) * 2;
+
+                shapeRenderer.triangle(
+                    region.vertices[i1],     region.vertices[i1 + 1],
+                    region.vertices[i2],     region.vertices[i2 + 1],
+                    region.vertices[i3],     region.vertices[i3 + 1]
+                );
+            }
+        }
+        shapeRenderer.end();
+
+        // Borders
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(Color.SKY);
+        shapeRenderer.setColor(Color.BLACK);
 
         for (Region region : regions) {
             shapeRenderer.polygon(region.vertices);
@@ -55,6 +81,7 @@ public class MapScreen implements Screen {
 
         shapeRenderer.end();
     }
+
 
     @Override
     public void resize(int width, int height) {

@@ -40,7 +40,7 @@ public class GeoJsonRegionLoader {
 
         float width = maxLon - minLon;
         float height = maxLat - minLat;
-        float scale = 500f / Math.max(width, height);
+        float scale = 700f / Math.max(width, height);
 
         float centerLon = (minLon + maxLon) / 2f;
         float centerLat = (minLat + maxLat) / 2f;
