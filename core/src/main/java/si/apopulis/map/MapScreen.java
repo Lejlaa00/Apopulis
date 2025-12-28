@@ -2,17 +2,32 @@ package si.apopulis.map;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.EarClippingTriangulator;
 import com.badlogic.gdx.utils.ShortArray;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+
 
 import java.util.List;
 
@@ -37,6 +52,22 @@ public class MapScreen implements Screen {
     private float lastScreenY = 0;
     private static final float DRAG_THRESHOLD = 5.0f;
 
+    // Zoom constants
+    private static final float MIN_ZOOM = 0.1f;
+    private static final float MAX_ZOOM = 3.0f;
+    private static final float ZOOM_SPEED = 0.1f;
+    private static final float DEFAULT_ZOOM = 1.0f;
+
+    // UI components
+    private Stage uiStage;
+    private Skin uiSkin;
+
+    private ImageButton zoomInButton;
+    private ImageButton zoomOutButton;
+
+    private Texture zoomInTexture;
+    private Texture zoomOutTexture;
+
 
     @Override
     public void show() {
@@ -47,12 +78,111 @@ public class MapScreen implements Screen {
         viewport.apply();
 
         camera.position.set(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, 0);
+        camera.zoom = DEFAULT_ZOOM;
         camera.update();
 
         regions = GeoJsonRegionLoader.loadAllRegions();
         System.out.println("Loaded regions: " + regions.size());
 
-        Gdx.input.setInputProcessor(new MapInputProcessor());
+        setupUI();
+
+        InputMultiplexer inputMultiplexer = new InputMultiplexer();
+        inputMultiplexer.addProcessor(uiStage);
+        inputMultiplexer.addProcessor(new MapInputProcessor());
+        Gdx.input.setInputProcessor(inputMultiplexer);
+    }
+
+    private void setupUI() {
+        uiStage = new Stage(new ScreenViewport());
+
+        uiSkin = new Skin();
+        uiSkin.add("default-font", new BitmapFont());
+
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.fill();
+        Texture whiteTexture = new Texture(pixmap);
+        pixmap.dispose();
+        uiSkin.add("white", whiteTexture);
+
+        TextButton.TextButtonStyle buttonStyle = new TextButton.TextButtonStyle();
+        buttonStyle.font = uiSkin.getFont("default-font");
+        buttonStyle.fontColor = Color.WHITE;
+        buttonStyle.up = uiSkin.newDrawable("white", new Color(0.2f, 0.2f, 0.2f, 0.8f));
+        buttonStyle.down = uiSkin.newDrawable("white", new Color(0.3f, 0.3f, 0.3f, 0.9f));
+        buttonStyle.over = uiSkin.newDrawable("white", new Color(0.25f, 0.25f, 0.25f, 0.85f));
+        uiSkin.add("default", buttonStyle);
+
+        zoomInTexture = new Texture(Gdx.files.internal("ui/btn_plus.png"));
+        zoomOutTexture = new Texture(Gdx.files.internal("ui/btn_minus.png"));
+
+        zoomInButton = new ImageButton(
+            new TextureRegionDrawable(new TextureRegion(zoomInTexture))
+        );
+        zoomOutButton = new ImageButton(
+            new TextureRegionDrawable(new TextureRegion(zoomOutTexture))
+        );
+
+        zoomInButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                zoomIn();
+            }
+        });
+
+        zoomOutButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                zoomOut();
+            }
+        });
+
+        Table table = new Table();
+        table.setFillParent(true);
+        table.bottom().right();
+        table.pad(20);
+
+        table.add(zoomInButton).size(32, 32).padBottom(10);
+        table.row();
+        table.add(zoomOutButton).size(32, 32);
+
+        uiStage.addActor(table);
+    }
+
+
+    private void zoomIn() {
+        float newZoom = camera.zoom - ZOOM_SPEED;
+        setZoom(newZoom);
+    }
+
+    private void zoomOut() {
+        float newZoom = camera.zoom + ZOOM_SPEED;
+        setZoom(newZoom);
+    }
+
+    private void setZoom(float zoom) {
+        camera.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+        camera.update();
+    }
+
+
+    private void zoomAtPoint(int screenX, int screenY, float zoomDelta) {
+        // Convert screen coordinates to world coordinates before zoom
+        Vector3 worldPosBefore = new Vector3(screenX, screenY, 0);
+        viewport.unproject(worldPosBefore);
+
+        // Apply zoom change
+        float newZoom = camera.zoom + zoomDelta;
+        camera.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+        camera.update();
+
+        // Convert screen coordinates to world coordinates after zoom
+        Vector3 worldPosAfter = new Vector3(screenX, screenY, 0);
+        viewport.unproject(worldPosAfter);
+
+        // Adjust camera position to keep the point under cursor fixed
+        camera.position.add(worldPosBefore.x - worldPosAfter.x, worldPosBefore.y - worldPosAfter.y, 0);
+        camera.update();
     }
 
 
@@ -61,10 +191,11 @@ public class MapScreen implements Screen {
         Gdx.gl.glClearColor(1, 1, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        uiStage.act(delta);
+
         camera.update();
         shapeRenderer.setProjectionMatrix(camera.combined);
 
-        // Mouse position in world coordinates
         Vector3 mousePos = new Vector3(
             Gdx.input.getX(),
             Gdx.input.getY(),
@@ -72,7 +203,6 @@ public class MapScreen implements Screen {
         );
         camera.unproject(mousePos);
 
-        // Update hover state
         updateHover(mousePos);
 
         if (Gdx.input.justTouched() && hoveredRegion != null) {
@@ -96,6 +226,9 @@ public class MapScreen implements Screen {
 
         // Draw borders
         drawBorders();
+
+        // Draw UI on top
+        uiStage.draw();
     }
 
     private void updateHover(Vector3 mousePos) {
@@ -160,6 +293,7 @@ public class MapScreen implements Screen {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height);
+        uiStage.getViewport().update(width, height, true);
     }
 
     @Override public void pause() {}
@@ -169,6 +303,10 @@ public class MapScreen implements Screen {
     @Override
     public void dispose() {
         shapeRenderer.dispose();
+        uiStage.dispose();
+        uiSkin.dispose();
+        zoomInTexture.dispose();
+        zoomOutTexture.dispose();
     }
 
     private class MapInputProcessor extends InputAdapter {
@@ -213,6 +351,13 @@ public class MapScreen implements Screen {
         public boolean touchUp(int screenX, int screenY, int pointer, int button) {
             isPanning = false;
             return false;
+        }
+
+        @Override
+        public boolean scrolled(float amountX, float amountY) {
+            float zoomDelta = amountY * ZOOM_SPEED;
+            zoomAtPoint(Gdx.input.getX(), Gdx.input.getY(), zoomDelta);
+            return true;
         }
     }
 }
