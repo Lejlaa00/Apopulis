@@ -11,14 +11,12 @@ public class ApopulisMap extends Game {
     @Override
     public void create() {
         assetManager = new AssetManager();
-        
-        // Load UI assets
+
         assetManager.load(AssetDescriptors.UI_ATLAS);
         assetManager.load(AssetDescriptors.UI_FONT);
-        
-        // Finish loading synchronously (in production, you might want async loading)
+
         assetManager.finishLoading();
-        
+
         setScreen(new MapScreen(assetManager));
     }
 

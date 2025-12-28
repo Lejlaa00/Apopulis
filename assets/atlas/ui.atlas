@@ -4,9 +4,16 @@ size: 1024, 1024
 format: RGBA8888
 filter: Nearest, Nearest
 repeat: none
+btn_exit
+  rotate: false
+  xy: 389, 401
+  size: 367, 369
+  orig: 367, 369
+  offset: 0, 0
+  index: -1
 btn_menu
   rotate: false
-  xy: 389, 457
+  xy: 389, 86
   size: 372, 313
   orig: 372, 313
   offset: 0, 0

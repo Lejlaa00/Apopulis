@@ -14,9 +14,7 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -26,7 +24,11 @@ import com.badlogic.gdx.utils.ShortArray;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
+import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import si.apopulis.map.assets.AssetDescriptors;
 import si.apopulis.map.assets.RegionNames;
 
@@ -36,7 +38,7 @@ import java.util.List;
 public class MapScreen implements Screen {
 
     private final AssetManager assetManager;
-    
+
     private ShapeRenderer shapeRenderer;
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -70,10 +72,22 @@ public class MapScreen implements Screen {
 
     // UI components
     private Stage uiStage;
-    private Skin uiSkin;
 
     private ImageButton zoomInButton;
     private ImageButton zoomOutButton;
+    private ImageButton hamburgerButton;
+    private Container<Table> sidePanel;
+    private boolean isPanelOpen = false;
+    private float panelWidth;
+    private float effectiveWorldWidth = WORLD_WIDTH;
+    private boolean isPanelPinned = false;
+
+    private float originalZoom;
+    private static final float PANEL_ZOOM_OUT = 0.4f;
+
+    private Table bottomRightTable;
+    private float zoomButtonsBaseX;
+
 
     public MapScreen(AssetManager assetManager) {
         this.assetManager = assetManager;
@@ -143,7 +157,17 @@ public class MapScreen implements Screen {
         // Calculate the visible area dimensions based on zoom
         // Higher zoom (> 1.0) = larger visible area (zoomed out)
         // Lower zoom (< 1.0) = smaller visible area (zoomed in)
-        float visibleWidth = WORLD_WIDTH * camera.zoom;
+
+        if (isPanelPinned) {
+            camera.update();
+            return;
+        }
+
+        float effectiveWidth = isPanelPinned
+            ? WORLD_WIDTH - panelWidth
+            : WORLD_WIDTH;
+
+        float visibleWidth = effectiveWidth * camera.zoom;
         float visibleHeight = WORLD_HEIGHT * camera.zoom;
 
         // Calculate half-dimensions for easier calculations
@@ -187,26 +211,49 @@ public class MapScreen implements Screen {
         TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
         BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
 
-        uiSkin = new Skin();
-        uiSkin.add("default-font", uiFont);
+        // Calculate panel width (30-35% of screen width)
+        float screenWidth = Gdx.graphics.getWidth();
+        panelWidth = screenWidth * 0.33f;
 
-        // Create white texture for button backgrounds
-        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(Color.WHITE);
-        pixmap.fill();
-        com.badlogic.gdx.graphics.Texture whiteTexture = new com.badlogic.gdx.graphics.Texture(pixmap);
-        pixmap.dispose();
-        uiSkin.add("white", whiteTexture);
+        // Setup zoom buttons
+        setupZoomButtons(uiAtlas);
 
-        TextButton.TextButtonStyle buttonStyle = new TextButton.TextButtonStyle();
-        buttonStyle.font = uiSkin.getFont("default-font");
-        buttonStyle.fontColor = Color.WHITE;
-        buttonStyle.up = uiSkin.newDrawable("white", new Color(0.2f, 0.2f, 0.2f, 0.8f));
-        buttonStyle.down = uiSkin.newDrawable("white", new Color(0.3f, 0.3f, 0.3f, 0.9f));
-        buttonStyle.over = uiSkin.newDrawable("white", new Color(0.25f, 0.25f, 0.25f, 0.85f));
-        uiSkin.add("default", buttonStyle);
+        // Setup hamburger button
+        setupHamburgerButton(uiAtlas);
 
-        // Get button regions from atlas
+        // Setup side panel
+        setupSidePanel(uiFont);
+
+        // Main UI table
+        Table mainTable = new Table();
+        mainTable.setFillParent(true);
+
+        // Top-right corner for hamburger button
+        Table topRightTable = new Table();
+        topRightTable.setFillParent(true);
+        topRightTable.top().right();
+        topRightTable.pad(20);
+        topRightTable.add(hamburgerButton).size(32, 32);
+
+        // Bottom-right corner for zoom buttons
+        bottomRightTable = new Table();
+        bottomRightTable.setFillParent(true);
+        bottomRightTable.bottom().right();
+        bottomRightTable.pad(20);
+        bottomRightTable.add(zoomInButton).size(32, 32).padBottom(10);
+        bottomRightTable.row();
+        bottomRightTable.add(zoomOutButton).size(32, 32);
+
+        bottomRightTable.right();
+
+        uiStage.addActor(topRightTable);
+        uiStage.addActor(bottomRightTable);
+        uiStage.addActor(sidePanel);
+
+        zoomButtonsBaseX = bottomRightTable.getX();
+    }
+
+    private void setupZoomButtons(TextureAtlas uiAtlas) {
         zoomInButton = new ImageButton(
             new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_PLUS))
         );
@@ -227,17 +274,218 @@ public class MapScreen implements Screen {
                 zoomOut();
             }
         });
+    }
 
-        Table table = new Table();
-        table.setFillParent(true);
-        table.bottom().right();
-        table.pad(20);
+    private void setupHamburgerButton(TextureAtlas uiAtlas) {
+        hamburgerButton = new ImageButton(
+            new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_HAMBURGER))
+        );
 
-        table.add(zoomInButton).size(32, 32).padBottom(10);
-        table.row();
-        table.add(zoomOutButton).size(32, 32);
+        hamburgerButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                toggleSidePanel();
+            }
+        });
+    }
 
-        uiStage.addActor(table);
+    private void setupSidePanel(BitmapFont uiFont) {
+        TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
+
+        // =========================
+        // HEADER (EXIT BUTTON)
+        // =========================
+        ImageButton exitButton = new ImageButton(
+            new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_EXIT))
+        );
+
+        exitButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                toggleSidePanel();
+            }
+        });
+
+        Table header = new Table();
+        header.top().right();
+        header.add(exitButton).size(24, 24);
+
+        // =========================
+        // CONTENT (NEWS CARDS)
+        // =========================
+        Table content = new Table();
+        content.top().left();
+        content.pad(16);
+
+        addNewsCards(content, uiFont);
+
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFadeScrollBars(false);
+        scrollPane.setScrollingDisabled(true, false);
+
+        // =========================
+        // PANEL ROOT
+        // =========================
+        Table panelTable = new Table();
+        panelTable.setBackground(createPanelBackground());
+        panelTable.top();
+
+        panelTable.add(header)
+            .expandX()
+            .fillX()
+            .padBottom(10);
+        panelTable.row();
+
+        panelTable.add(scrollPane)
+            .expand()
+            .fill();
+
+        // =========================
+        // CONTAINER (SLIDE PANEL)
+        // =========================
+        sidePanel = new Container<>(panelTable);
+        sidePanel.setSize(panelWidth, Gdx.graphics.getHeight());
+        sidePanel.setPosition(Gdx.graphics.getWidth(), 0); // off-screen
+        sidePanel.setTransform(true);
+    }
+
+    private void addNewsCards(Table container, BitmapFont font) {
+        // Mock news data
+        String[] newsTitles = {
+            "Novice o regionalnem razvoju",
+            "Aktualne spremembe v zakonodaji",
+            "Nova infrastrukturna nalozba",
+            "Sodelovanje med regijami",
+            "Okoljske pobude v regiji"
+        };
+
+        String[] newsDescriptions = {
+            "Pregled najnovejših dogodkov in razvojnih projektov v regiji.",
+            "Pomembne spremembe zakonodaje, ki vplivajo na lokalno skupnost.",
+            "Predstavitev nove infrastrukturne naložbe, ki bo izboljsala povezanost.",
+            "Pregled projektov sodelovanja med razlicnimi regijami drzave.",
+            "Okoljske pobude in trajnostni razvojni projekti v regiji."
+        };
+
+        Label.LabelStyle titleStyle = new Label.LabelStyle(font, new Color(0.2f, 0.2f, 0.2f, 1f));
+        Label.LabelStyle descStyle = new Label.LabelStyle(font, new Color(0.5f, 0.5f, 0.5f, 1f));
+
+        for (int i = 0; i < newsTitles.length; i++) {
+            // Create card container with border effect
+            Table card = new Table();
+            card.pad(15);
+            card.setBackground(createCardBackground());
+
+            // Title
+            Label titleLabel = new Label(newsTitles[i], titleStyle);
+            titleLabel.setWrap(true);
+            card.add(titleLabel).width(panelWidth - 50).left().top();
+            card.row().padTop(8);
+
+            // Description
+            Label descLabel = new Label(newsDescriptions[i], descStyle);
+            descLabel.setWrap(true);
+            card.add(descLabel).width(panelWidth - 50).left().top();
+
+            // Add card to container with spacing and subtle separator
+            container.add(card).width(panelWidth - 20).padBottom(12).left();
+            container.row();
+
+            // Add subtle separator line (except after last card)
+            if (i < newsTitles.length - 1) {
+                Table separator = new Table();
+                separator.setBackground(createSeparatorBackground());
+                container.add(separator).width(panelWidth - 20).height(1).padBottom(3).left();
+                container.row();
+            }
+        }
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createPanelBackground() {
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(0.98f, 0.98f, 0.98f, 1f)); // Light background
+        pixmap.fill();
+        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
+        pixmap.dispose();
+        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
+        );
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createCardBackground() {
+        // Create a white background
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.fill();
+        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
+        pixmap.dispose();
+        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
+        );
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createSeparatorBackground() {
+        // Create a subtle separator line
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(0.85f, 0.85f, 0.85f, 1f));
+        pixmap.fill();
+        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
+        pixmap.dispose();
+        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
+        );
+    }
+
+    private void toggleSidePanel() {
+        isPanelOpen = !isPanelOpen;
+
+        float panelTargetX = isPanelOpen
+            ? Gdx.graphics.getWidth() - panelWidth
+            : Gdx.graphics.getWidth();
+
+        sidePanel.clearActions();
+        sidePanel.addAction(Actions.moveTo(panelTargetX, 0, 0.3f));
+
+        // =========================
+        // ZOOM BUTTONS – FIXED LOGIC
+        // =========================
+        float buttonsTargetX = isPanelOpen
+            ? zoomButtonsBaseX - panelWidth
+            : zoomButtonsBaseX;
+
+        bottomRightTable.clearActions();
+        bottomRightTable.addAction(
+            Actions.moveTo(buttonsTargetX, bottomRightTable.getY(), 0.3f)
+        );
+
+        adjustCameraForPanel(isPanelOpen);
+    }
+
+
+
+    private void adjustCameraForPanel(boolean open) {
+
+        float pixelShift = panelWidth * 0.47f;     // koliko panela zauzima ekran
+        float worldShift = pixelShift * camera.zoom; // PRETVARANJE U WORLD SPACE
+
+        if (open) {
+            originalZoom = camera.zoom;
+
+            // kamera ide DESNO → mapa ide LIJEVO
+            camera.position.x += pixelShift;
+
+            // dodatni zoom out
+            camera.zoom = Math.min(MAX_ZOOM, camera.zoom + PANEL_ZOOM_OUT);
+
+            isPanelPinned = true;
+        } else {
+            camera.position.x -= worldShift;
+            camera.zoom = originalZoom;
+            isPanelPinned = false;
+        }
+
+        camera.update();
+        clampCameraToMap();
     }
 
 
@@ -389,6 +637,14 @@ public class MapScreen implements Screen {
     public void resize(int width, int height) {
         viewport.update(width, height);
         uiStage.getViewport().update(width, height, true);
+
+        // Update panel width and position on resize
+        if (sidePanel != null) {
+            panelWidth = width * 0.33f;
+            sidePanel.setSize(panelWidth, height);
+            float targetX = isPanelOpen ? width - panelWidth : width;
+            sidePanel.setPosition(targetX, 0);
+        }
     }
 
     @Override public void pause() {}
@@ -399,7 +655,6 @@ public class MapScreen implements Screen {
     public void dispose() {
         shapeRenderer.dispose();
         uiStage.dispose();
-        uiSkin.dispose();
         // Note: Assets managed by AssetManager should not be disposed here
         // They will be disposed when AssetManager is disposed in ApopulisMap
     }
