@@ -46,6 +46,12 @@ public class MapScreen implements Screen {
 
     private EarClippingTriangulator triangulator = new EarClippingTriangulator();
 
+    // Map bounds for camera constraints
+    private float mapMinX = Float.MAX_VALUE;
+    private float mapMaxX = Float.MIN_VALUE;
+    private float mapMinY = Float.MAX_VALUE;
+    private float mapMaxY = Float.MIN_VALUE;
+
     // Panning state
     private boolean isPanning = false;
     private float lastScreenX = 0;
@@ -84,12 +90,90 @@ public class MapScreen implements Screen {
         regions = GeoJsonRegionLoader.loadAllRegions();
         System.out.println("Loaded regions: " + regions.size());
 
+        calculateMapBounds();
+
+        // Clamp initial camera position to map bounds
+        clampCameraToMap();
+
         setupUI();
 
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
         inputMultiplexer.addProcessor(uiStage);
         inputMultiplexer.addProcessor(new MapInputProcessor());
         Gdx.input.setInputProcessor(inputMultiplexer);
+    }
+
+    /**
+     * Calculates the overall bounding box of the map from all regions.
+     * This is used to constrain camera movement so the map always stays visible.
+     */
+    private void calculateMapBounds() {
+        mapMinX = Float.MAX_VALUE;
+        mapMaxX = Float.MIN_VALUE;
+        mapMinY = Float.MAX_VALUE;
+        mapMaxY = Float.MIN_VALUE;
+
+        for (Region region : regions) {
+            mapMinX = Math.min(mapMinX, region.minX);
+            mapMaxX = Math.max(mapMaxX, region.maxX);
+            mapMinY = Math.min(mapMinY, region.minY);
+            mapMaxY = Math.max(mapMaxY, region.maxY);
+        }
+
+        System.out.println("Map bounds: X[" + mapMinX + ", " + mapMaxX + "] Y[" + mapMinY + ", " + mapMaxY + "]");
+    }
+
+    /**
+     * Clamps the camera position so that the visible area always intersects the map.
+     *
+     * How it works:
+     * 1. Calculate the visible area based on viewport size and current zoom level
+     * 2. The visible area extends from (camera.x - visibleWidth/2) to (camera.x + visibleWidth/2)
+     * 3. Ensure the visible area overlaps with the map bounds
+     * 4. When zoomed out (high zoom value > 1.0), the visible area is larger, so constraints are tighter
+     * 5. When zoomed in (low zoom value < 1.0), the visible area is smaller, so more panning freedom is allowed
+     *
+     * Note: In libGDX, zoom > 1.0 means zoomed out (larger visible area), zoom < 1.0 means zoomed in (smaller visible area)
+     */
+    private void clampCameraToMap() {
+        // Calculate the visible area dimensions based on zoom
+        // Higher zoom (> 1.0) = larger visible area (zoomed out)
+        // Lower zoom (< 1.0) = smaller visible area (zoomed in)
+        float visibleWidth = WORLD_WIDTH * camera.zoom;
+        float visibleHeight = WORLD_HEIGHT * camera.zoom;
+
+        // Calculate half-dimensions for easier calculations
+        float halfVisibleWidth = visibleWidth * 0.5f;
+        float halfVisibleHeight = visibleHeight * 0.5f;
+
+        // Calculate the map dimensions
+        float mapWidth = mapMaxX - mapMinX;
+        float mapHeight = mapMaxY - mapMinY;
+
+        // If the visible area is larger than the map, center the camera on the map
+        if (visibleWidth >= mapWidth) {
+            camera.position.x = (mapMinX + mapMaxX) * 0.5f;
+        } else {
+            // Constrain camera X position so visible area stays within map bounds
+            // Left edge constraint: camera.x - halfVisibleWidth >= mapMinX
+            // Right edge constraint: camera.x + halfVisibleWidth <= mapMaxX
+            float minCameraX = mapMinX + halfVisibleWidth;
+            float maxCameraX = mapMaxX - halfVisibleWidth;
+            camera.position.x = Math.max(minCameraX, Math.min(maxCameraX, camera.position.x));
+        }
+
+        // Same logic for Y axis
+        if (visibleHeight >= mapHeight) {
+            camera.position.y = (mapMinY + mapMaxY) * 0.5f;
+        } else {
+            // Bottom edge constraint: camera.y - halfVisibleHeight >= mapMinY
+            // Top edge constraint: camera.y + halfVisibleHeight <= mapMaxY
+            float minCameraY = mapMinY + halfVisibleHeight;
+            float maxCameraY = mapMaxY - halfVisibleHeight;
+            camera.position.y = Math.max(minCameraY, Math.min(maxCameraY, camera.position.y));
+        }
+
+        camera.update();
     }
 
     private void setupUI() {
@@ -163,6 +247,7 @@ public class MapScreen implements Screen {
     private void setZoom(float zoom) {
         camera.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
         camera.update();
+        clampCameraToMap();
     }
 
 
@@ -183,6 +268,9 @@ public class MapScreen implements Screen {
         // Adjust camera position to keep the point under cursor fixed
         camera.position.add(worldPosBefore.x - worldPosAfter.x, worldPosBefore.y - worldPosAfter.y, 0);
         camera.update();
+
+        // Clamp camera to ensure map stays visible after zoom
+        clampCameraToMap();
     }
 
 
@@ -337,6 +425,9 @@ public class MapScreen implements Screen {
 
                 camera.position.add(deltaWorldX, deltaWorldY, 0);
                 camera.update();
+
+                // Clamp camera to ensure map stays visible after panning
+                clampCameraToMap();
 
                 isPanning = true;
             }
