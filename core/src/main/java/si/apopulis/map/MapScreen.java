@@ -1,6 +1,7 @@
 package si.apopulis.map;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -30,6 +31,12 @@ public class MapScreen implements Screen {
 
     private EarClippingTriangulator triangulator = new EarClippingTriangulator();
 
+    // Panning state
+    private boolean isPanning = false;
+    private float lastScreenX = 0;
+    private float lastScreenY = 0;
+    private static final float DRAG_THRESHOLD = 5.0f;
+
 
     @Override
     public void show() {
@@ -44,6 +51,8 @@ public class MapScreen implements Screen {
 
         regions = GeoJsonRegionLoader.loadAllRegions();
         System.out.println("Loaded regions: " + regions.size());
+
+        Gdx.input.setInputProcessor(new MapInputProcessor());
     }
 
 
@@ -160,5 +169,50 @@ public class MapScreen implements Screen {
     @Override
     public void dispose() {
         shapeRenderer.dispose();
+    }
+
+    private class MapInputProcessor extends InputAdapter {
+
+        @Override
+        public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+            lastScreenX = screenX;
+            lastScreenY = screenY;
+            isPanning = false;
+            return false;
+        }
+
+        @Override
+        public boolean touchDragged(int screenX, int screenY, int pointer) {
+            float deltaScreenX = screenX - lastScreenX;
+            float deltaScreenY = screenY - lastScreenY;
+            float distance = (float) Math.sqrt(deltaScreenX * deltaScreenX + deltaScreenY * deltaScreenY);
+
+            if (distance > DRAG_THRESHOLD || isPanning) {
+                Vector3 lastWorldPos = new Vector3(lastScreenX, lastScreenY, 0);
+                Vector3 currentWorldPos = new Vector3(screenX, screenY, 0);
+
+                viewport.unproject(lastWorldPos);
+                viewport.unproject(currentWorldPos);
+
+                float deltaWorldX = lastWorldPos.x - currentWorldPos.x;
+                float deltaWorldY = lastWorldPos.y - currentWorldPos.y;
+
+                camera.position.add(deltaWorldX, deltaWorldY, 0);
+                camera.update();
+
+                isPanning = true;
+            }
+
+            lastScreenX = screenX;
+            lastScreenY = screenY;
+
+            return isPanning;
+        }
+
+        @Override
+        public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+            isPanning = false;
+            return false;
+        }
     }
 }
