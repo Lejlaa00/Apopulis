@@ -1,0 +1,27 @@
+
+ui.png
+size: 1024, 1024
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+btn_menu
+  rotate: false
+  xy: 389, 457
+  size: 372, 313
+  orig: 372, 313
+  offset: 0, 0
+  index: -1
+btn_minus
+  rotate: false
+  xy: 1, 1
+  size: 386, 383
+  orig: 386, 383
+  offset: 0, 0
+  index: -1
+btn_plus
+  rotate: false
+  xy: 1, 386
+  size: 386, 384
+  orig: 386, 384
+  offset: 0, 0
+  index: -1

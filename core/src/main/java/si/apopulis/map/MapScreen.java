@@ -4,12 +4,13 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -26,13 +27,16 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import si.apopulis.map.assets.AssetDescriptors;
+import si.apopulis.map.assets.RegionNames;
 
 
 import java.util.List;
 
 public class MapScreen implements Screen {
 
+    private final AssetManager assetManager;
+    
     private ShapeRenderer shapeRenderer;
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -71,9 +75,9 @@ public class MapScreen implements Screen {
     private ImageButton zoomInButton;
     private ImageButton zoomOutButton;
 
-    private Texture zoomInTexture;
-    private Texture zoomOutTexture;
-
+    public MapScreen(AssetManager assetManager) {
+        this.assetManager = assetManager;
+    }
 
     @Override
     public void show() {
@@ -179,13 +183,18 @@ public class MapScreen implements Screen {
     private void setupUI() {
         uiStage = new Stage(new ScreenViewport());
 
-        uiSkin = new Skin();
-        uiSkin.add("default-font", new BitmapFont());
+        // Get assets from AssetManager
+        TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
+        BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
 
+        uiSkin = new Skin();
+        uiSkin.add("default-font", uiFont);
+
+        // Create white texture for button backgrounds
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pixmap.setColor(Color.WHITE);
         pixmap.fill();
-        Texture whiteTexture = new Texture(pixmap);
+        com.badlogic.gdx.graphics.Texture whiteTexture = new com.badlogic.gdx.graphics.Texture(pixmap);
         pixmap.dispose();
         uiSkin.add("white", whiteTexture);
 
@@ -197,14 +206,12 @@ public class MapScreen implements Screen {
         buttonStyle.over = uiSkin.newDrawable("white", new Color(0.25f, 0.25f, 0.25f, 0.85f));
         uiSkin.add("default", buttonStyle);
 
-        zoomInTexture = new Texture(Gdx.files.internal("ui/btn_plus.png"));
-        zoomOutTexture = new Texture(Gdx.files.internal("ui/btn_minus.png"));
-
+        // Get button regions from atlas
         zoomInButton = new ImageButton(
-            new TextureRegionDrawable(new TextureRegion(zoomInTexture))
+            new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_PLUS))
         );
         zoomOutButton = new ImageButton(
-            new TextureRegionDrawable(new TextureRegion(zoomOutTexture))
+            new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_MINUS))
         );
 
         zoomInButton.addListener(new ClickListener() {
@@ -393,8 +400,8 @@ public class MapScreen implements Screen {
         shapeRenderer.dispose();
         uiStage.dispose();
         uiSkin.dispose();
-        zoomInTexture.dispose();
-        zoomOutTexture.dispose();
+        // Note: Assets managed by AssetManager should not be disposed here
+        // They will be disposed when AssetManager is disposed in ApopulisMap
     }
 
     private class MapInputProcessor extends InputAdapter {
