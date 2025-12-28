@@ -25,6 +25,7 @@ yarn-error.log*
 
 # Frontend-specific (optional)
 .eslintcache
+.vs/
 =======
 node_modules
 .DS_Store
