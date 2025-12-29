@@ -27,8 +27,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Container;
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import si.apopulis.map.assets.AssetDescriptors;
 import si.apopulis.map.assets.RegionNames;
 
@@ -79,7 +82,6 @@ public class MapScreen implements Screen {
     private Container<Table> sidePanel;
     private boolean isPanelOpen = false;
     private float panelWidth;
-    private float effectiveWorldWidth = WORLD_WIDTH;
     private boolean isPanelPinned = false;
 
     private float originalZoom;
@@ -88,6 +90,7 @@ public class MapScreen implements Screen {
     private Table bottomRightTable;
     private float zoomButtonsBaseX;
 
+    private String selectedCategory = "Splošno";
 
     public MapScreen(AssetManager assetManager) {
         this.assetManager = assetManager;
@@ -137,7 +140,6 @@ public class MapScreen implements Screen {
     }
 
     private void clampCameraToMap() {
-
         if (isPanelPinned) {
             camera.update();
             return;
@@ -255,6 +257,24 @@ public class MapScreen implements Screen {
     private void setupSidePanel(BitmapFont uiFont) {
         TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
 
+        Array<String> categories = new Array<>();
+        categories.addAll("Splošno", "Biznis", "Gospodarstvo", "Kultura",
+            "Lifestyle", "Politika", "Tehnologija", "Vreme");
+
+        SelectBox.SelectBoxStyle selectBoxStyle = createSelectBoxStyle(uiFont);
+        SelectBox<String> categorySelectBox = new SelectBox<>(selectBoxStyle);
+        categorySelectBox.setItems(categories);
+        categorySelectBox.setSelected("Splošno");
+
+        categorySelectBox.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeListener.ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                selectedCategory = categorySelectBox.getSelected();
+                System.out.println("Selected category: " + selectedCategory);
+            }
+        });
+
+        // Exit button
         ImageButton exitButton = new ImageButton(
             new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_EXIT))
         );
@@ -267,8 +287,11 @@ public class MapScreen implements Screen {
         });
 
         Table header = new Table();
-        header.top().right();
-        header.add(exitButton).size(24, 24);
+        header.top().left();
+        header.pad(12);
+        header.add(categorySelectBox).left().height(36).minWidth(150);
+        header.add().expandX();
+        header.add(exitButton).size(24, 24).right();
 
         Table content = new Table();
         content.top().left();
@@ -296,12 +319,11 @@ public class MapScreen implements Screen {
 
         sidePanel = new Container<>(panelTable);
         sidePanel.setSize(panelWidth, Gdx.graphics.getHeight());
-        sidePanel.setPosition(Gdx.graphics.getWidth(), 0); // off-screen
+        sidePanel.setPosition(Gdx.graphics.getWidth(), 0);
         sidePanel.setTransform(true);
     }
 
     private void addNewsCards(Table container, BitmapFont font) {
-        // Mock news data
         String[] newsTitles = {
             "Novice o regionalnem razvoju",
             "Aktualne spremembe v zakonodaji",
@@ -321,7 +343,7 @@ public class MapScreen implements Screen {
         Label.LabelStyle titleStyle = new Label.LabelStyle(font, new Color(0.15f, 0.15f, 0.15f, 1f));
 
         BitmapFont descFont = new BitmapFont(font.getData(), font.getRegions(), false);
-
+        descFont.getData().setScale(0.82f);
         Label.LabelStyle descStyle = new Label.LabelStyle(descFont, new Color(0.45f, 0.45f, 0.45f, 1f));
 
         float cardWidth = panelWidth - 24;
@@ -338,26 +360,24 @@ public class MapScreen implements Screen {
             card.pad(10, 12, 10, 12);
             card.setBackground(createCardBackground());
 
-            // Title
             Label titleLabel = new Label(newsTitles[i], titleStyle);
             titleLabel.setWrap(true);
-            card.add(titleLabel).width(cardWidth - 40).left().top();
             card.row().padTop(6);
 
-            // Description
             Label descLabel = new Label(newsDescriptions[i], descStyle);
             descLabel.setWrap(true);
             card.add(descLabel).width(cardWidth - 40).left().top();
 
             cardWrapper.add(card).expand().fill();
-// Reduced from 12px to 8px
+
+            container.add(cardWrapper).width(cardWidth).padBottom(8).left();
             container.row();
         }
     }
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createPanelBackground() {
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.98f, 0.98f, 0.98f, 1f));
+        pixmap.setColor(new Color(0.98f, 0.98f, 0.98f, 1f)); // Light background
         pixmap.fill();
         com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
         pixmap.dispose();
@@ -370,14 +390,18 @@ public class MapScreen implements Screen {
         int size = 100;
         Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
 
-        pixmap.setColor(new Color(1f, 1f, 1f, 1f)); // Pure white
+        pixmap.setColor(new Color(1f, 1f, 1f, 1f));
         pixmap.fill();
 
         pixmap.setColor(new Color(0.92f, 0.92f, 0.92f, 1f));
+        // Top border
         pixmap.fillRectangle(0, 0, size, 1);
+        // Left border
         pixmap.fillRectangle(0, 0, 1, size);
+        // Right border (softer)
         pixmap.setColor(new Color(0.95f, 0.95f, 0.95f, 1f));
         pixmap.fillRectangle(size - 1, 0, 1, size);
+        // Bottom border (softer, simulating shadow)
         pixmap.setColor(new Color(0.94f, 0.94f, 0.94f, 1f));
         pixmap.fillRectangle(0, size - 1, size, 1);
 
@@ -397,6 +421,89 @@ public class MapScreen implements Screen {
         pixmap.fill();
         com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
         pixmap.dispose();
+        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
+        );
+    }
+
+    private SelectBox.SelectBoxStyle createSelectBoxStyle(BitmapFont font) {
+        SelectBox.SelectBoxStyle style = new SelectBox.SelectBoxStyle();
+        style.font = font;
+        style.fontColor = new Color(0.15f, 0.15f, 0.15f, 1f); // Dark text
+        style.background = createDropdownBackground();
+        style.scrollStyle = createScrollPaneStyle();
+        style.listStyle = createListStyle(font);
+        return style;
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownBackground() {
+        int width = 200;
+        int height = 38;
+        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+
+        pixmap.setColor(new Color(1f, 1f, 1f, 1f));
+        pixmap.fill();
+
+        pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
+        pixmap.drawRectangle(0, 0, width, height);
+
+        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
+        texture.setFilter(com.badlogic.gdx.graphics.Texture.TextureFilter.Linear, com.badlogic.gdx.graphics.Texture.TextureFilter.Linear);
+        pixmap.dispose();
+
+        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
+        );
+    }
+
+    private ScrollPane.ScrollPaneStyle createScrollPaneStyle() {
+        ScrollPane.ScrollPaneStyle style = new ScrollPane.ScrollPaneStyle();
+        style.background = createDropdownListBackground();
+        return style;
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle createListStyle(BitmapFont font) {
+        com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle style = new com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle();
+        style.font = font;
+        style.fontColorSelected = new Color(1f, 1f, 1f, 1f);
+        style.fontColorUnselected = new Color(0.15f, 0.15f, 0.15f, 1f);
+        style.selection = createDropdownSelectionBackground();
+        style.background = createDropdownListBackground();
+        return style;
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownListBackground() {
+        int width = 200;
+        int height = 200;
+        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+
+        pixmap.setColor(new Color(1f, 1f, 1f, 1f));
+        pixmap.fill();
+
+        pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
+        pixmap.drawRectangle(0, 0, width, height);
+
+        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
+        texture.setFilter(com.badlogic.gdx.graphics.Texture.TextureFilter.Linear, com.badlogic.gdx.graphics.Texture.TextureFilter.Linear);
+        pixmap.dispose();
+
+        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
+        );
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownSelectionBackground() {
+        int width = 200;
+        int height = 30;
+        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+
+        pixmap.setColor(new Color(0.6f, 0.45f, 0.75f, 1f));
+        pixmap.fill();
+
+        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
+        texture.setFilter(com.badlogic.gdx.graphics.Texture.TextureFilter.Linear, com.badlogic.gdx.graphics.Texture.TextureFilter.Linear);
+        pixmap.dispose();
+
         return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
             new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
         );
@@ -471,7 +578,6 @@ public class MapScreen implements Screen {
         Vector3 worldPosBefore = new Vector3(screenX, screenY, 0);
         viewport.unproject(worldPosBefore);
 
-        // Apply zoom change
         float newZoom = camera.zoom + zoomDelta;
         camera.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
         camera.update();
@@ -484,6 +590,7 @@ public class MapScreen implements Screen {
 
         clampCameraToMap();
     }
+
 
     @Override
     public void render(float delta) {
@@ -590,13 +697,13 @@ public class MapScreen implements Screen {
         viewport.update(width, height);
         uiStage.getViewport().update(width, height, true);
 
-        // Update panel width and position on resize
         if (sidePanel != null) {
             panelWidth = width * 0.33f;
             sidePanel.setSize(panelWidth, height);
             float targetX = isPanelOpen ? width - panelWidth : width;
             sidePanel.setPosition(targetX, 0);
         }
+
     }
 
     @Override public void pause() {}
@@ -638,7 +745,6 @@ public class MapScreen implements Screen {
                 camera.position.add(deltaWorldX, deltaWorldY, 0);
                 camera.update();
 
-                // Clamp camera to ensure map stays visible after panning
                 clampCameraToMap();
 
                 isPanning = true;

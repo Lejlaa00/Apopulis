@@ -9,6 +9,7 @@ public final class RegionNames {
     public static final String BTN_MINUS = "btn_minus";
     public static final String BTN_HAMBURGER = "btn_menu";
     public static final String BTN_EXIT = "btn_exit";
+    public static final String BTN_CATEGORY = "btn_category";
 
 
 }
