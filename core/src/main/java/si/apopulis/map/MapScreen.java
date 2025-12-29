@@ -110,7 +110,6 @@ public class MapScreen implements Screen {
 
         calculateMapBounds();
 
-        // Clamp initial camera position to map bounds
         clampCameraToMap();
 
         setupUI();
@@ -121,10 +120,6 @@ public class MapScreen implements Screen {
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
 
-    /**
-     * Calculates the overall bounding box of the map from all regions.
-     * This is used to constrain camera movement so the map always stays visible.
-     */
     private void calculateMapBounds() {
         mapMinX = Float.MAX_VALUE;
         mapMaxX = Float.MIN_VALUE;
@@ -141,22 +136,7 @@ public class MapScreen implements Screen {
         System.out.println("Map bounds: X[" + mapMinX + ", " + mapMaxX + "] Y[" + mapMinY + ", " + mapMaxY + "]");
     }
 
-    /**
-     * Clamps the camera position so that the visible area always intersects the map.
-     *
-     * How it works:
-     * 1. Calculate the visible area based on viewport size and current zoom level
-     * 2. The visible area extends from (camera.x - visibleWidth/2) to (camera.x + visibleWidth/2)
-     * 3. Ensure the visible area overlaps with the map bounds
-     * 4. When zoomed out (high zoom value > 1.0), the visible area is larger, so constraints are tighter
-     * 5. When zoomed in (low zoom value < 1.0), the visible area is smaller, so more panning freedom is allowed
-     *
-     * Note: In libGDX, zoom > 1.0 means zoomed out (larger visible area), zoom < 1.0 means zoomed in (smaller visible area)
-     */
     private void clampCameraToMap() {
-        // Calculate the visible area dimensions based on zoom
-        // Higher zoom (> 1.0) = larger visible area (zoomed out)
-        // Lower zoom (< 1.0) = smaller visible area (zoomed in)
 
         if (isPanelPinned) {
             camera.update();
@@ -170,32 +150,23 @@ public class MapScreen implements Screen {
         float visibleWidth = effectiveWidth * camera.zoom;
         float visibleHeight = WORLD_HEIGHT * camera.zoom;
 
-        // Calculate half-dimensions for easier calculations
         float halfVisibleWidth = visibleWidth * 0.5f;
         float halfVisibleHeight = visibleHeight * 0.5f;
 
-        // Calculate the map dimensions
         float mapWidth = mapMaxX - mapMinX;
         float mapHeight = mapMaxY - mapMinY;
 
-        // If the visible area is larger than the map, center the camera on the map
         if (visibleWidth >= mapWidth) {
             camera.position.x = (mapMinX + mapMaxX) * 0.5f;
         } else {
-            // Constrain camera X position so visible area stays within map bounds
-            // Left edge constraint: camera.x - halfVisibleWidth >= mapMinX
-            // Right edge constraint: camera.x + halfVisibleWidth <= mapMaxX
             float minCameraX = mapMinX + halfVisibleWidth;
             float maxCameraX = mapMaxX - halfVisibleWidth;
             camera.position.x = Math.max(minCameraX, Math.min(maxCameraX, camera.position.x));
         }
 
-        // Same logic for Y axis
         if (visibleHeight >= mapHeight) {
             camera.position.y = (mapMinY + mapMaxY) * 0.5f;
         } else {
-            // Bottom edge constraint: camera.y - halfVisibleHeight >= mapMinY
-            // Top edge constraint: camera.y + halfVisibleHeight <= mapMaxY
             float minCameraY = mapMinY + halfVisibleHeight;
             float maxCameraY = mapMaxY - halfVisibleHeight;
             camera.position.y = Math.max(minCameraY, Math.min(maxCameraY, camera.position.y));
@@ -207,35 +178,27 @@ public class MapScreen implements Screen {
     private void setupUI() {
         uiStage = new Stage(new ScreenViewport());
 
-        // Get assets from AssetManager
         TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
         BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
 
-        // Calculate panel width (30-35% of screen width)
         float screenWidth = Gdx.graphics.getWidth();
         panelWidth = screenWidth * 0.33f;
 
-        // Setup zoom buttons
         setupZoomButtons(uiAtlas);
 
-        // Setup hamburger button
         setupHamburgerButton(uiAtlas);
 
-        // Setup side panel
         setupSidePanel(uiFont);
 
-        // Main UI table
         Table mainTable = new Table();
         mainTable.setFillParent(true);
 
-        // Top-right corner for hamburger button
         Table topRightTable = new Table();
         topRightTable.setFillParent(true);
         topRightTable.top().right();
         topRightTable.pad(20);
         topRightTable.add(hamburgerButton).size(32, 32);
 
-        // Bottom-right corner for zoom buttons
         bottomRightTable = new Table();
         bottomRightTable.setFillParent(true);
         bottomRightTable.bottom().right();
@@ -292,9 +255,6 @@ public class MapScreen implements Screen {
     private void setupSidePanel(BitmapFont uiFont) {
         TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
 
-        // =========================
-        // HEADER (EXIT BUTTON)
-        // =========================
         ImageButton exitButton = new ImageButton(
             new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_EXIT))
         );
@@ -310,12 +270,9 @@ public class MapScreen implements Screen {
         header.top().right();
         header.add(exitButton).size(24, 24);
 
-        // =========================
-        // CONTENT (NEWS CARDS)
-        // =========================
         Table content = new Table();
         content.top().left();
-        content.pad(16);
+        content.pad(12, 12, 12, 12);
 
         addNewsCards(content, uiFont);
 
@@ -323,9 +280,6 @@ public class MapScreen implements Screen {
         scrollPane.setFadeScrollBars(false);
         scrollPane.setScrollingDisabled(true, false);
 
-        // =========================
-        // PANEL ROOT
-        // =========================
         Table panelTable = new Table();
         panelTable.setBackground(createPanelBackground());
         panelTable.top();
@@ -340,9 +294,6 @@ public class MapScreen implements Screen {
             .expand()
             .fill();
 
-        // =========================
-        // CONTAINER (SLIDE PANEL)
-        // =========================
         sidePanel = new Container<>(panelTable);
         sidePanel.setSize(panelWidth, Gdx.graphics.getHeight());
         sidePanel.setPosition(Gdx.graphics.getWidth(), 0); // off-screen
@@ -360,50 +311,53 @@ public class MapScreen implements Screen {
         };
 
         String[] newsDescriptions = {
-            "Pregled najnovejših dogodkov in razvojnih projektov v regiji.",
+            "Pregled najnovejsih dogodkov in razvojnih projektov v regiji.",
             "Pomembne spremembe zakonodaje, ki vplivajo na lokalno skupnost.",
-            "Predstavitev nove infrastrukturne naložbe, ki bo izboljsala povezanost.",
+            "Predstavitev nove infrastrukturne nalozbe, ki bo izboljsala povezanost.",
             "Pregled projektov sodelovanja med razlicnimi regijami drzave.",
             "Okoljske pobude in trajnostni razvojni projekti v regiji."
         };
 
-        Label.LabelStyle titleStyle = new Label.LabelStyle(font, new Color(0.2f, 0.2f, 0.2f, 1f));
-        Label.LabelStyle descStyle = new Label.LabelStyle(font, new Color(0.5f, 0.5f, 0.5f, 1f));
+        Label.LabelStyle titleStyle = new Label.LabelStyle(font, new Color(0.15f, 0.15f, 0.15f, 1f));
+
+        BitmapFont descFont = new BitmapFont(font.getData(), font.getRegions(), false);
+
+        Label.LabelStyle descStyle = new Label.LabelStyle(descFont, new Color(0.45f, 0.45f, 0.45f, 1f));
+
+        float cardWidth = panelWidth - 24;
 
         for (int i = 0; i < newsTitles.length; i++) {
-            // Create card container with border effect
+            Table cardWrapper = new Table();
+            cardWrapper.left();
+
+            Table accentLine = new Table();
+            accentLine.setBackground(createAccentLineBackground());
+            cardWrapper.add(accentLine).width(3).minHeight(60).fillY();
+
             Table card = new Table();
-            card.pad(15);
+            card.pad(10, 12, 10, 12);
             card.setBackground(createCardBackground());
 
             // Title
             Label titleLabel = new Label(newsTitles[i], titleStyle);
             titleLabel.setWrap(true);
-            card.add(titleLabel).width(panelWidth - 50).left().top();
-            card.row().padTop(8);
+            card.add(titleLabel).width(cardWidth - 40).left().top();
+            card.row().padTop(6);
 
             // Description
             Label descLabel = new Label(newsDescriptions[i], descStyle);
             descLabel.setWrap(true);
-            card.add(descLabel).width(panelWidth - 50).left().top();
+            card.add(descLabel).width(cardWidth - 40).left().top();
 
-            // Add card to container with spacing and subtle separator
-            container.add(card).width(panelWidth - 20).padBottom(12).left();
+            cardWrapper.add(card).expand().fill();
+// Reduced from 12px to 8px
             container.row();
-
-            // Add subtle separator line (except after last card)
-            if (i < newsTitles.length - 1) {
-                Table separator = new Table();
-                separator.setBackground(createSeparatorBackground());
-                container.add(separator).width(panelWidth - 20).height(1).padBottom(3).left();
-                container.row();
-            }
         }
     }
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createPanelBackground() {
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.98f, 0.98f, 0.98f, 1f)); // Light background
+        pixmap.setColor(new Color(0.98f, 0.98f, 0.98f, 1f));
         pixmap.fill();
         com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
         pixmap.dispose();
@@ -413,21 +367,33 @@ public class MapScreen implements Screen {
     }
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createCardBackground() {
-        // Create a white background
-        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(Color.WHITE);
+        int size = 100;
+        Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+
+        pixmap.setColor(new Color(1f, 1f, 1f, 1f)); // Pure white
         pixmap.fill();
+
+        pixmap.setColor(new Color(0.92f, 0.92f, 0.92f, 1f));
+        pixmap.fillRectangle(0, 0, size, 1);
+        pixmap.fillRectangle(0, 0, 1, size);
+        pixmap.setColor(new Color(0.95f, 0.95f, 0.95f, 1f));
+        pixmap.fillRectangle(size - 1, 0, 1, size);
+        pixmap.setColor(new Color(0.94f, 0.94f, 0.94f, 1f));
+        pixmap.fillRectangle(0, size - 1, size, 1);
+
         com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
+        texture.setFilter(com.badlogic.gdx.graphics.Texture.TextureFilter.Linear, com.badlogic.gdx.graphics.Texture.TextureFilter.Linear);
         pixmap.dispose();
         return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
             new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
         );
     }
 
-    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createSeparatorBackground() {
-        // Create a subtle separator line
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createAccentLineBackground() {
+        // Create a thin colored accent line (left side of card)
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.85f, 0.85f, 0.85f, 1f));
+        // Use a subtle accent color (soft blue/purple to match the map theme)
+        pixmap.setColor(new Color(0.6f, 0.45f, 0.75f, 1f)); // Matches hover color from map
         pixmap.fill();
         com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
         pixmap.dispose();
@@ -446,9 +412,6 @@ public class MapScreen implements Screen {
         sidePanel.clearActions();
         sidePanel.addAction(Actions.moveTo(panelTargetX, 0, 0.3f));
 
-        // =========================
-        // ZOOM BUTTONS – FIXED LOGIC
-        // =========================
         float buttonsTargetX = isPanelOpen
             ? zoomButtonsBaseX - panelWidth
             : zoomButtonsBaseX;
@@ -465,16 +428,14 @@ public class MapScreen implements Screen {
 
     private void adjustCameraForPanel(boolean open) {
 
-        float pixelShift = panelWidth * 0.47f;     // koliko panela zauzima ekran
-        float worldShift = pixelShift * camera.zoom; // PRETVARANJE U WORLD SPACE
+        float pixelShift = panelWidth * 0.47f;
+        float worldShift = pixelShift * camera.zoom;
 
         if (open) {
             originalZoom = camera.zoom;
 
-            // kamera ide DESNO → mapa ide LIJEVO
             camera.position.x += pixelShift;
 
-            // dodatni zoom out
             camera.zoom = Math.min(MAX_ZOOM, camera.zoom + PANEL_ZOOM_OUT);
 
             isPanelPinned = true;
@@ -507,7 +468,6 @@ public class MapScreen implements Screen {
 
 
     private void zoomAtPoint(int screenX, int screenY, float zoomDelta) {
-        // Convert screen coordinates to world coordinates before zoom
         Vector3 worldPosBefore = new Vector3(screenX, screenY, 0);
         viewport.unproject(worldPosBefore);
 
@@ -516,18 +476,14 @@ public class MapScreen implements Screen {
         camera.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
         camera.update();
 
-        // Convert screen coordinates to world coordinates after zoom
         Vector3 worldPosAfter = new Vector3(screenX, screenY, 0);
         viewport.unproject(worldPosAfter);
 
-        // Adjust camera position to keep the point under cursor fixed
         camera.position.add(worldPosBefore.x - worldPosAfter.x, worldPosBefore.y - worldPosAfter.y, 0);
         camera.update();
 
-        // Clamp camera to ensure map stays visible after zoom
         clampCameraToMap();
     }
-
 
     @Override
     public void render(float delta) {
@@ -556,10 +512,8 @@ public class MapScreen implements Screen {
         Color regionColor = new Color(0.75f, 0.6f, 0.85f, 1f);
         Color hoverColor  = new Color(0.6f, 0.45f, 0.75f, 1f);
 
-        // Draw all regions
         drawRegions(regionColor);
 
-        // Draw hovered region
         if (hoveredRegion != null) {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(hoverColor);
@@ -567,10 +521,8 @@ public class MapScreen implements Screen {
             shapeRenderer.end();
         }
 
-        // Draw borders
         drawBorders();
 
-        // Draw UI on top
         uiStage.draw();
     }
 
@@ -655,8 +607,6 @@ public class MapScreen implements Screen {
     public void dispose() {
         shapeRenderer.dispose();
         uiStage.dispose();
-        // Note: Assets managed by AssetManager should not be disposed here
-        // They will be disposed when AssetManager is disposed in ApopulisMap
     }
 
     private class MapInputProcessor extends InputAdapter {

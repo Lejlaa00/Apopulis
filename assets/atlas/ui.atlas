@@ -4,30 +4,37 @@ size: 1024, 1024
 format: RGBA8888
 filter: Nearest, Nearest
 repeat: none
+btn_category
+  rotate: false
+  xy: 1, 1
+  size: 434, 161
+  orig: 434, 161
+  offset: 0, 0
+  index: -1
 btn_exit
   rotate: false
-  xy: 389, 401
+  xy: 389, 564
   size: 367, 369
   orig: 367, 369
   offset: 0, 0
   index: -1
 btn_menu
   rotate: false
-  xy: 389, 86
+  xy: 389, 249
   size: 372, 313
   orig: 372, 313
   offset: 0, 0
   index: -1
 btn_minus
   rotate: false
-  xy: 1, 1
+  xy: 1, 164
   size: 386, 383
   orig: 386, 383
   offset: 0, 0
   index: -1
 btn_plus
   rotate: false
-  xy: 1, 386
+  xy: 1, 549
   size: 386, 384
   orig: 386, 384
   offset: 0, 0
