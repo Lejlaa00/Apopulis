@@ -362,6 +362,7 @@ public class MapScreen implements Screen {
 
             Label titleLabel = new Label(newsTitles[i], titleStyle);
             titleLabel.setWrap(true);
+            card.add(titleLabel).width(cardWidth - 40).left().top();
             card.row().padTop(6);
 
             Label descLabel = new Label(newsDescriptions[i], descStyle);
@@ -377,7 +378,7 @@ public class MapScreen implements Screen {
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createPanelBackground() {
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.98f, 0.98f, 0.98f, 1f)); // Light background
+        pixmap.setColor(new Color(0.98f, 0.98f, 0.98f, 1f));
         pixmap.fill();
         com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
         pixmap.dispose();
@@ -441,9 +442,11 @@ public class MapScreen implements Screen {
         int height = 38;
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
 
+        // Light background
         pixmap.setColor(new Color(1f, 1f, 1f, 1f));
         pixmap.fill();
 
+        // Subtle border
         pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
         pixmap.drawRectangle(0, 0, width, height);
 
@@ -477,9 +480,11 @@ public class MapScreen implements Screen {
         int height = 200;
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
 
+        // Light background
         pixmap.setColor(new Color(1f, 1f, 1f, 1f));
         pixmap.fill();
 
+        // Subtle border
         pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
         pixmap.drawRectangle(0, 0, width, height);
 
@@ -497,6 +502,7 @@ public class MapScreen implements Screen {
         int height = 30;
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
 
+        // Soft purple accent color for selection
         pixmap.setColor(new Color(0.6f, 0.45f, 0.75f, 1f));
         pixmap.fill();
 
@@ -628,8 +634,10 @@ public class MapScreen implements Screen {
             shapeRenderer.end();
         }
 
+        // Draw borders
         drawBorders();
 
+        // Draw UI on top
         uiStage.draw();
     }
 
@@ -697,6 +705,7 @@ public class MapScreen implements Screen {
         viewport.update(width, height);
         uiStage.getViewport().update(width, height, true);
 
+        // Update panel width and position on resize
         if (sidePanel != null) {
             panelWidth = width * 0.33f;
             sidePanel.setSize(panelWidth, height);
@@ -745,6 +754,7 @@ public class MapScreen implements Screen {
                 camera.position.add(deltaWorldX, deltaWorldY, 0);
                 camera.update();
 
+                // Clamp camera to ensure map stays visible after panning
                 clampCameraToMap();
 
                 isPanning = true;
