@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const provinceController = require('../controllers/provinceController');
 
+// Get province news statistics
+router.get('/stats/news', provinceController.getProvinceNewsStats);
+
 // Get all provinces
 router.get('/', provinceController.getAllProvinces);
 
