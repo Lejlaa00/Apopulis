@@ -99,9 +99,15 @@ public class MapScreen implements Screen {
     private static final float FETCH_INTERVAL = 60f; // 60 seconds
     private boolean isFetchingNews = false;
 
+    // News items for side panel
+    private Array<NewsItem> newsItems;
+    private Table newsContentTable;
+    private boolean isFetchingNewsItems = false;
+
     public MapScreen(AssetManager assetManager) {
         this.assetManager = assetManager;
         this.newsMarkers = new Array<>();
+        this.newsItems = new Array<>();
     }
 
     @Override
@@ -132,6 +138,93 @@ public class MapScreen implements Screen {
 
         // Fetch news markers on startup
         fetchNewsMarkers();
+        
+        // Fetch initial news items
+        fetchNewsItems(selectedCategory);
+    }
+
+    private void fetchNewsItems(String category) {
+        if (isFetchingNewsItems) {
+            return;
+        }
+
+        isFetchingNewsItems = true;
+        System.out.println("Fetching news items for category: " + category);
+
+        // Fetch more news items to account for client-side filtering
+        NewsApiClient.fetchNewsByCategory(category, 50, new NewsApiClient.NewsItemsCallback() {
+            @Override
+            public void onSuccess(Array<NewsItem> items) {
+                newsItems = items;
+                isFetchingNewsItems = false;
+                System.out.println("Successfully fetched " + items.size + " news items");
+                
+                // Update the news cards in the side panel
+                updateNewsCards();
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                isFetchingNewsItems = false;
+                System.err.println("Failed to fetch news items: " + error.getMessage());
+                // Keep showing existing news or show empty state
+            }
+        });
+    }
+
+    private void updateNewsCards() {
+        // This method should only be called from the main thread
+        if (newsContentTable == null || assetManager == null) {
+            return;
+        }
+
+        try {
+            // Clear existing cards
+            newsContentTable.clear();
+
+        // Filter news by selected category
+        Array<NewsItem> filteredNews = new Array<>();
+        for (NewsItem item : newsItems) {
+            // If "Splošno" (General) is selected, show all news
+            // Otherwise, filter by category name
+            if (selectedCategory.equals("Splošno") || 
+                (item.getCategory() != null && item.getCategory().getName() != null && 
+                 item.getCategory().getName().equals(selectedCategory))) {
+                filteredNews.add(item);
+            }
+        }
+
+        if (filteredNews.size == 0) {
+            // Show empty state
+            Label.LabelStyle emptyStyle = new Label.LabelStyle(
+                assetManager.get(AssetDescriptors.UI_FONT),
+                new Color(0.5f, 0.5f, 0.5f, 1f)
+            );
+            Label emptyLabel = new Label("Ni novic za izbrano kategorijo", emptyStyle);
+            newsContentTable.add(emptyLabel).padTop(20);
+            return;
+        }
+
+        BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
+        Label.LabelStyle titleStyle = new Label.LabelStyle(uiFont, new Color(0.15f, 0.15f, 0.15f, 1f));
+
+        BitmapFont descFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
+        descFont.getData().setScale(0.82f);
+        Label.LabelStyle descStyle = new Label.LabelStyle(descFont, new Color(0.45f, 0.45f, 0.45f, 1f));
+
+        float cardWidth = panelWidth - 24;
+
+            // Add news cards from filtered data
+            for (int i = 0; i < filteredNews.size && i < 10; i++) {
+                NewsItem item = filteredNews.get(i);
+                if (item != null) {
+                    addNewsCard(newsContentTable, item, titleStyle, descStyle, cardWidth);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error updating news cards: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void fetchNewsMarkers() {
@@ -309,6 +402,8 @@ public class MapScreen implements Screen {
             public void changed(ChangeListener.ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
                 selectedCategory = categorySelectBox.getSelected();
                 System.out.println("Selected category: " + selectedCategory);
+                // Fetch news for the selected category
+                fetchNewsItems(selectedCategory);
             }
         });
 
@@ -335,6 +430,7 @@ public class MapScreen implements Screen {
         content.top().left();
         content.pad(12, 12, 12, 12);
 
+        newsContentTable = content;
         addNewsCards(content, uiFont);
 
         ScrollPane scrollPane = new ScrollPane(content);
@@ -362,22 +458,8 @@ public class MapScreen implements Screen {
     }
 
     private void addNewsCards(Table container, BitmapFont font) {
-        String[] newsTitles = {
-            "Novice o regionalnem razvoju",
-            "Aktualne spremembe v zakonodaji",
-            "Nova infrastrukturna nalozba",
-            "Sodelovanje med regijami",
-            "Okoljske pobude v regiji"
-        };
-
-        String[] newsDescriptions = {
-            "Pregled najnovejsih dogodkov in razvojnih projektov v regiji.",
-            "Pomembne spremembe zakonodaje, ki vplivajo na lokalno skupnost.",
-            "Predstavitev nove infrastrukturne nalozbe, ki bo izboljsala povezanost.",
-            "Pregled projektov sodelovanja med razlicnimi regijami drzave.",
-            "Okoljske pobude in trajnostni razvojni projekti v regiji."
-        };
-
+        // This method is now just for initial setup
+        // Real news will be added via updateNewsCards()
         Label.LabelStyle titleStyle = new Label.LabelStyle(font, new Color(0.15f, 0.15f, 0.15f, 1f));
 
         BitmapFont descFont = new BitmapFont(font.getData(), font.getRegions(), false);
@@ -386,32 +468,46 @@ public class MapScreen implements Screen {
 
         float cardWidth = panelWidth - 24;
 
-        for (int i = 0; i < newsTitles.length; i++) {
-            Table cardWrapper = new Table();
-            cardWrapper.left();
+        // Show loading state initially
+        Label loadingLabel = new Label("Nalaganje novic...", descStyle);
+        container.add(loadingLabel).padTop(20);
+    }
 
-            Table accentLine = new Table();
-            accentLine.setBackground(createAccentLineBackground());
-            cardWrapper.add(accentLine).width(3).minHeight(60).fillY();
+    private void addNewsCard(Table container, NewsItem item, Label.LabelStyle titleStyle, Label.LabelStyle descStyle, float cardWidth) {
+        Table cardWrapper = new Table();
+        cardWrapper.left();
 
-            Table card = new Table();
-            card.pad(10, 12, 10, 12);
-            card.setBackground(createCardBackground());
+        Table accentLine = new Table();
+        accentLine.setBackground(createAccentLineBackground());
+        cardWrapper.add(accentLine).width(3).minHeight(60).fillY();
 
-            Label titleLabel = new Label(newsTitles[i], titleStyle);
-            titleLabel.setWrap(true);
-            card.add(titleLabel).width(cardWidth - 40).left().top();
-            card.row().padTop(6);
+        Table card = new Table();
+        card.pad(10, 12, 10, 12);
+        card.setBackground(createCardBackground());
 
-            Label descLabel = new Label(newsDescriptions[i], descStyle);
-            descLabel.setWrap(true);
-            card.add(descLabel).width(cardWidth - 40).left().top();
+        // Title
+        String title = item.getTitle() != null && !item.getTitle().isEmpty() 
+            ? item.getTitle() 
+            : "Brez naslova";
+        Label titleLabel = new Label(title, titleStyle);
+        titleLabel.setWrap(true);
+        card.add(titleLabel).width(cardWidth - 40).left().top();
+        card.row().padTop(6);
 
-            cardWrapper.add(card).expand().fill();
+        // Summary/Description
+        String description = item.getSummary() != null && !item.getSummary().isEmpty()
+            ? item.getSummary()
+            : (item.getContent() != null && !item.getContent().isEmpty()
+                ? item.getContent().substring(0, Math.min(150, item.getContent().length())) + "..."
+                : "Ni opisa");
+        Label descLabel = new Label(description, descStyle);
+        descLabel.setWrap(true);
+        card.add(descLabel).width(cardWidth - 40).left().top();
 
-            container.add(cardWrapper).width(cardWidth).padBottom(8).left();
-            container.row();
-        }
+        cardWrapper.add(card).expand().fill();
+
+        container.add(cardWrapper).width(cardWidth).padBottom(8).left();
+        container.row();
     }
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createPanelBackground() {
@@ -643,6 +739,8 @@ public class MapScreen implements Screen {
         if (timeSinceLastFetch >= FETCH_INTERVAL) {
             timeSinceLastFetch = 0;
             fetchNewsMarkers();
+            // Also refresh news items when refreshing markers
+            fetchNewsItems(selectedCategory);
         }
 
         Gdx.gl.glClearColor(1, 1, 1, 1);
