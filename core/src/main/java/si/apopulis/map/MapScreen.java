@@ -37,6 +37,7 @@ import si.apopulis.map.assets.RegionNames;
 
 
 import java.util.List;
+import com.badlogic.gdx.utils.Array;
 
 public class MapScreen implements Screen {
 
@@ -92,8 +93,15 @@ public class MapScreen implements Screen {
 
     private String selectedCategory = "Splošno";
 
+    // News markers
+    private Array<ProvinceNewsMarker> newsMarkers;
+    private float timeSinceLastFetch = 0;
+    private static final float FETCH_INTERVAL = 60f; // 60 seconds
+    private boolean isFetchingNews = false;
+
     public MapScreen(AssetManager assetManager) {
         this.assetManager = assetManager;
+        this.newsMarkers = new Array<>();
     }
 
     @Override
@@ -121,6 +129,36 @@ public class MapScreen implements Screen {
         inputMultiplexer.addProcessor(uiStage);
         inputMultiplexer.addProcessor(new MapInputProcessor());
         Gdx.input.setInputProcessor(inputMultiplexer);
+
+        // Fetch news markers on startup
+        fetchNewsMarkers();
+    }
+
+    private void fetchNewsMarkers() {
+        if (isFetchingNews) {
+            return;
+        }
+
+        isFetchingNews = true;
+        System.out.println("Fetching province news stats from API...");
+
+        NewsApiClient.fetchProvinceNewsStats(24, new NewsApiClient.ProvinceNewsCallback() {
+            @Override
+            public void onSuccess(Array<ProvinceNewsMarker> markers) {
+                newsMarkers = markers;
+                isFetchingNews = false;
+                System.out.println("Successfully fetched " + markers.size + " province news markers");
+                for (ProvinceNewsMarker marker : markers) {
+                    System.out.println("  - " + marker);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                isFetchingNews = false;
+                System.err.println("Failed to fetch province news stats: " + error.getMessage());
+            }
+        });
     }
 
     private void calculateMapBounds() {
@@ -600,6 +638,13 @@ public class MapScreen implements Screen {
 
     @Override
     public void render(float delta) {
+        // Update fetch timer
+        timeSinceLastFetch += delta;
+        if (timeSinceLastFetch >= FETCH_INTERVAL) {
+            timeSinceLastFetch = 0;
+            fetchNewsMarkers();
+        }
+
         Gdx.gl.glClearColor(1, 1, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -637,8 +682,70 @@ public class MapScreen implements Screen {
         // Draw borders
         drawBorders();
 
+        // Draw news markers
+        drawNewsMarkers();
+
         // Draw UI on top
         uiStage.draw();
+    }
+
+    private void drawNewsMarkers() {
+        if (newsMarkers == null || newsMarkers.size == 0) {
+            return;
+        }
+
+        // Find min and max news counts for normalization
+        int minNews = Integer.MAX_VALUE;
+        int maxNews = Integer.MIN_VALUE;
+        for (ProvinceNewsMarker marker : newsMarkers) {
+            minNews = Math.min(minNews, marker.getNewsCount());
+            maxNews = Math.max(maxNews, marker.getNewsCount());
+        }
+
+        // If all markers have the same count, use a default range
+        if (minNews == maxNews) {
+            minNews = 0;
+            maxNews = Math.max(maxNews, 1);
+        }
+
+        float minRadius = 3f;  // Smaller minimum size
+        float maxRadius = 20f;  // Larger maximum size for better visibility
+        float radiusRange = maxRadius - minRadius;
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        for (ProvinceNewsMarker marker : newsMarkers) {
+            // Convert lat/lon to map coordinates using the same transformation as regions
+            float[] mapCoords = GeoJsonRegionLoader.latLonToMapCoords(
+                marker.getCenterLatitude(),
+                marker.getCenterLongitude()
+            );
+            float x = mapCoords[0];
+            float y = mapCoords[1];
+
+            // Calculate radius using normalized linear scale for better visual distinction
+            // This makes differences much more visible than logarithmic scale
+            float normalized = (float)(marker.getNewsCount() - minNews) / (maxNews - minNews);
+            float radius = minRadius + normalized * radiusRange;
+            
+            // Scale radius by zoom level for consistent visual size
+            float scaledRadius = radius * camera.zoom;
+
+            // Draw semi-transparent circle
+            shapeRenderer.setColor(0.9f, 0.3f, 0.3f, 0.7f); // Red with transparency
+            shapeRenderer.circle(x, y, scaledRadius, 30);
+
+            // Draw border
+            shapeRenderer.end();
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(0.7f, 0.1f, 0.1f, 1f); // Darker red border
+            shapeRenderer.circle(x, y, scaledRadius, 30);
+            shapeRenderer.end();
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        }
+
+        shapeRenderer.end();
     }
 
     private void updateHover(Vector3 mousePos) {

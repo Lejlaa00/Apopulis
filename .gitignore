@@ -57,10 +57,23 @@ www-test/
 # Not sure yet...
 
 ## IntelliJ, Android Studio:
-.idea/
+# Only exclude user-specific files, keep project structure files
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries/
+.idea/shelf/
+.idea/.name
+.idea/copyright/
+.idea/dataSources/
+.idea/dataSources.local.xml
+.idea/sqlDataSources.xml
+.idea/dynamic.xml
+.idea/uiDesigner.xml
+.idea/dbnavigator.xml
 *.ipr
 *.iws
-*.iml
+# Keep .iml files - they are essential for module structure
+# *.iml
 
 ## Eclipse:
 .classpath

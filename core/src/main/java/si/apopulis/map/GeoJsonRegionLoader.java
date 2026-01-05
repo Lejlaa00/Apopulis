@@ -10,6 +10,32 @@ import java.util.List;
 
 public class GeoJsonRegionLoader {
 
+    // Transformation parameters for converting lat/lon to map coordinates
+    private static float scale;
+    private static float centerLon;
+    private static float centerLat;
+
+    public static float getScale() {
+        return scale;
+    }
+
+    public static float getCenterLon() {
+        return centerLon;
+    }
+
+    public static float getCenterLat() {
+        return centerLat;
+    }
+
+    /**
+     * Converts geographic coordinates (lat/lon) to map screen coordinates
+     */
+    public static float[] latLonToMapCoords(float lat, float lon) {
+        float x = (lon - centerLon) * scale + 400;
+        float y = (lat - centerLat) * scale + 300;
+        return new float[]{x, y};
+    }
+
     public static List<Region> loadAllRegions() {
 
         List<Region> regions = new ArrayList<>();
@@ -40,10 +66,10 @@ public class GeoJsonRegionLoader {
 
         float width = maxLon - minLon;
         float height = maxLat - minLat;
-        float scale = 700f / Math.max(width, height);
+        scale = 700f / Math.max(width, height);
 
-        float centerLon = (minLon + maxLon) / 2f;
-        float centerLat = (minLat + maxLat) / 2f;
+        centerLon = (minLon + maxLon) / 2f;
+        centerLat = (minLat + maxLat) / 2f;
 
         // Regions
         for (JsonValue feature : features) {
