@@ -9,7 +9,9 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.NinePatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -30,6 +32,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import si.apopulis.map.assets.AssetDescriptors;
@@ -91,7 +94,7 @@ public class MapScreen implements Screen {
     private Table bottomRightTable;
     private float zoomButtonsBaseX;
 
-    private String selectedCategory = "Splošno";
+    private String selectedCategory = "Splosno";
 
     // News markers
     private Array<ProvinceNewsMarker> newsMarkers;
@@ -136,10 +139,8 @@ public class MapScreen implements Screen {
         inputMultiplexer.addProcessor(new MapInputProcessor());
         Gdx.input.setInputProcessor(inputMultiplexer);
 
-        // Fetch news markers on startup
         fetchNewsMarkers();
-        
-        // Fetch initial news items
+
         fetchNewsItems(selectedCategory);
     }
 
@@ -151,15 +152,13 @@ public class MapScreen implements Screen {
         isFetchingNewsItems = true;
         System.out.println("Fetching news items for category: " + category);
 
-        // Fetch more news items to account for client-side filtering
         NewsApiClient.fetchNewsByCategory(category, 50, new NewsApiClient.NewsItemsCallback() {
             @Override
             public void onSuccess(Array<NewsItem> items) {
                 newsItems = items;
                 isFetchingNewsItems = false;
                 System.out.println("Successfully fetched " + items.size + " news items");
-                
-                // Update the news cards in the side panel
+
                 updateNewsCards();
             }
 
@@ -167,35 +166,28 @@ public class MapScreen implements Screen {
             public void onFailure(Throwable error) {
                 isFetchingNewsItems = false;
                 System.err.println("Failed to fetch news items: " + error.getMessage());
-                // Keep showing existing news or show empty state
             }
         });
     }
 
     private void updateNewsCards() {
-        // This method should only be called from the main thread
         if (newsContentTable == null || assetManager == null) {
             return;
         }
 
         try {
-            // Clear existing cards
             newsContentTable.clear();
 
-        // Filter news by selected category
         Array<NewsItem> filteredNews = new Array<>();
         for (NewsItem item : newsItems) {
-            // If "Splošno" (General) is selected, show all news
-            // Otherwise, filter by category name
-            if (selectedCategory.equals("Splošno") || 
-                (item.getCategory() != null && item.getCategory().getName() != null && 
+            if (selectedCategory.equals("Splosno") ||
+                (item.getCategory() != null && item.getCategory().getName() != null &&
                  item.getCategory().getName().equals(selectedCategory))) {
                 filteredNews.add(item);
             }
         }
 
         if (filteredNews.size == 0) {
-            // Show empty state
             Label.LabelStyle emptyStyle = new Label.LabelStyle(
                 assetManager.get(AssetDescriptors.UI_FONT),
                 new Color(0.5f, 0.5f, 0.5f, 1f)
@@ -214,7 +206,6 @@ public class MapScreen implements Screen {
 
         float cardWidth = panelWidth - 24;
 
-            // Add news cards from filtered data
             for (int i = 0; i < filteredNews.size && i < 10; i++) {
                 NewsItem item = filteredNews.get(i);
                 if (item != null) {
@@ -389,25 +380,23 @@ public class MapScreen implements Screen {
         TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
 
         Array<String> categories = new Array<>();
-        categories.addAll("Splošno", "Biznis", "Gospodarstvo", "Kultura",
+        categories.addAll("Splosno", "Biznis", "Gospodarstvo", "Kultura",
             "Lifestyle", "Politika", "Tehnologija", "Vreme");
 
         SelectBox.SelectBoxStyle selectBoxStyle = createSelectBoxStyle(uiFont);
         SelectBox<String> categorySelectBox = new SelectBox<>(selectBoxStyle);
         categorySelectBox.setItems(categories);
-        categorySelectBox.setSelected("Splošno");
+        categorySelectBox.setSelected("Splosno");
 
         categorySelectBox.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeListener.ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
                 selectedCategory = categorySelectBox.getSelected();
                 System.out.println("Selected category: " + selectedCategory);
-                // Fetch news for the selected category
                 fetchNewsItems(selectedCategory);
             }
         });
 
-        // Exit button
         ImageButton exitButton = new ImageButton(
             new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_EXIT))
         );
@@ -458,8 +447,6 @@ public class MapScreen implements Screen {
     }
 
     private void addNewsCards(Table container, BitmapFont font) {
-        // This method is now just for initial setup
-        // Real news will be added via updateNewsCards()
         Label.LabelStyle titleStyle = new Label.LabelStyle(font, new Color(0.15f, 0.15f, 0.15f, 1f));
 
         BitmapFont descFont = new BitmapFont(font.getData(), font.getRegions(), false);
@@ -468,7 +455,6 @@ public class MapScreen implements Screen {
 
         float cardWidth = panelWidth - 24;
 
-        // Show loading state initially
         Label loadingLabel = new Label("Nalaganje novic...", descStyle);
         container.add(loadingLabel).padTop(20);
     }
@@ -485,9 +471,8 @@ public class MapScreen implements Screen {
         card.pad(10, 12, 10, 12);
         card.setBackground(createCardBackground());
 
-        // Title
-        String title = item.getTitle() != null && !item.getTitle().isEmpty() 
-            ? item.getTitle() 
+        String title = item.getTitle() != null && !item.getTitle().isEmpty()
+            ? item.getTitle()
             : "Brez naslova";
         Label titleLabel = new Label(title, titleStyle);
         titleLabel.setWrap(true);
@@ -529,14 +514,10 @@ public class MapScreen implements Screen {
         pixmap.fill();
 
         pixmap.setColor(new Color(0.92f, 0.92f, 0.92f, 1f));
-        // Top border
         pixmap.fillRectangle(0, 0, size, 1);
-        // Left border
         pixmap.fillRectangle(0, 0, 1, size);
-        // Right border (softer)
         pixmap.setColor(new Color(0.95f, 0.95f, 0.95f, 1f));
         pixmap.fillRectangle(size - 1, 0, 1, size);
-        // Bottom border (softer, simulating shadow)
         pixmap.setColor(new Color(0.94f, 0.94f, 0.94f, 1f));
         pixmap.fillRectangle(0, size - 1, size, 1);
 
@@ -549,10 +530,8 @@ public class MapScreen implements Screen {
     }
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createAccentLineBackground() {
-        // Create a thin colored accent line (left side of card)
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        // Use a subtle accent color (soft blue/purple to match the map theme)
-        pixmap.setColor(new Color(0.6f, 0.45f, 0.75f, 1f)); // Matches hover color from map
+        pixmap.setColor(new Color(0.6f, 0.45f, 0.75f, 1f));
         pixmap.fill();
         com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
         pixmap.dispose();
@@ -564,8 +543,9 @@ public class MapScreen implements Screen {
     private SelectBox.SelectBoxStyle createSelectBoxStyle(BitmapFont font) {
         SelectBox.SelectBoxStyle style = new SelectBox.SelectBoxStyle();
         style.font = font;
-        style.fontColor = new Color(0.15f, 0.15f, 0.15f, 1f); // Dark text
-        style.background = createDropdownBackground();
+        style.fontColor = new Color(0.15f, 0.15f, 0.15f, 1f);
+        style.background = createDropdownBackgroundOpen();
+        style.backgroundOpen = createDropdownBackground();
         style.scrollStyle = createScrollPaneStyle();
         style.listStyle = createListStyle(font);
         return style;
@@ -574,23 +554,93 @@ public class MapScreen implements Screen {
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownBackground() {
         int width = 200;
         int height = 38;
+        int leftPadding = 12;
+        int rightPadding = 30;
+        int arrowSize = 7;
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
 
-        // Light background
         pixmap.setColor(new Color(1f, 1f, 1f, 1f));
         pixmap.fill();
 
-        // Subtle border
         pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
         pixmap.drawRectangle(0, 0, width, height);
 
-        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
-        texture.setFilter(com.badlogic.gdx.graphics.Texture.TextureFilter.Linear, com.badlogic.gdx.graphics.Texture.TextureFilter.Linear);
+        pixmap.setColor(new Color(0.4f, 0.4f, 0.4f, 1f));
+        int arrowX = width - rightPadding / 2;
+        int arrowY = height / 2;
+
+        int topY = arrowY - arrowSize / 2;
+        int bottomY = arrowY + arrowSize / 2;
+
+        for (int y = topY; y <= bottomY; y++) {
+            if (y < 0 || y >= height) continue;
+
+            int distFromTop = y - topY;
+
+            int halfWidth = (distFromTop * arrowSize) / arrowSize;
+
+            int leftX = arrowX - halfWidth;
+            int rightX = arrowX + halfWidth;
+
+            for (int x = leftX; x <= rightX; x++) {
+                if (x >= 0 && x < width) {
+                    pixmap.drawPixel(x, y);
+                }
+            }
+        }
+
+        Texture texture = new Texture(pixmap);
+        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         pixmap.dispose();
 
-        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
-            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
-        );
+        NinePatch ninePatch = new NinePatch(texture, leftPadding, rightPadding, 0, 0);
+        return new NinePatchDrawable(ninePatch);
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownBackgroundOpen() {
+        int width = 200;
+        int height = 38;
+        int leftPadding = 12;
+        int rightPadding = 30;
+        int arrowSize = 7;
+        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+
+        pixmap.setColor(new Color(1f, 1f, 1f, 1f));
+        pixmap.fill();
+
+        pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
+        pixmap.drawRectangle(0, 0, width, height);
+
+        pixmap.setColor(new Color(0.4f, 0.4f, 0.4f, 1f));
+        int arrowX = width - rightPadding / 2;
+        int arrowY = height / 2;
+
+        int topY = arrowY - arrowSize / 2;
+        int bottomY = arrowY + arrowSize / 2;
+
+        for (int y = topY; y <= bottomY; y++) {
+            if (y < 0 || y >= height) continue;
+
+            int distFromBottom = bottomY - y;
+
+            int halfWidth = (distFromBottom * arrowSize) / arrowSize;
+
+            int leftX = arrowX - halfWidth;
+            int rightX = arrowX + halfWidth;
+
+            for (int x = leftX; x <= rightX; x++) {
+                if (x >= 0 && x < width) {
+                    pixmap.drawPixel(x, y);
+                }
+            }
+        }
+
+        Texture texture = new Texture(pixmap);
+        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        pixmap.dispose();
+
+        NinePatch ninePatch = new NinePatch(texture, leftPadding, rightPadding, 0, 0);
+        return new NinePatchDrawable(ninePatch);
     }
 
     private ScrollPane.ScrollPaneStyle createScrollPaneStyle() {
@@ -612,42 +662,59 @@ public class MapScreen implements Screen {
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownListBackground() {
         int width = 200;
         int height = 200;
+
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
 
-        // Light background
         pixmap.setColor(new Color(1f, 1f, 1f, 1f));
         pixmap.fill();
 
-        // Subtle border
         pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
-        pixmap.drawRectangle(0, 0, width, height);
 
-        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
-        texture.setFilter(com.badlogic.gdx.graphics.Texture.TextureFilter.Linear, com.badlogic.gdx.graphics.Texture.TextureFilter.Linear);
+        pixmap.drawLine(0, height - 1, width, height - 1);
+        pixmap.drawLine(width - 1, 0, width - 1, height);
+        pixmap.drawLine(0, 0, width, 0);
+
+        Texture texture = new Texture(pixmap);
+        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         pixmap.dispose();
 
-        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
-            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
+        NinePatch ninePatch = new NinePatch(
+            texture,
+            4,
+            0,
+            0,
+            0
         );
+
+        return new NinePatchDrawable(ninePatch);
     }
+
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownSelectionBackground() {
         int width = 200;
         int height = 30;
+
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
 
-        // Soft purple accent color for selection
         pixmap.setColor(new Color(0.6f, 0.45f, 0.75f, 1f));
         pixmap.fill();
 
-        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
-        texture.setFilter(com.badlogic.gdx.graphics.Texture.TextureFilter.Linear, com.badlogic.gdx.graphics.Texture.TextureFilter.Linear);
+        Texture texture = new Texture(pixmap);
+        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         pixmap.dispose();
 
-        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
-            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
+        NinePatch ninePatch = new NinePatch(
+            texture,
+            4,
+            0,
+            0,
+            0
         );
+
+        return new NinePatchDrawable(ninePatch);
     }
+
+
 
     private void toggleSidePanel() {
         isPanelOpen = !isPanelOpen;
@@ -826,7 +893,7 @@ public class MapScreen implements Screen {
             // This makes differences much more visible than logarithmic scale
             float normalized = (float)(marker.getNewsCount() - minNews) / (maxNews - minNews);
             float radius = minRadius + normalized * radiusRange;
-            
+
             // Scale radius by zoom level for consistent visual size
             float scaledRadius = radius * camera.zoom;
 
