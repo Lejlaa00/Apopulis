@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Dependencies (applies to both frontend and backend)
 **/node_modules/
 **/.pnp
@@ -21,11 +20,28 @@ yarn-error.log*
 
 # Backend-specific
 **/.cache/
-**/uploads/  # User uploads (if applicable)
+**/uploads/
 
-# Frontend-specific (optional)
+# Frontend-specific
 .eslintcache
-=======
-node_modules
-.DS_Store
->>>>>>> 20acdcfde5419b660545c9f6bb6ca6984fddb44f
+
+# Gradle / Android / Kotlin build files
+.gradle/
+.kotlin/
+android/
+local.properties
+assets/
+
+# Python / ML Service
+**/__pycache__/
+**/*.py[cod]
+*$py.class
+*.so
+.Python
+**/venv/
+**/env/
+**/ENV/
+**/.venv
+*.log
+**/*.pth
+**/*.ipynb

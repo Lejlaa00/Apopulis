@@ -20,6 +20,7 @@ const sourceRoutes = require('./routes/sourceRoutes');
 const provinceRoutes = require('./routes/provinceRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const healthRoutes = require('./routes/healthRoutes');
+const mlRoutes = require('./routes/mlRoutes');
 
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("MongoDB connected"))
@@ -75,6 +76,7 @@ app.use('/api/sources', sourceRoutes);
 app.use('/api/provinces', provinceRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api', healthRoutes);
+app.use('/api/ml', mlRoutes);
 
 // Protected test route
 app.get('/api/me', authMiddleware, (req, res) => {
