@@ -13,29 +13,42 @@ btn_category
   index: -1
 btn_exit
   rotate: false
-  xy: 389, 564
+  xy: 389, 588
   size: 367, 369
   orig: 367, 369
   offset: 0, 0
   index: -1
-btn_menu
-  rotate: false
-  xy: 389, 249
-  size: 372, 313
-  orig: 372, 313
-  offset: 0, 0
-  index: -1
 btn_minus
   rotate: false
-  xy: 1, 164
+  xy: 1, 188
   size: 386, 383
   orig: 386, 383
   offset: 0, 0
   index: -1
 btn_plus
   rotate: false
-  xy: 1, 549
+  xy: 1, 573
   size: 386, 384
   orig: 386, 384
+  offset: 0, 0
+  index: -1
+ic_pin
+  rotate: false
+  xy: 389, 164
+  size: 311, 422
+  orig: 311, 422
+  offset: 0, 0
+  index: -1
+
+ui2.png
+size: 512, 512
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+btn_menu
+  rotate: false
+  xy: 1, 1
+  size: 372, 313
+  orig: 372, 313
   offset: 0, 0
   index: -1

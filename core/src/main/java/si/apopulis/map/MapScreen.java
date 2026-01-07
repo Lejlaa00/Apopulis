@@ -18,6 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -37,10 +38,12 @@ import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import si.apopulis.map.assets.AssetDescriptors;
 import si.apopulis.map.assets.RegionNames;
-
-
 import java.util.List;
-import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.math.Vector2;
+import java.util.Random;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
 
 public class MapScreen implements Screen {
 
@@ -101,11 +104,22 @@ public class MapScreen implements Screen {
     private float timeSinceLastFetch = 0;
     private static final float FETCH_INTERVAL = 60f; // 60 seconds
     private boolean isFetchingNews = false;
+    private Array<NewsItem> displayedNews = new Array<>();
 
     // News items for side panel
     private Array<NewsItem> newsItems;
     private Table newsContentTable;
     private boolean isFetchingNewsItems = false;
+
+    // News dots inside selected region
+    private ObjectMap<String, Vector2> newsDotCache = new ObjectMap<>();
+    private Array<Vector2> selectedNewsDots = new Array<>();
+
+    // Pin
+    private SpriteBatch batch;
+    private TextureRegion pinRegion;
+    private static final float PIN_BASE_W = 14f;
+    private static final float PIN_BASE_H = 18f;
 
     public MapScreen(AssetManager assetManager) {
         this.assetManager = assetManager;
@@ -116,6 +130,14 @@ public class MapScreen implements Screen {
     @Override
     public void show() {
         shapeRenderer = new ShapeRenderer();
+        batch = new SpriteBatch();
+
+        TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
+        pinRegion = uiAtlas.findRegion(RegionNames.IC_PIN);
+
+        if (pinRegion == null) {
+            System.err.println("ERROR: ic_pin not found in atlas!");
+        }
 
         camera = new OrthographicCamera();
         viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
@@ -159,7 +181,13 @@ public class MapScreen implements Screen {
                 isFetchingNewsItems = false;
                 System.out.println("Successfully fetched " + items.size + " news items");
 
+                if (selectedRegion != null) {
+                    displayedNews = filterNewsForRegion(selectedRegion);
+                } else {
+                    displayedNews.clear();
+                }
                 updateNewsCards();
+                rebuildNewsDotsForSelectedRegion();
             }
 
             @Override
@@ -178,8 +206,13 @@ public class MapScreen implements Screen {
         try {
             newsContentTable.clear();
 
+            Array<NewsItem> sourceNews =
+                (selectedRegion != null && displayedNews != null)
+                    ? displayedNews
+                    : newsItems;
+
         Array<NewsItem> filteredNews = new Array<>();
-        for (NewsItem item : newsItems) {
+        for (NewsItem item : sourceNews) {
             if (selectedCategory.equals("Splosno") ||
                 (item.getCategory() != null && item.getCategory().getName() != null &&
                  item.getCategory().getName().equals(selectedCategory))) {
@@ -243,6 +276,108 @@ public class MapScreen implements Screen {
                 System.err.println("Failed to fetch province news stats: " + error.getMessage());
             }
         });
+    }
+
+    private boolean isNewsInsideRegion(NewsItem item, Region region) {
+        if (item == null || region == null) return false;
+        if (item.getLocation() == null) return false;
+
+        double lat = item.getLocation().getLatitude();
+        double lon = item.getLocation().getLongitude();
+
+        if (lat == 0.0 && lon == 0.0) return false;
+
+        float[] map = GeoJsonRegionLoader.latLonToMapCoords((float)lat, (float)lon);
+        float x = map[0];
+        float y = map[1];
+
+        if (x < region.minX || x > region.maxX || y < region.minY || y > region.maxY) {
+            return false;
+        }
+
+        return Intersector.isPointInPolygon(region.vertices, 0, region.vertices.length, x, y);
+    }
+
+    private Array<NewsItem> filterNewsForRegion(Region region) {
+        Array<NewsItem> result = new Array<>();
+        if (region == null) return result;
+
+        for (NewsItem item : newsItems) {
+            if (item == null) continue;
+
+            if (isNewsInsideRegion(item, region)) {
+                result.add(item);
+            }
+        }
+
+        System.out.println("FILTER DEBUG: region=" + region.id + " -> " + result.size + " items");
+        return result;
+    }
+
+    private void rebuildNewsDotsForSelectedRegion() {
+        selectedNewsDots.clear();
+
+        if (selectedRegion == null || displayedNews == null || displayedNews.size == 0) {
+            return;
+        }
+
+        for (NewsItem item : displayedNews) {
+            if (item == null) continue;
+
+            String cacheKey = item.getId() + "_" + selectedRegion.id;
+
+            Vector2 pos = newsDotCache.get(cacheKey);
+            if (pos == null) {
+                pos = generateDeterministicPointInRegion(selectedRegion, cacheKey);
+                newsDotCache.put(cacheKey, pos);
+            }
+
+            selectedNewsDots.add(pos);
+        }
+
+        System.out.println("DOTS DEBUG: built " + selectedNewsDots.size + " dots for region=" + selectedRegion.id);
+    }
+
+    private Vector2 generateDeterministicPointInRegion(Region region, String seedKey) {
+        Random rng = new Random(seedKey.hashCode());
+
+        float minX = region.minX;
+        float maxX = region.maxX;
+        float minY = region.minY;
+        float maxY = region.maxY;
+
+        for (int i = 0; i < 400; i++) {
+            float x = minX + rng.nextFloat() * (maxX - minX);
+            float y = minY + rng.nextFloat() * (maxY - minY);
+
+            if (Intersector.isPointInPolygon(region.vertices, 0, region.vertices.length, x, y)) {
+                return new Vector2(x, y);
+            }
+        }
+
+        // fallback - centar bounding boxa
+        return new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
+    }
+
+    private void drawSelectedRegionNewsPins() {
+        if (batch == null) return;
+        if (selectedRegion == null || selectedNewsDots.size == 0) return;
+        if (pinRegion == null) return;
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        float w = PIN_BASE_W ;
+        float h = PIN_BASE_H ;
+
+        for (Vector2 p : selectedNewsDots) {
+            float drawX = p.x - w * 0.5f;
+            float drawY = p.y;
+
+            batch.draw(pinRegion, drawX, drawY, w, h);
+        }
+
+        batch.end();
     }
 
     private void calculateMapBounds() {
@@ -830,6 +965,15 @@ public class MapScreen implements Screen {
         if (Gdx.input.justTouched() && hoveredRegion != null) {
             selectedRegion = hoveredRegion;
             System.out.println("Clicked region: " + selectedRegion.id);
+
+            displayedNews = filterNewsForRegion(selectedRegion);
+            rebuildNewsDotsForSelectedRegion();
+            updateNewsCards();
+
+            // auto-open panel
+            if (!isPanelOpen) {
+                toggleSidePanel();
+            }
         }
 
         Color regionColor = new Color(0.75f, 0.6f, 0.85f, 1f);
@@ -848,69 +992,10 @@ public class MapScreen implements Screen {
         drawBorders();
 
         // Draw news markers
-        drawNewsMarkers();
+        drawSelectedRegionNewsPins();
 
         // Draw UI on top
         uiStage.draw();
-    }
-
-    private void drawNewsMarkers() {
-        if (newsMarkers == null || newsMarkers.size == 0) {
-            return;
-        }
-
-        // Find min and max news counts for normalization
-        int minNews = Integer.MAX_VALUE;
-        int maxNews = Integer.MIN_VALUE;
-        for (ProvinceNewsMarker marker : newsMarkers) {
-            minNews = Math.min(minNews, marker.getNewsCount());
-            maxNews = Math.max(maxNews, marker.getNewsCount());
-        }
-
-        // If all markers have the same count, use a default range
-        if (minNews == maxNews) {
-            minNews = 0;
-            maxNews = Math.max(maxNews, 1);
-        }
-
-        float minRadius = 3f;  // Smaller minimum size
-        float maxRadius = 20f;  // Larger maximum size for better visibility
-        float radiusRange = maxRadius - minRadius;
-
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        for (ProvinceNewsMarker marker : newsMarkers) {
-            // Convert lat/lon to map coordinates using the same transformation as regions
-            float[] mapCoords = GeoJsonRegionLoader.latLonToMapCoords(
-                marker.getCenterLatitude(),
-                marker.getCenterLongitude()
-            );
-            float x = mapCoords[0];
-            float y = mapCoords[1];
-
-            // Calculate radius using normalized linear scale for better visual distinction
-            // This makes differences much more visible than logarithmic scale
-            float normalized = (float)(marker.getNewsCount() - minNews) / (maxNews - minNews);
-            float radius = minRadius + normalized * radiusRange;
-
-            // Scale radius by zoom level for consistent visual size
-            float scaledRadius = radius * camera.zoom;
-
-            // Draw semi-transparent circle
-            shapeRenderer.setColor(0.9f, 0.3f, 0.3f, 0.7f); // Red with transparency
-            shapeRenderer.circle(x, y, scaledRadius, 30);
-
-            // Draw border
-            shapeRenderer.end();
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setColor(0.7f, 0.1f, 0.1f, 1f); // Darker red border
-            shapeRenderer.circle(x, y, scaledRadius, 30);
-            shapeRenderer.end();
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        }
-
-        shapeRenderer.end();
     }
 
     private void updateHover(Vector3 mousePos) {
@@ -994,6 +1079,7 @@ public class MapScreen implements Screen {
     @Override
     public void dispose() {
         shapeRenderer.dispose();
+        if (batch != null) batch.dispose();
         uiStage.dispose();
     }
 

@@ -131,7 +131,7 @@ public class NewsApiClient {
 
             // Handle both {news: [...]} and [...] formats
             JsonValue newsArray = root.has("news") ? root.get("news") : root;
-            
+
             // Check if newsArray is valid
             if (newsArray == null || newsArray.size == 0) {
                 return newsItems;
@@ -139,9 +139,9 @@ public class NewsApiClient {
 
             for (JsonValue item : newsArray) {
                 if (item == null) continue;
-                
+
                 NewsItem newsItem = new NewsItem();
-                
+
                 // Basic fields
                 newsItem.setId(item.getString("_id", ""));
                 newsItem.setTitle(item.getString("title", ""));
@@ -161,6 +161,8 @@ public class NewsApiClient {
                     NewsItem.LocationInfo location = new NewsItem.LocationInfo();
                     location.setId(loc.getString("_id", ""));
                     location.setName(loc.getString("name", ""));
+                    location.setLatitude(loc.getDouble("latitude", 0.0));
+                    location.setLongitude(loc.getDouble("longitude", 0.0));
                     newsItem.setLocation(location);
                 }
 

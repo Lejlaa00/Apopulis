@@ -12,9 +12,10 @@ public class NewsItem {
     private int likes;
     private int dislikes;
     private int commentsCount;
-    private LocationInfo location;
-    private CategoryInfo category;
-    private SourceInfo source;
+
+    private LocationInfo locationId;
+    private CategoryInfo categoryId;
+    private SourceInfo sourceId;
 
     public NewsItem() {
     }
@@ -108,49 +109,47 @@ public class NewsItem {
     }
 
     public LocationInfo getLocation() {
-        return location;
+        return locationId;
     }
 
     public void setLocation(LocationInfo location) {
-        this.location = location;
+        this.locationId = location;
     }
 
     public CategoryInfo getCategory() {
-        return category;
+        return categoryId;
     }
 
     public void setCategory(CategoryInfo category) {
-        this.category = category;
+        this.categoryId = category;
     }
 
     public SourceInfo getSource() {
-        return source;
+        return sourceId;
     }
 
     public void setSource(SourceInfo source) {
-        this.source = source;
+        this.sourceId = source;
     }
 
     // Nested classes for populated fields
     public static class LocationInfo {
         private String id;
         private String name;
+        private double latitude;
+        private double longitude;
 
-        public String getId() {
-            return id;
-        }
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
 
-        public void setId(String id) {
-            this.id = id;
-        }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
 
-        public String getName() {
-            return name;
-        }
+        public double getLatitude() { return latitude; }
+        public void setLatitude(double latitude) { this.latitude = latitude; }
 
-        public void setName(String name) {
-            this.name = name;
-        }
+        public double getLongitude() { return longitude; }
+        public void setLongitude(double longitude) { this.longitude = longitude; }
     }
 
     public static class CategoryInfo {
