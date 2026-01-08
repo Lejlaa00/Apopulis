@@ -46,4 +46,8 @@ object RetrofitInstance {
         retrofit.create(CommentsApi::class.java)
     }
 
+    val mlApi: MLApi by lazy {
+        retrofit.create(MLApi::class.java)
+    }
+
 }
