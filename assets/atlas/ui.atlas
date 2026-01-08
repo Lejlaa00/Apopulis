@@ -1,6 +1,6 @@
 
 ui.png
-size: 1024, 1024
+size: 2048, 1024
 format: RGBA8888
 filter: Nearest, Nearest
 repeat: none
@@ -13,42 +13,43 @@ btn_category
   index: -1
 btn_exit
   rotate: false
-  xy: 389, 588
+  xy: 709, 564
   size: 367, 369
   orig: 367, 369
   offset: 0, 0
   index: -1
+btn_menu
+  rotate: false
+  xy: 1078, 620
+  size: 372, 313
+  orig: 372, 313
+  offset: 0, 0
+  index: -1
 btn_minus
   rotate: false
-  xy: 1, 188
+  xy: 1, 164
   size: 386, 383
   orig: 386, 383
   offset: 0, 0
   index: -1
 btn_plus
   rotate: false
-  xy: 1, 573
+  xy: 1, 549
   size: 386, 384
   orig: 386, 384
   offset: 0, 0
   index: -1
 ic_pin
   rotate: false
-  xy: 389, 164
-  size: 311, 422
-  orig: 311, 422
+  xy: 389, 506
+  size: 318, 427
+  orig: 318, 427
   offset: 0, 0
   index: -1
-
-ui2.png
-size: 512, 512
-format: RGBA8888
-filter: Nearest, Nearest
-repeat: none
-btn_menu
+ic_pin_city
   rotate: false
-  xy: 1, 1
-  size: 372, 313
-  orig: 372, 313
+  xy: 1452, 511
+  size: 311, 422
+  orig: 311, 422
   offset: 0, 0
   index: -1

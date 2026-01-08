@@ -18,6 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -89,6 +90,7 @@ public class MapScreen implements Screen {
     private Container<Table> sidePanel;
     private boolean isPanelOpen = false;
     private float panelWidth;
+    private float panelHeight;
     private boolean isPanelPinned = false;
 
     private float originalZoom;
@@ -109,6 +111,8 @@ public class MapScreen implements Screen {
     // News items for side panel
     private Array<NewsItem> newsItems;
     private Table newsContentTable;
+    private Table newsWrapperTable;
+    private ScrollPane newsScrollPane;
     private boolean isFetchingNewsItems = false;
 
     // News dots inside selected region
@@ -116,8 +120,11 @@ public class MapScreen implements Screen {
     private Array<Vector2> selectedNewsDots = new Array<>();
 
     // Pin
+    private List<Marker> markers;
     private SpriteBatch batch;
     private TextureRegion pinRegion;
+    private TextureRegion ppjPinRegion;
+
     private static final float PIN_BASE_W = 14f;
     private static final float PIN_BASE_H = 18f;
 
@@ -132,8 +139,16 @@ public class MapScreen implements Screen {
         shapeRenderer = new ShapeRenderer();
         batch = new SpriteBatch();
 
+        String geoJson = Gdx.files.internal("markers.geojson").readString();
+        markers = GeoJsonMarkerLoader.loadMarkers(geoJson);
+
+        System.out.println("Loaded markers: " + markers.size());
+
         TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
         pinRegion = uiAtlas.findRegion(RegionNames.IC_PIN);
+
+        ppjPinRegion = uiAtlas.findRegion(RegionNames.IC_PIN_CITY);
+
 
         if (pinRegion == null) {
             System.err.println("ERROR: ic_pin not found in atlas!");
@@ -211,33 +226,46 @@ public class MapScreen implements Screen {
                     ? displayedNews
                     : newsItems;
 
-        Array<NewsItem> filteredNews = new Array<>();
-        for (NewsItem item : sourceNews) {
-            if (selectedCategory.equals("Splosno") ||
-                (item.getCategory() != null && item.getCategory().getName() != null &&
-                 item.getCategory().getName().equals(selectedCategory))) {
-                filteredNews.add(item);
+            Array<NewsItem> filteredNews = new Array<>();
+            for (NewsItem item : sourceNews) {
+                if (selectedCategory.equals("Splosno") ||
+                    (item.getCategory() != null && item.getCategory().getName() != null &&
+                        item.getCategory().getName().equals(selectedCategory))) {
+                    filteredNews.add(item);
+                }
             }
-        }
 
-        if (filteredNews.size == 0) {
-            Label.LabelStyle emptyStyle = new Label.LabelStyle(
-                assetManager.get(AssetDescriptors.UI_FONT),
-                new Color(0.5f, 0.5f, 0.5f, 1f)
-            );
-            Label emptyLabel = new Label("Ni novic za izbrano kategorijo", emptyStyle);
-            newsContentTable.add(emptyLabel).padTop(20);
-            return;
-        }
+            if (filteredNews.size == 0) {
+                Label.LabelStyle emptyStyle = new Label.LabelStyle(
+                    assetManager.get(AssetDescriptors.UI_FONT),
+                    new Color(0.5f, 0.5f, 0.5f, 1f)
+                );
+                Label emptyLabel = new Label("Ni novic za izbrano kategorijo", emptyStyle);
+                emptyLabel.setAlignment(Align.center);
 
-        BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
-        Label.LabelStyle titleStyle = new Label.LabelStyle(uiFont, new Color(0.15f, 0.15f, 0.15f, 1f));
+                // Add spacer at top to push content to center
+                newsContentTable.add().expandY();
+                newsContentTable.row();
 
-        BitmapFont descFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
-        descFont.getData().setScale(0.82f);
-        Label.LabelStyle descStyle = new Label.LabelStyle(descFont, new Color(0.45f, 0.45f, 0.45f, 1f));
+                // Add centered label
+                newsContentTable.add(emptyLabel)
+                    .expandX()
+                    .center();
+                newsContentTable.row();
 
-        float cardWidth = panelWidth - 24;
+                // Add spacer at bottom to fill remaining vertical space
+                newsContentTable.add().expandY();
+                return;
+            }
+
+            BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
+            Label.LabelStyle titleStyle = new Label.LabelStyle(uiFont, new Color(0.15f, 0.15f, 0.15f, 1f));
+
+            BitmapFont descFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
+            descFont.getData().setScale(0.82f);
+            Label.LabelStyle descStyle = new Label.LabelStyle(descFont, new Color(0.45f, 0.45f, 0.45f, 1f));
+
+            float cardWidth = panelWidth - 24;
 
             for (int i = 0; i < filteredNews.size && i < 10; i++) {
                 NewsItem item = filteredNews.get(i);
@@ -245,6 +273,10 @@ public class MapScreen implements Screen {
                     addNewsCard(newsContentTable, item, titleStyle, descStyle, cardWidth);
                 }
             }
+
+            // Add spacer row at the end to fill remaining vertical space
+            newsContentTable.row();
+            newsContentTable.add().expandY();
         } catch (Exception e) {
             System.err.println("Error updating news cards: " + e.getMessage());
             e.printStackTrace();
@@ -380,6 +412,37 @@ public class MapScreen implements Screen {
         batch.end();
     }
 
+    private void drawPPJMarkers() {
+        if (markers == null || markers.isEmpty()) return;
+        if (batch == null) return;
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        for (Marker m : markers) {
+
+            float[] map = GeoJsonRegionLoader.latLonToMapCoords(m.lat, m.lon);
+            float x = map[0];
+            float y = map[1];
+
+            boolean isPPJ = "region".equals(m.level);
+
+            TextureRegion region = isPPJ ? ppjPinRegion : pinRegion;
+
+            float w = isPPJ ? PIN_BASE_W * 1.3f : PIN_BASE_W;
+            float h = isPPJ ? PIN_BASE_H * 1.3f : PIN_BASE_H;
+
+            float drawX = x - w * 0.5f;
+            float drawY = y;
+
+            batch.draw(region, drawX, drawY, w, h);
+        }
+
+        batch.end();
+    }
+
+
+
     private void calculateMapBounds() {
         mapMinX = Float.MAX_VALUE;
         mapMaxX = Float.MIN_VALUE;
@@ -441,7 +504,10 @@ public class MapScreen implements Screen {
         BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
 
         float screenWidth = Gdx.graphics.getWidth();
+        float screenHeight = Gdx.graphics.getHeight();
         panelWidth = screenWidth * 0.33f;
+        panelHeight = screenHeight;
+
 
         setupZoomButtons(uiAtlas);
 
@@ -552,14 +618,41 @@ public class MapScreen implements Screen {
 
         Table content = new Table();
         content.top().left();
-        content.pad(12, 12, 12, 12);
+        content.pad(0, 12, 12, 12);
+        content.defaults().expandX().fillX();
 
         newsContentTable = content;
         addNewsCards(content, uiFont);
 
-        ScrollPane scrollPane = new ScrollPane(content);
+        // Wrap content in a table that fills ScrollPane viewport
+        // This ensures the content table always fills the full height
+        Table wrapperTable = new Table();
+        wrapperTable.top().left();
+        wrapperTable.add(content).expand().fill().top().left();
+        // Add expandable row to ensure wrapper fills viewport height
+        wrapperTable.row();
+        wrapperTable.add().expandY();
+        newsWrapperTable = wrapperTable;
+
+        // Set wrapper size to fill viewport (header is ~60px)
+        float headerHeight = 60f;
+        wrapperTable.setSize(panelWidth, panelHeight - headerHeight);
+
+        // Create ScrollPane style with visible scrollbars
+        ScrollPane.ScrollPaneStyle scrollPaneStyle = createNewsScrollPaneStyle();
+
+        ScrollPane scrollPane = new ScrollPane(wrapperTable, scrollPaneStyle);
         scrollPane.setFadeScrollBars(false);
         scrollPane.setScrollingDisabled(true, false);
+        scrollPane.setScrollbarsVisible(true);
+        scrollPane.setScrollBarPositions(false, true); // horizontal: left, vertical: right
+        scrollPane.setOverscroll(false, false); // Disable overscroll
+
+        // 🔴 OVO JE KLJUČ
+        scrollPane.setForceScroll(false, true); // force vertical logic
+        scrollPane.setScrollY(0);               // uvijek počni od vrha
+        scrollPane.layout();
+        newsScrollPane = scrollPane;
 
         Table panelTable = new Table();
         panelTable.setBackground(createPanelBackground());
@@ -576,7 +669,7 @@ public class MapScreen implements Screen {
             .fill();
 
         sidePanel = new Container<>(panelTable);
-        sidePanel.setSize(panelWidth, Gdx.graphics.getHeight());
+        sidePanel.setSize(panelWidth, panelHeight);
         sidePanel.setPosition(Gdx.graphics.getWidth(), 0);
         sidePanel.setTransform(true);
     }
@@ -618,8 +711,8 @@ public class MapScreen implements Screen {
         String description = item.getSummary() != null && !item.getSummary().isEmpty()
             ? item.getSummary()
             : (item.getContent() != null && !item.getContent().isEmpty()
-                ? item.getContent().substring(0, Math.min(150, item.getContent().length())) + "..."
-                : "Ni opisa");
+            ? item.getContent().substring(0, Math.min(150, item.getContent().length())) + "..."
+            : "Ni opisa");
         Label descLabel = new Label(description, descStyle);
         descLabel.setWrap(true);
         card.add(descLabel).width(cardWidth - 40).left().top();
@@ -782,6 +875,39 @@ public class MapScreen implements Screen {
         ScrollPane.ScrollPaneStyle style = new ScrollPane.ScrollPaneStyle();
         style.background = createDropdownListBackground();
         return style;
+    }
+
+    private ScrollPane.ScrollPaneStyle createNewsScrollPaneStyle() {
+        ScrollPane.ScrollPaneStyle style = new ScrollPane.ScrollPaneStyle();
+        style.vScroll = createScrollBarDrawable();
+        style.vScrollKnob = createScrollBarKnobDrawable();
+        style.hScroll = createScrollBarDrawable();
+        style.hScrollKnob = createScrollBarKnobDrawable();
+        return style;
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createScrollBarDrawable() {
+        int width = 8;
+        int height = 8;
+        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(0.7f, 0.7f, 0.7f, 0.5f));
+        pixmap.fill();
+        Texture texture = new Texture(pixmap);
+        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        pixmap.dispose();
+        return new TextureRegionDrawable(new TextureRegion(texture));
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createScrollBarKnobDrawable() {
+        int width = 8;
+        int height = 8;
+        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(0.5f, 0.5f, 0.5f, 0.8f));
+        pixmap.fill();
+        Texture texture = new Texture(pixmap);
+        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        pixmap.dispose();
+        return new TextureRegionDrawable(new TextureRegion(texture));
     }
 
     private com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle createListStyle(BitmapFont font) {
@@ -994,6 +1120,8 @@ public class MapScreen implements Screen {
         // Draw news markers
         drawSelectedRegionNewsPins();
 
+        drawPPJMarkers();
+
         // Draw UI on top
         uiStage.draw();
     }
@@ -1065,9 +1193,24 @@ public class MapScreen implements Screen {
         // Update panel width and position on resize
         if (sidePanel != null) {
             panelWidth = width * 0.33f;
+            panelHeight = height;
             sidePanel.setSize(panelWidth, height);
             float targetX = isPanelOpen ? width - panelWidth : width;
             sidePanel.setPosition(targetX, 0);
+        }
+
+        // Update wrapper table size to fill ScrollPane viewport
+        // Header is approximately 60px (36px selectbox + 24px padding)
+        if (newsWrapperTable != null && newsScrollPane != null) {
+            float headerHeight = 60f;
+            newsWrapperTable.setSize(panelWidth, panelHeight - headerHeight);
+            newsWrapperTable.invalidate();
+            newsScrollPane.invalidate();
+        }
+
+        // Invalidate layout to ensure expandable rows recalculate
+        if (newsContentTable != null) {
+            newsContentTable.invalidate();
         }
 
     }

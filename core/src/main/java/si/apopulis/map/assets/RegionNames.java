@@ -11,6 +11,7 @@ public final class RegionNames {
     public static final String BTN_EXIT = "btn_exit";
     public static final String BTN_CATEGORY = "btn_category";
     public static final String IC_PIN = "ic_pin";
+    public static final String IC_PIN_CITY = "ic_pin_city";
 
 
 }
