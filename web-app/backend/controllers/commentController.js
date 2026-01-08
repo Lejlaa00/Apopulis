@@ -52,11 +52,16 @@ exports.getComments = async (req, res) => {
 
 exports.createComment = async (req, res) => {
   try {
-    const { content, parentCommentId } = req.body;
+    const { content, parentCommentId, isSimulated, simulationId } = req.body;
     const { newsItemId } = req.params;
     const userId = req.user.id;
 
-    console.log("🔧 Incoming comment:", { content, parentCommentId, newsItemId, userId });
+    console.log("Incoming comment:", { content, parentCommentId, isSimulated, simulationId, newsItemId, userId });
+
+
+    if (isSimulated && parentCommentId) {
+      return res.status(400).json({ msg: 'Simulated comments cannot be replies.' });
+    }
 
     if (parentCommentId) {
       const mongoose = require('mongoose');
@@ -74,10 +79,16 @@ exports.createComment = async (req, res) => {
       userId,
       newsItemId,
       content,
-      parentCommentId: parentCommentId || null
+      parentCommentId: parentCommentId || null,
+      isSimulated: !!isSimulated,
+      simulationId: simulationId || null
     });
 
     await comment.save(); 
+
+    console.log("Saved comment _id:", comment._id);
+    const check = await Comment.findById(comment._id).lean();
+    console.log("DB check:", check);
 
     const newsItem = await NewsItem.findById(newsItemId);
     if (newsItem && !newsItem.commentedBy.includes(userId)) {
@@ -91,7 +102,7 @@ exports.createComment = async (req, res) => {
     res.status(201).json(populatedComment);
 
   } catch (err) {
-    console.error('❌ Error creating comment:', err);
+    console.error(' Error creating comment:', err);
     res.status(500).json({ msg: 'Error creating comment', error: err.message });
   }
 };
