@@ -485,3 +485,118 @@ exports.getNewsByProvince = async (req, res) => {
 
 
 exports.updateNewsMetrics = updateNewsMetrics;
+
+// Create news from mobile app with image upload and GPS location
+exports.createNewsFromMobile = async (req, res) => {
+    try {
+        const { title, content, category, location, latitude, longitude, summary, author } = req.body;
+        
+        console.log('Mobile news upload request:', { title, category, location, latitude, longitude });
+
+        // Validate required fields
+        if (!title || !content) {
+            return res.status(400).json({ msg: 'Title and content are required' });
+        }
+
+        // Get or create "user" category
+        let categoryDoc = await Category.findOne({ name: 'user' });
+        if (!categoryDoc) {
+            categoryDoc = new Category({ name: 'user', description: 'User generated content' });
+            await categoryDoc.save();
+            console.log('Created "user" category');
+        }
+
+        // Get or create "User" source
+        let sourceDoc = await Source.findOne({ name: 'User' });
+        if (!sourceDoc) {
+            sourceDoc = new Source({ 
+                name: 'User', 
+                url: 'app://user-generated',
+                description: 'User generated from mobile app'
+            });
+            await sourceDoc.save();
+            console.log('Created "User" source');
+        }
+
+        // Handle location - try to find existing or create new based on GPS
+        let locationDoc;
+        
+        if (location) {
+            // If location name is provided, try to find it
+            locationDoc = await Location.findOne({ name: location });
+        }
+        
+        // If no location found and GPS coordinates provided, create a new location
+        if (!locationDoc && latitude && longitude) {
+            // Get a default province (any province will do for user-generated content)
+            const Province = require('../models/provinceModel');
+            let defaultProvince = await Province.findOne();
+            
+            if (!defaultProvince) {
+                // Create a default "User" province if none exists
+                defaultProvince = new Province({
+                    name: 'User Generated',
+                    code: 'USER'
+                });
+                await defaultProvince.save();
+                console.log('Created default "User Generated" province');
+            }
+            
+            const locationName = `User Location ${Date.now()}`;
+            locationDoc = new Location({
+                name: locationName,
+                latitude: parseFloat(latitude),
+                longitude: parseFloat(longitude),
+                province: defaultProvince._id
+            });
+            await locationDoc.save();
+            console.log('Created new location from GPS:', locationName);
+        }
+        
+        // If still no location, use a default
+        if (!locationDoc) {
+            locationDoc = await Location.findOne();
+            if (!locationDoc) {
+                return res.status(400).json({ msg: 'No location available. Please provide GPS coordinates.' });
+            }
+        }
+
+        // Handle image URL
+        let imageUrl = null;
+        if (req.file) {
+            // Generate URL for uploaded image
+            const baseUrl = process.env.BASE_URL || 'http://localhost:5001';
+            imageUrl = `${baseUrl}/images/${req.file.filename}`;
+            console.log('Image uploaded:', imageUrl);
+        }
+
+        // Create news item
+        const newsItem = new NewsItem({
+            title,
+            summary: summary || content.substring(0, 200),
+            content,
+            publishedAt: new Date(),
+            sourceId: sourceDoc._id,
+            locationId: locationDoc._id,
+            categoryId: categoryDoc._id,
+            url: 'app://user-post',
+            imageUrl: imageUrl || 'http://localhost:5001/images/default-image.jpg',
+            author: author || 'Anonymous User',
+            tags: ['user-generated']
+        });
+
+        await newsItem.save();
+        
+        // Populate references for response
+        await newsItem.populate('sourceId', 'name url');
+        await newsItem.populate('locationId', 'name latitude longitude');
+        await newsItem.populate('categoryId', 'name');
+
+        console.log('News created successfully:', newsItem._id);
+        res.status(201).json(newsItem);
+        
+    } catch (err) {
+        console.error('Error creating news from mobile:', err);
+        res.status(500).json({ msg: 'Error creating news item', error: err.message });
+    }
+};
