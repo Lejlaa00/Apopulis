@@ -18,6 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.viewport.FitViewport;
@@ -100,6 +101,8 @@ public class MapScreen implements Screen {
     private float zoomButtonsBaseX;
 
     private String selectedCategory = "Splosno";
+    private Table categoryChipsWrapper;
+
 
     // News markers
     private Array<ProvinceNewsMarker> newsMarkers;
@@ -127,6 +130,11 @@ public class MapScreen implements Screen {
 
     private static final float PIN_BASE_W = 14f;
     private static final float PIN_BASE_H = 18f;
+
+    private Table categoryChipsTable;
+    private ScrollPane categoryChipsScroll;
+    private String activeChipCategory = "Splosno";
+
 
     public MapScreen(AssetManager assetManager) {
         this.assetManager = assetManager;
@@ -539,6 +547,8 @@ public class MapScreen implements Screen {
         uiStage.addActor(sidePanel);
 
         zoomButtonsBaseX = bottomRightTable.getX();
+
+        setupCategoryChips(uiFont);
     }
 
     private void setupZoomButtons(TextureAtlas uiAtlas) {
@@ -580,24 +590,6 @@ public class MapScreen implements Screen {
     private void setupSidePanel(BitmapFont uiFont) {
         TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
 
-        Array<String> categories = new Array<>();
-        categories.addAll("Splosno", "Biznis", "Gospodarstvo", "Kultura",
-            "Lifestyle", "Politika", "Tehnologija", "Vreme");
-
-        SelectBox.SelectBoxStyle selectBoxStyle = createSelectBoxStyle(uiFont);
-        SelectBox<String> categorySelectBox = new SelectBox<>(selectBoxStyle);
-        categorySelectBox.setItems(categories);
-        categorySelectBox.setSelected("Splosno");
-
-        categorySelectBox.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeListener.ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
-                selectedCategory = categorySelectBox.getSelected();
-                System.out.println("Selected category: " + selectedCategory);
-                fetchNewsItems(selectedCategory);
-            }
-        });
-
         ImageButton exitButton = new ImageButton(
             new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_EXIT))
         );
@@ -612,9 +604,9 @@ public class MapScreen implements Screen {
         Table header = new Table();
         header.top().left();
         header.pad(12);
-        header.add(categorySelectBox).left().height(36).minWidth(150);
         header.add().expandX();
         header.add(exitButton).size(24, 24).right();
+
 
         Table content = new Table();
         content.top().left();
@@ -767,110 +759,6 @@ public class MapScreen implements Screen {
             new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
         );
     }
-
-    private SelectBox.SelectBoxStyle createSelectBoxStyle(BitmapFont font) {
-        SelectBox.SelectBoxStyle style = new SelectBox.SelectBoxStyle();
-        style.font = font;
-        style.fontColor = new Color(0.15f, 0.15f, 0.15f, 1f);
-        style.background = createDropdownBackgroundOpen();
-        style.backgroundOpen = createDropdownBackground();
-        style.scrollStyle = createScrollPaneStyle();
-        style.listStyle = createListStyle(font);
-        return style;
-    }
-
-    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownBackground() {
-        int width = 200;
-        int height = 38;
-        int leftPadding = 12;
-        int rightPadding = 30;
-        int arrowSize = 7;
-        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-
-        pixmap.setColor(new Color(1f, 1f, 1f, 1f));
-        pixmap.fill();
-
-        pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
-        pixmap.drawRectangle(0, 0, width, height);
-
-        pixmap.setColor(new Color(0.4f, 0.4f, 0.4f, 1f));
-        int arrowX = width - rightPadding / 2;
-        int arrowY = height / 2;
-
-        int topY = arrowY - arrowSize / 2;
-        int bottomY = arrowY + arrowSize / 2;
-
-        for (int y = topY; y <= bottomY; y++) {
-            if (y < 0 || y >= height) continue;
-
-            int distFromTop = y - topY;
-
-            int halfWidth = (distFromTop * arrowSize) / arrowSize;
-
-            int leftX = arrowX - halfWidth;
-            int rightX = arrowX + halfWidth;
-
-            for (int x = leftX; x <= rightX; x++) {
-                if (x >= 0 && x < width) {
-                    pixmap.drawPixel(x, y);
-                }
-            }
-        }
-
-        Texture texture = new Texture(pixmap);
-        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        pixmap.dispose();
-
-        NinePatch ninePatch = new NinePatch(texture, leftPadding, rightPadding, 0, 0);
-        return new NinePatchDrawable(ninePatch);
-    }
-
-    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownBackgroundOpen() {
-        int width = 200;
-        int height = 38;
-        int leftPadding = 12;
-        int rightPadding = 30;
-        int arrowSize = 7;
-        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-
-        pixmap.setColor(new Color(1f, 1f, 1f, 1f));
-        pixmap.fill();
-
-        pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
-        pixmap.drawRectangle(0, 0, width, height);
-
-        pixmap.setColor(new Color(0.4f, 0.4f, 0.4f, 1f));
-        int arrowX = width - rightPadding / 2;
-        int arrowY = height / 2;
-
-        int topY = arrowY - arrowSize / 2;
-        int bottomY = arrowY + arrowSize / 2;
-
-        for (int y = topY; y <= bottomY; y++) {
-            if (y < 0 || y >= height) continue;
-
-            int distFromBottom = bottomY - y;
-
-            int halfWidth = (distFromBottom * arrowSize) / arrowSize;
-
-            int leftX = arrowX - halfWidth;
-            int rightX = arrowX + halfWidth;
-
-            for (int x = leftX; x <= rightX; x++) {
-                if (x >= 0 && x < width) {
-                    pixmap.drawPixel(x, y);
-                }
-            }
-        }
-
-        Texture texture = new Texture(pixmap);
-        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        pixmap.dispose();
-
-        NinePatch ninePatch = new NinePatch(texture, leftPadding, rightPadding, 0, 0);
-        return new NinePatchDrawable(ninePatch);
-    }
-
     private ScrollPane.ScrollPaneStyle createScrollPaneStyle() {
         ScrollPane.ScrollPaneStyle style = new ScrollPane.ScrollPaneStyle();
         style.background = createDropdownListBackground();
@@ -908,16 +796,6 @@ public class MapScreen implements Screen {
         texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         pixmap.dispose();
         return new TextureRegionDrawable(new TextureRegion(texture));
-    }
-
-    private com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle createListStyle(BitmapFont font) {
-        com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle style = new com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle();
-        style.font = font;
-        style.fontColorSelected = new Color(1f, 1f, 1f, 1f);
-        style.fontColorUnselected = new Color(0.15f, 0.15f, 0.15f, 1f);
-        style.selection = createDropdownSelectionBackground();
-        style.background = createDropdownListBackground();
-        return style;
     }
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownListBackground() {
@@ -974,7 +852,110 @@ public class MapScreen implements Screen {
 
         return new NinePatchDrawable(ninePatch);
     }
+    private Container<Label> createCategoryChip(String category, BitmapFont font, TextureAtlas atlas) {
 
+        Label label = new Label(category, new Label.LabelStyle(
+            font, new Color(0.2f, 0.2f, 0.2f, 1f)
+        ));
+        label.setAlignment(Align.center);
+
+
+        Container<Label> chip = new Container<>(label);
+        chip.setTransform(true);
+        chip.pad(8, 16, 8, 16);
+        chip.minHeight(45);
+        chip.maxHeight(45);
+        chip.minWidth(100);   // KRATKO
+        chip.maxWidth(200);  // limit
+
+        chip.setScale(isPanelOpen ? 0.9f : 1f);
+        chip.addAction(Actions.scaleTo(
+            isPanelOpen ? 0.9f : 1f,
+            isPanelOpen ? 0.9f : 1f,
+            0.2f
+        ));
+
+        boolean active = category.equals(activeChipCategory);
+
+        chip.setBackground(
+            active
+                ? createActiveCategoryChipDrawable(atlas)
+                : createCategoryChipDrawable(atlas)
+        );
+
+
+        chip.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                activeChipCategory = category;
+                selectedCategory = category;
+                fetchNewsItems(category);
+                rebuildCategoryChips();   // refresh UI
+            }
+        });
+
+        return chip;
+    }
+
+    private Drawable createCategoryChipDrawable(TextureAtlas atlas) {
+        return new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        );
+    }
+
+    private Drawable createActiveCategoryChipDrawable(TextureAtlas atlas) {
+        return new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(0.80f, 0.78f, 0.78f, 1f));
+    }
+
+    private void setupCategoryChips(BitmapFont font) {
+
+        categoryChipsTable = new Table();
+        categoryChipsTable.left();
+        categoryChipsTable.pad(10);
+
+        rebuildCategoryChips();
+
+        categoryChipsScroll = new ScrollPane(categoryChipsTable);
+        categoryChipsScroll.setScrollingDisabled(false, true);
+        categoryChipsScroll.setFadeScrollBars(false);
+
+        categoryChipsWrapper = new Table();
+        categoryChipsWrapper.setFillParent(true);
+        categoryChipsWrapper.top();
+        categoryChipsWrapper.padTop(20);
+        categoryChipsWrapper.padRight(100);
+        categoryChipsWrapper.add(categoryChipsScroll)
+            .height(48)
+            .expandX()
+            .fillX()
+            .padLeft(16)
+            .padRight(16);
+
+        uiStage.addActor(categoryChipsWrapper);
+
+    }
+
+    private void rebuildCategoryChips() {
+        categoryChipsTable.clear();
+
+        String[] categories = {
+            "Splosno", "Biznis", "Gospodarstvo",
+            "Kultura", "Lifestyle", "Politika",
+            "Tehnologija", "Vreme"
+        };
+
+        BitmapFont font = assetManager.get(AssetDescriptors.UI_FONT);
+        TextureAtlas atlas = assetManager.get(AssetDescriptors.UI_ATLAS);
+
+
+        for (String cat : categories) {
+            categoryChipsTable.add(
+                createCategoryChip(cat, font, atlas)
+            ).padRight(8);
+        }
+    }
 
 
     private void toggleSidePanel() {
@@ -996,7 +977,27 @@ public class MapScreen implements Screen {
             Actions.moveTo(buttonsTargetX, bottomRightTable.getY(), 0.3f)
         );
 
+
+        adjustCategoryChipsForPanel(isPanelOpen);
+
         adjustCameraForPanel(isPanelOpen);
+
+    }
+    private void adjustCategoryChipsForPanel(boolean open) {
+        if (categoryChipsWrapper == null) return;
+
+        categoryChipsWrapper.clearActions();
+
+        float targetRightPad = open ? panelWidth + 24f : 100f;
+        float targetHeight   = open ? 40f : 48f;
+
+        categoryChipsWrapper.addAction(
+            Actions.run(() -> {
+                categoryChipsWrapper.padRight(targetRightPad);
+                categoryChipsScroll.setHeight(targetHeight);
+                categoryChipsWrapper.invalidateHierarchy();
+            })
+        );
     }
 
 
