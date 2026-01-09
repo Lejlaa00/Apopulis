@@ -228,6 +228,8 @@ public class MapScreen implements Screen {
 
         try {
             newsContentTable.clear();
+            newsContentTable.top();
+
 
             Array<NewsItem> sourceNews =
                 (selectedRegion != null && displayedNews != null)
@@ -244,34 +246,47 @@ public class MapScreen implements Screen {
             }
 
             if (filteredNews.size == 0) {
+                newsContentTable.top();
+
                 Label.LabelStyle emptyStyle = new Label.LabelStyle(
                     assetManager.get(AssetDescriptors.UI_FONT),
-                    new Color(0.5f, 0.5f, 0.5f, 1f)
+                    new Color(0.75f, 0.75f, 0.75f, 1f)
                 );
-                Label emptyLabel = new Label("Ni novic za izbrano kategorijo", emptyStyle);
-                emptyLabel.setAlignment(Align.center);
 
-                // Add spacer at top to push content to center
-                newsContentTable.add().expandY();
-                newsContentTable.row();
+                Label emptyLabel = new Label(
+                    "Ni novic za izbrano kategorijo",
+                    emptyStyle
+                );
 
-                // Add centered label
+                emptyLabel.setAlignment(Align.left);
+                emptyLabel.setWrap(false);
+
                 newsContentTable.add(emptyLabel)
-                    .expandX()
-                    .center();
+                    .padTop(20)
+                    .left();
+
                 newsContentTable.row();
 
-                // Add spacer at bottom to fill remaining vertical space
+
+                newsContentTable.row();
+
                 newsContentTable.add().expandY();
+
+                newsScrollPane.layout();
+                newsScrollPane.setScrollY(0);
+
                 return;
             }
 
+            Color softWhite = new Color(0.88f, 0.88f, 0.88f, 1f);
+            Color mutedWhite = new Color(0.75f, 0.75f, 0.75f, 1f);
+
             BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
-            Label.LabelStyle titleStyle = new Label.LabelStyle(uiFont, new Color(0.15f, 0.15f, 0.15f, 1f));
+            Label.LabelStyle titleStyle = new Label.LabelStyle(uiFont, softWhite);
 
             BitmapFont descFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
             descFont.getData().setScale(0.82f);
-            Label.LabelStyle descStyle = new Label.LabelStyle(descFont, new Color(0.45f, 0.45f, 0.45f, 1f));
+            Label.LabelStyle descStyle = new Label.LabelStyle(descFont, mutedWhite);
 
             float cardWidth = panelWidth - 24;
 
@@ -634,6 +649,14 @@ public class MapScreen implements Screen {
         ScrollPane.ScrollPaneStyle scrollPaneStyle = createNewsScrollPaneStyle();
 
         ScrollPane scrollPane = new ScrollPane(wrapperTable, scrollPaneStyle);
+        scrollPane.setScrollY(0);
+        scrollPane.setForceScroll(false, true);
+        scrollPane.setFlickScroll(false);
+        scrollPane.setOverscroll(false, false);
+        scrollPane.setClamp(true);
+        scrollPane.setScrollingDisabled(true, false);
+        scrollPane.layout();
+
         scrollPane.setFadeScrollBars(false);
         scrollPane.setScrollingDisabled(true, false);
         scrollPane.setScrollbarsVisible(true);
@@ -685,39 +708,87 @@ public class MapScreen implements Screen {
 
         Table accentLine = new Table();
         accentLine.setBackground(createAccentLineBackground());
-        cardWrapper.add(accentLine).width(3).minHeight(60).fillY();
+        cardWrapper.add(accentLine).width(3).minHeight(48).fillY();
 
         Table card = new Table();
-        card.pad(10, 12, 10, 12);
+        card.pad(8, 12, 8, 12);
         card.setBackground(createCardBackground());
 
-        String title = item.getTitle() != null && !item.getTitle().isEmpty()
-            ? item.getTitle()
-            : "Brez naslova";
+        String rawTitle = item.getTitle();
+        String title = limitTitle(rawTitle, 100);
+
         Label titleLabel = new Label(title, titleStyle);
         titleLabel.setWrap(true);
+        titleLabel.setEllipsis(true);
+        titleLabel.setFontScale(0.80f);
         card.add(titleLabel).width(cardWidth - 40).left().top();
         card.row().padTop(6);
 
-        // Summary/Description
-        String description = item.getSummary() != null && !item.getSummary().isEmpty()
-            ? item.getSummary()
-            : (item.getContent() != null && !item.getContent().isEmpty()
-            ? item.getContent().substring(0, Math.min(150, item.getContent().length())) + "..."
-            : "Ni opisa");
+        String rawText =
+            item.getSummary() != null && !item.getSummary().isEmpty()
+                ? item.getSummary()
+                : item.getContent();
+
+        String description = firstSentenceOrLimit(rawText, 80);
+
         Label descLabel = new Label(description, descStyle);
         descLabel.setWrap(true);
+        descLabel.setFontScale(0.50f);
         card.add(descLabel).width(cardWidth - 40).left().top();
 
         cardWrapper.add(card).expand().fill();
+
+        // Make card clickable to open detail screen
+        cardWrapper.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                openNewsDetailScreen(item);
+            }
+        });
 
         container.add(cardWrapper).width(cardWidth).padBottom(8).left();
         container.row();
     }
 
+    private String limitTitle(String title, int maxChars) {
+        if (title == null) return "Brez naslova";
+
+        title = title.trim();
+
+        if (title.length() <= maxChars) {
+            return title;
+        }
+
+        return title.substring(0, maxChars).trim() + "...";
+    }
+
+    private String firstSentenceOrLimit(String text, int maxChars) {
+        if (text == null) return "";
+
+        text = text.trim();
+
+        int dotIndex = text.indexOf(".");
+        if (dotIndex > 0 && dotIndex < maxChars) {
+            return text.substring(0, dotIndex + 1);
+        }
+
+        if (text.length() > maxChars) {
+            return text.substring(0, maxChars).trim() + "...";
+        }
+
+        return text;
+    }
+
+
+    private void openNewsDetailScreen(NewsItem item) {
+        com.badlogic.gdx.Game game = (com.badlogic.gdx.Game) Gdx.app.getApplicationListener();
+        NewsDetailScreen detailScreen = new NewsDetailScreen(assetManager, item, this);
+        game.setScreen(detailScreen);
+    }
+
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createPanelBackground() {
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.98f, 0.98f, 0.98f, 1f));
+        pixmap.setColor(new Color(0.12f, 0.12f, 0.13f, 1f));
         pixmap.fill();
         com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
         pixmap.dispose();
@@ -730,15 +801,17 @@ public class MapScreen implements Screen {
         int size = 100;
         Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
 
-        pixmap.setColor(new Color(1f, 1f, 1f, 1f));
+        pixmap.setColor(new Color(0.16f, 0.16f, 0.17f, 1f));
         pixmap.fill();
 
-        pixmap.setColor(new Color(0.92f, 0.92f, 0.92f, 1f));
+        pixmap.setColor(new Color(0.25f, 0.25f, 0.26f, 1f));
         pixmap.fillRectangle(0, 0, size, 1);
         pixmap.fillRectangle(0, 0, 1, size);
-        pixmap.setColor(new Color(0.95f, 0.95f, 0.95f, 1f));
+        pixmap.setColor(new Color(0.25f, 0.25f, 0.26f, 1f));
+
         pixmap.fillRectangle(size - 1, 0, 1, size);
-        pixmap.setColor(new Color(0.94f, 0.94f, 0.94f, 1f));
+        pixmap.setColor(new Color(0.25f, 0.25f, 0.26f, 1f));
+
         pixmap.fillRectangle(0, size - 1, size, 1);
 
         com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
@@ -855,7 +928,7 @@ public class MapScreen implements Screen {
     private Container<Label> createCategoryChip(String category, BitmapFont font, TextureAtlas atlas) {
 
         Label label = new Label(category, new Label.LabelStyle(
-            font, new Color(0.2f, 0.2f, 0.2f, 1f)
+            font, new Color(0.88f, 0.88f, 0.88f, 1f)
         ));
         label.setAlignment(Align.center);
 
@@ -865,15 +938,8 @@ public class MapScreen implements Screen {
         chip.pad(8, 16, 8, 16);
         chip.minHeight(45);
         chip.maxHeight(45);
-        chip.minWidth(100);   // KRATKO
-        chip.maxWidth(200);  // limit
-
-        chip.setScale(isPanelOpen ? 0.9f : 1f);
-        chip.addAction(Actions.scaleTo(
-            isPanelOpen ? 0.9f : 1f,
-            isPanelOpen ? 0.9f : 1f,
-            0.2f
-        ));
+        chip.minWidth(100);
+        chip.maxWidth(200);
 
         boolean active = category.equals(activeChipCategory);
 
@@ -900,13 +966,13 @@ public class MapScreen implements Screen {
     private Drawable createCategoryChipDrawable(TextureAtlas atlas) {
         return new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
-        );
+        ).tint(new Color(1f, 1f, 1f, 0.3f)); // normal
     }
 
     private Drawable createActiveCategoryChipDrawable(TextureAtlas atlas) {
         return new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(0.80f, 0.78f, 0.78f, 1f));
+        ).tint(new Color(1f, 1f, 1f, 0.6f)); // accent (active)
     }
 
     private void setupCategoryChips(BitmapFont font) {
@@ -1072,7 +1138,8 @@ public class MapScreen implements Screen {
             fetchNewsItems(selectedCategory);
         }
 
-        Gdx.gl.glClearColor(1, 1, 1, 1);
+        Gdx.gl.glClearColor(0.118f, 0.118f, 0.133f, 1f);
+
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         uiStage.act(delta);
