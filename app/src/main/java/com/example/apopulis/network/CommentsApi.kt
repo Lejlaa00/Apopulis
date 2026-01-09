@@ -1,5 +1,6 @@
 package com.example.apopulis.network
 
+import retrofit2.Response
 import com.example.apopulis.model.Comment
 import com.example.apopulis.model.CommentsResponse
 import com.example.apopulis.model.CreateCommentRequest
@@ -17,6 +18,7 @@ interface CommentsApi {
     suspend fun createComment(
         @Path("newsItemId") newsItemId: String,
         @Body body: CreateCommentRequest
-    ): Comment
+    ): Response<Comment>
+
 
 }

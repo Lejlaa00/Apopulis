@@ -69,5 +69,14 @@
         android:name="com.example.apopulis.ui.CreatePostFragment"
         android:label="Map" />
 
+    <fragment
+        android:id="@+id/simulationFragment"
+        android:name="com.example.apopulis.ui.SimulationFragment"
+        android:label="Simulation" />
+
+    <action
+        android:id="@+id/action_mapFragment_to_simulationFragment"
+        app:destination="@id/simulationFragment" />
+
 
 </navigation>

@@ -61,17 +61,23 @@ class CommentSimulationManager {
                     try {
                         onEvent?.invoke(Event.CommentSending(newsId, i, safeComments))
 
-                        RetrofitInstance.commentsApi.createComment(
-                            newsId,
-                            CreateCommentRequest(
-                                content = CommentTextGenerator.generate(),
-                                isSimulated = true,
-                                simulationId = simulationId
-                            )
+                        val body = CreateCommentRequest(
+                            content = CommentTextGenerator.generate(),
+                            isSimulated = true,
+                            simulationId = simulationId
                         )
 
-                        onEvent?.invoke(Event.CommentSent(newsId, i, safeComments))
-                        Log.d("SIM", "sent $i/$safeComments -> news=$newsId simId=$simulationId")
+                        val resp = RetrofitInstance.commentsApi.createComment(newsId, body)
+
+                        if (!resp.isSuccessful) {
+                            val err = resp.errorBody()?.string()
+                            Log.e("SIM", "HTTP ${resp.code()} err=$err")
+                            onEvent?.invoke(Event.Error(RuntimeException("HTTP ${resp.code()} $err")))
+                        } else {
+                            onEvent?.invoke(Event.CommentSent(newsId, i, safeComments))
+                            Log.d("SIM", "OK sent $i/$safeComments -> news=$newsId simId=$simulationId")
+                        }
+
                     } catch (e: Exception) {
                         onEvent?.invoke(Event.Error(e))
                         Log.e("SIM", "send failed $i/$safeComments: ${e.message}", e)

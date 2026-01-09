@@ -62,4 +62,18 @@
         android:elevation="8dp"
         app:fabSize="normal" />
 
+    <!-- Floating Action Button for simulation settings -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabSimulation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginRight="16dp"
+        android:layout_marginBottom="220dp"
+        android:contentDescription="Simulation"
+        android:elevation="8dp"
+        app:fabSize="normal"
+        app:srcCompat="@android:drawable/ic_menu_manage" />
+
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

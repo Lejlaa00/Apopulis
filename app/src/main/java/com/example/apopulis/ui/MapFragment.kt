@@ -114,6 +114,10 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         setupNewsRecyclerView()
         setupFloatingActionButton()
 
+        binding.fabSimulation.setOnClickListener {
+            findNavController().navigate(R.id.action_mapFragment_to_simulationFragment)
+        }
+
         val mapFragment = SupportMapFragment.newInstance()
         childFragmentManager.beginTransaction()
             .replace(R.id.map_container, mapFragment)
@@ -395,6 +399,17 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         bottomSheetBinding.tvBottomSheetTitle.text = title
     }
 
+    private fun getCandidateNewsIdsForSelectedRegion(): List<String> {
+        val feature = selectedFeature ?: return emptyList()
+
+        return newsList.mapNotNull { news ->
+            val loc = news.locationId ?: return@mapNotNull null
+            if (loc.latitude == 0.0 && loc.longitude == 0.0) return@mapNotNull null
+
+            val point = LatLng(loc.latitude, loc.longitude)
+            if (isPointInsideFeature(point, feature)) news._id else null
+        }
+    }
 
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
