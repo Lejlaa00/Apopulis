@@ -5,8 +5,11 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
@@ -19,6 +22,11 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import si.apopulis.map.assets.AssetDescriptors;
 import si.apopulis.map.assets.RegionNames;
+import com.badlogic.gdx.Net;
+import com.badlogic.gdx.net.HttpRequestBuilder;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.utils.Scaling;
+
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -30,8 +38,8 @@ public class NewsDetailScreen implements Screen {
     private final AssetManager assetManager;
     private final NewsItem newsItem;
     private final Screen previousScreen;
+
     private Stage stage;
-    private Table rootTable;
 
     public NewsDetailScreen(AssetManager assetManager, NewsItem newsItem, Screen previousScreen) {
         this.assetManager = assetManager;
@@ -44,234 +52,263 @@ public class NewsDetailScreen implements Screen {
         stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
 
-        TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
         BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
+        TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
 
-        // Create root table that fills the screen
-        rootTable = new Table();
-        rootTable.setFillParent(true);
-        rootTable.setBackground(createScreenBackground());
+        Table root = new Table();
+        root.setFillParent(true);
+        root.setBackground(bg(new Color(0.10f, 0.10f, 0.11f, 1f)));
+        stage.addActor(root);
 
-        // Header with back button
-        Table header = createHeader(uiAtlas);
-        rootTable.add(header).expandX().fillX().pad(20, 20, 0, 20);
-        rootTable.row();
-
-        // Content area (scrollable)
-        Table contentTable = createContentTable(uiFont);
-        ScrollPane scrollPane = new ScrollPane(contentTable);
-        scrollPane.setFadeScrollBars(false);
-        scrollPane.setScrollingDisabled(true, false);
-
-        rootTable.add(scrollPane).expand().fill().pad(20);
-        rootTable.row();
-
-        stage.addActor(rootTable);
-    }
-
-    private Table createHeader(TextureAtlas uiAtlas) {
         Table header = new Table();
-        header.setBackground(createHeaderBackground());
+        header.setBackground(bg(new Color(0.12f, 0.12f, 0.13f, 1f)));
+        header.pad(16);
 
-        // Back button
-        ImageButton backButton = new ImageButton(
+        ImageButton back = new ImageButton(
             new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_EXIT))
         );
-        backButton.addListener(new ClickListener() {
+        back.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                Gdx.app.postRunnable(() -> {
-                    if (previousScreen != null) {
-                        ((com.badlogic.gdx.Game) Gdx.app.getApplicationListener()).setScreen(previousScreen);
-                    }
-                });
+
+                if (previousScreen instanceof MapScreen) {
+                    ((MapScreen) previousScreen).resetSidePanelUI();
+                }
+
+                ((com.badlogic.gdx.Game) Gdx.app.getApplicationListener())
+                    .setScreen(previousScreen);
             }
         });
 
-        header.add(backButton).size(32, 32).pad(12);
+
         header.add().expandX();
-        header.pack();
+        header.add(back).size(32, 32);
 
-        return header;
-    }
+        root.add(header).expandX().fillX().padBottom(16);
+        root.row();
 
-    private Table createContentTable(BitmapFont uiFont) {
+        // CONTENT CARD
+        float maxWidth = Math.min(900, Gdx.graphics.getWidth() - 64);
+        float paddingLeft = 20f;
+        float paddingRight = 48f;
+        float paddingTop = 32f;
+        float paddingBottom = 32f;
+
         Table content = new Table();
         content.top().left();
-        content.pad(30);
+        content.padLeft(paddingLeft);
+        content.padRight(paddingRight);
+        content.padTop(paddingTop);
+        content.padBottom(paddingBottom);
 
-        // Maximum content width for comfortable reading
-        float maxContentWidth = Math.min(800, Gdx.graphics.getWidth() - 80);
-
-        // Title
-        String title = newsItem.getTitle() != null && !newsItem.getTitle().isEmpty()
-            ? newsItem.getTitle()
-            : "Brez naslova";
-        
         BitmapFont titleFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
-        titleFont.getData().setScale(1.4f);
-        Label.LabelStyle titleStyle = new Label.LabelStyle(titleFont, new Color(0.1f, 0.1f, 0.1f, 1f));
-        Label titleLabel = new Label(title, titleStyle);
-        titleLabel.setWrap(true);
-        titleLabel.setAlignment(Align.left);
-        content.add(titleLabel).width(maxContentWidth).left().padBottom(24);
+        titleFont.getData().setScale(1.35f);
+        Label title = new Label(
+            safe(newsItem.getTitle(), "Brez naslova"),
+            new Label.LabelStyle(titleFont, new Color(0.95f, 0.95f, 0.95f, 1f))
+        );
+        title.setWrap(true);
+        content.add(title).width(maxWidth).left().padBottom(20);
         content.row();
 
-        // Metadata row (category, date, source)
-        Table metadataTable = createMetadataTable(uiFont, maxContentWidth);
-        content.add(metadataTable).width(maxContentWidth).left().padBottom(30);
-        content.row();
-
-        // Divider line
-        Table divider = new Table();
-        divider.setBackground(createDividerDrawable());
-        content.add(divider).width(maxContentWidth).height(1).padBottom(30);
-        content.row();
-
-        // Content/Summary
-        String contentText = getContentText();
-        if (contentText != null && !contentText.isEmpty()) {
-            BitmapFont contentFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
-            contentFont.getData().setScale(1.0f);
-            Label.LabelStyle contentStyle = new Label.LabelStyle(contentFont, new Color(0.2f, 0.2f, 0.2f, 1f));
-            Label contentLabel = new Label(contentText, contentStyle);
-            contentLabel.setWrap(true);
-            contentLabel.setAlignment(Align.left);
-            content.add(contentLabel).width(maxContentWidth).left();
-            content.row();
+        if (newsItem.getImageUrl() != null && !newsItem.getImageUrl().isEmpty()) {
+            addHeroImage(content, maxWidth, newsItem.getImageUrl());
         }
 
-        // Add padding at bottom
+        BitmapFont metaFont = new BitmapFont(Gdx.files.internal("fonts/arial-32.fnt"));
+        metaFont.getData().setScale(0.55f);
+
+        Color metaColor = new Color(0.6f, 0.6f, 0.6f, 1f);
+        Label.LabelStyle metaStyle = new Label.LabelStyle(metaFont, metaColor);
+
+        Table meta = new Table();
+        meta.left();
+
+        if (newsItem.getCategory() != null) {
+            meta.add(new Label("Kategorija: " + newsItem.getCategory().getName(), metaStyle))
+                .left()
+                .padBottom(4);
+            meta.row();
+        }
+
+        if (newsItem.getPublishedAt() != null) {
+            meta.add(new Label("Objavljeno: " + formatDate(newsItem.getPublishedAt()), metaStyle))
+                .left()
+                .padBottom(4);
+            meta.row();
+        }
+
+        if (newsItem.getAuthor() != null && !newsItem.getAuthor().isEmpty()) {
+            meta.add(new Label("Avtor: " + newsItem.getAuthor(), metaStyle))
+                .left()
+                .padBottom(4);
+            meta.row();
+        }
+
+        if (newsItem.getSource() != null) {
+            meta.add(new Label("Vir: " + newsItem.getSource().getName(), metaStyle))
+                .left();
+        }
+
+        content.add(meta).left().padBottom(20);
+        content.row();
+
+        Table divider = new Table();
+        divider.setBackground(bg(new Color(0.25f, 0.25f, 0.26f, 1f)));
+
+        content.add(divider)
+            .width(maxWidth)
+            .height(1)
+            .padBottom(24);
+        content.row();
+
+
+        BitmapFont bodyFont = new BitmapFont(Gdx.files.internal("fonts/arial-32.fnt"));
+        bodyFont.getData().setScale(0.65f);
+
+        Label body = new Label(
+            getBodyText(),
+            new Label.LabelStyle(bodyFont, new Color(0.82f, 0.82f, 0.82f, 1f))
+        );
+
+        body.setWrap(true);
+        body.setAlignment(Align.left);
+
+        content.add(body)
+            .width(maxWidth)
+            .left();
+
+        content.row();
+
         content.add().expandY().minHeight(40);
 
-        return content;
+        Table contentWrapper = new Table();
+        contentWrapper.top().left();
+        float wrapperWidth = maxWidth + paddingLeft + paddingRight;
+
+        contentWrapper.add(content)
+            .width(wrapperWidth)
+            .top()
+            .left();
+        contentWrapper.row();
+        contentWrapper.add().expandY();
+
+        ScrollPane scroll = new ScrollPane(contentWrapper);
+        scroll.setFadeScrollBars(false);
+        scroll.setScrollingDisabled(true, false);
+        scroll.setOverscroll(false, false);
+        scroll.setClamp(true);
+        scroll.setFillParent(false);
+
+        Table card = new Table();
+        card.setBackground(bg(new Color(0.15f, 0.15f, 0.16f, 1f)));
+        card.add(scroll).expand().fill();
+        card.pad(8);
+
+        root.add(card)
+            .expand()
+            .fill()
+            .padBottom(24)
+            .padLeft(100)
+            .padRight(100);
     }
 
-    private Table createMetadataTable(BitmapFont font, float maxWidth) {
-        Table metadata = new Table();
-        metadata.left();
-
-        BitmapFont metaFont = new BitmapFont(font.getData(), font.getRegions(), false);
-        metaFont.getData().setScale(0.85f);
-        Label.LabelStyle metaStyle = new Label.LabelStyle(metaFont, new Color(0.5f, 0.5f, 0.5f, 1f));
-
-        // Category
-        if (newsItem.getCategory() != null && newsItem.getCategory().getName() != null) {
-            Label categoryLabel = new Label("Kategorija: " + newsItem.getCategory().getName(), metaStyle);
-            metadata.add(categoryLabel).left();
-            metadata.add().width(20); // Spacer
-        }
-
-        // Date
-        if (newsItem.getPublishedAt() != null && !newsItem.getPublishedAt().isEmpty()) {
-            String formattedDate = formatDate(newsItem.getPublishedAt());
-            Label dateLabel = new Label("Datum: " + formattedDate, metaStyle);
-            metadata.add(dateLabel).left();
-            metadata.add().width(20); // Spacer
-        }
-
-        // Source
-        if (newsItem.getSource() != null && newsItem.getSource().getName() != null) {
-            Label sourceLabel = new Label("Vir: " + newsItem.getSource().getName(), metaStyle);
-            metadata.add(sourceLabel).left();
-        }
-
-        // Author (if available)
-        if (newsItem.getAuthor() != null && !newsItem.getAuthor().isEmpty()) {
-            metadata.row().padTop(8);
-            Label authorLabel = new Label("Avtor: " + newsItem.getAuthor(), metaStyle);
-            metadata.add(authorLabel).left();
-        }
-
-        return metadata;
-    }
-
-    private String getContentText() {
-        if (newsItem.getContent() != null && !newsItem.getContent().isEmpty()) {
+    private String getBodyText() {
+        if (newsItem.getContent() != null && !newsItem.getContent().isEmpty())
             return newsItem.getContent();
-        } else if (newsItem.getSummary() != null && !newsItem.getSummary().isEmpty()) {
+        if (newsItem.getSummary() != null)
             return newsItem.getSummary();
-        }
-        return null;
+        return "";
     }
 
-    private String formatDate(String dateString) {
-        if (dateString == null || dateString.isEmpty()) {
-            return "Neznan datum";
-        }
-
+    private String formatDate(String raw) {
         try {
-            // Try ISO 8601 format first
-            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
-            Date date = inputFormat.parse(dateString);
-            SimpleDateFormat outputFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.US);
-            return outputFormat.format(date);
+            Date d = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(raw);
+            return new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.US).format(d);
         } catch (ParseException e) {
-            // If parsing fails, return original string
-            return dateString;
+            return raw;
         }
     }
 
-    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createScreenBackground() {
-        com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.98f, 0.98f, 0.98f, 1f));
-        pixmap.fill();
-        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
-        pixmap.dispose();
-        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
-            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
-        );
+    private String safe(String s, String def) {
+        return (s == null || s.isEmpty()) ? def : s;
     }
 
-    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createHeaderBackground() {
-        com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(1f, 1f, 1f, 1f));
-        pixmap.fill();
-        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
-        pixmap.dispose();
-        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
-            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
-        );
+    private void addHeroImage(Table content, float maxWidth, String imageUrl) {
+
+        Pixmap ph = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        ph.setColor(new Color(0.2f, 0.2f, 0.2f, 1f));
+        ph.fill();
+        Texture placeholder = new Texture(ph);
+        ph.dispose();
+
+        Image hero = new Image(placeholder);
+        hero.setScaling(Scaling.fit);
+
+        content.add(hero)
+            .width(maxWidth)
+            .height(260)
+            .padBottom(24);
+        content.row();
+
+        HttpRequestBuilder builder = new HttpRequestBuilder();
+        Net.HttpRequest request = builder.newRequest()
+            .method(Net.HttpMethods.GET)
+            .url(imageUrl)
+            .build();
+
+        Gdx.net.sendHttpRequest(request, new Net.HttpResponseListener() {
+
+            @Override
+            public void handleHttpResponse(Net.HttpResponse httpResponse) {
+                byte[] bytes = httpResponse.getResult();
+
+                Gdx.app.postRunnable(() -> {
+                    try {
+                        Pixmap pixmap = new Pixmap(bytes, 0, bytes.length);
+                        Texture tex = new Texture(pixmap);
+                        pixmap.dispose();
+
+                        hero.setDrawable(
+                            new TextureRegionDrawable(new TextureRegion(tex))
+                        );
+                    } catch (Exception e) {
+                        Gdx.app.error("IMAGE", "Failed to decode image", e);
+                    }
+                });
+            }
+
+            @Override
+            public void failed(Throwable t) {
+                Gdx.app.error("IMAGE", "Failed to load image", t);
+            }
+
+            @Override
+            public void cancelled() {}
+        });
     }
 
-    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDividerDrawable() {
-        com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.85f, 0.85f, 0.85f, 1f));
-        pixmap.fill();
-        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
-        pixmap.dispose();
-        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
-            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
-        );
+
+    private TextureRegionDrawable bg(Color c) {
+        Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        p.setColor(c);
+        p.fill();
+        Texture t = new Texture(p);
+        p.dispose();
+        return new TextureRegionDrawable(new TextureRegion(t));
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0.98f, 0.98f, 0.98f, 1);
+        Gdx.gl.glClearColor(0.10f, 0.10f, 0.11f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
         stage.act(delta);
         stage.draw();
     }
 
-    @Override
-    public void resize(int width, int height) {
-        stage.getViewport().update(width, height, true);
-    }
-
-    @Override
-    public void pause() {}
-
-    @Override
-    public void resume() {}
-
-    @Override
-    public void hide() {}
-
-    @Override
-    public void dispose() {
-        if (stage != null) {
-            stage.dispose();
-        }
-    }
+    @Override public void resize(int w, int h) { stage.getViewport().update(w, h, true); }
+    @Override public void pause() {}
+    @Override public void resume() {}
+    @Override public void hide() {}
+    @Override public void dispose() { stage.dispose(); }
 }

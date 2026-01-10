@@ -781,10 +781,15 @@ public class MapScreen implements Screen {
 
 
     private void openNewsDetailScreen(NewsItem item) {
-        com.badlogic.gdx.Game game = (com.badlogic.gdx.Game) Gdx.app.getApplicationListener();
-        NewsDetailScreen detailScreen = new NewsDetailScreen(assetManager, item, this);
+        com.badlogic.gdx.Game game =
+            (com.badlogic.gdx.Game) Gdx.app.getApplicationListener();
+
+        NewsDetailScreen detailScreen =
+            new NewsDetailScreen(assetManager, item, this);
+
         game.setScreen(detailScreen);
     }
+
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createPanelBackground() {
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
@@ -1007,8 +1012,8 @@ public class MapScreen implements Screen {
         categoryChipsTable.clear();
 
         String[] categories = {
-            "Splosno", "Biznis", "Gospodarstvo",
-            "Kultura", "Lifestyle", "Politika",
+            "Splosno", "Biznis", "Politika",
+            "Kultura", "Lifestyle", "Gospodarstvo",
             "Tehnologija", "Vreme"
         };
 
@@ -1066,7 +1071,30 @@ public class MapScreen implements Screen {
         );
     }
 
+    public void resetSidePanelUI() {
+        isPanelOpen = false;
+        isPanelPinned = false;
 
+        // PANEL
+        if (sidePanel != null) {
+            sidePanel.clearActions();
+            sidePanel.setPosition(Gdx.graphics.getWidth(), 0);
+        }
+
+        // CATEGORY CHIPS
+        adjustCategoryChipsForPanel(false);
+
+        // ZOOM BUTTONS
+        if (bottomRightTable != null) {
+            bottomRightTable.clearActions();
+            bottomRightTable.setPosition(zoomButtonsBaseX, bottomRightTable.getY());
+        }
+
+        // CAMERA
+        camera.zoom = DEFAULT_ZOOM;
+        camera.update();
+        clampCameraToMap();
+    }
 
     private void adjustCameraForPanel(boolean open) {
 
