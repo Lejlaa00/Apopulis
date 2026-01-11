@@ -157,19 +157,38 @@ int Blockchain::calculateDifficulty() const {
     std::cout << "[DIFFICULTY] Adjustment - Expected: " << expectedTime 
               << "s, Actual: " << actualTime << "s" << std::endl;
     
-    // Adjust difficulty
-    if (actualTime < expectedTime / 2) {
-        std::cout << "[DIFFICULTY] Increasing difficulty from " 
+    // More aggressive adjustment for very fast blocks
+    if (actualTime < expectedTime / 4) {
+        int increase = 2;
+        std::cout << "[DIFFICULTY] VERY FAST! Increasing difficulty from " 
+                  << adjustmentBlock.difficulty << " to " << (adjustmentBlock.difficulty + increase) << std::endl;
+        return adjustmentBlock.difficulty + increase;
+    }
+    // Standard fast adjustment
+    else if (actualTime < expectedTime * 2 / 3) {
+        std::cout << "[DIFFICULTY] Too fast. Increasing difficulty from " 
                   << adjustmentBlock.difficulty << " to " << (adjustmentBlock.difficulty + 1) << std::endl;
         return adjustmentBlock.difficulty + 1;
-    } else if (actualTime > expectedTime * 2) {
+    } 
+    // Very slow blocks
+    else if (actualTime > expectedTime * 4) {
+        int newDiff = adjustmentBlock.difficulty - 2;
+        if (newDiff < 0) newDiff = 0;
+        std::cout << "[DIFFICULTY] VERY SLOW! Decreasing difficulty from " 
+                  << adjustmentBlock.difficulty << " to " << newDiff << std::endl;
+        return newDiff;
+    }
+    // Standard slow adjustment
+    else if (actualTime > expectedTime * 3 / 2) {
         int newDiff = adjustmentBlock.difficulty - 1;
         if (newDiff < 0) newDiff = 0;
-        std::cout << "[DIFFICULTY] Decreasing difficulty from " 
+        std::cout << "[DIFFICULTY] Too slow. Decreasing difficulty from " 
                   << adjustmentBlock.difficulty << " to " << newDiff << std::endl;
         return newDiff;
     }
     
+    std::cout << "[DIFFICULTY] Block time is within acceptable range. Keeping difficulty at " 
+              << adjustmentBlock.difficulty << std::endl;
     return adjustmentBlock.difficulty;
 }
 
