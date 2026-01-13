@@ -65,7 +65,7 @@ public class NewsDetailScreen implements Screen {
         header.pad(16);
 
         ImageButton back = new ImageButton(
-            new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_EXIT))
+            new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_X))
         );
         back.addListener(new ClickListener() {
             @Override
@@ -81,8 +81,11 @@ public class NewsDetailScreen implements Screen {
         });
 
 
+        header.add(back)
+            .size(20, 20)
+            .left();
+
         header.add().expandX();
-        header.add(back).size(32, 32);
 
         root.add(header).expandX().fillX().padBottom(16);
         root.row();

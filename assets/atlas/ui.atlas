@@ -39,6 +39,13 @@ btn_plus
   orig: 386, 384
   offset: 0, 0
   index: -1
+btn_x
+  rotate: false
+  xy: 1022, 229
+  size: 341, 334
+  orig: 341, 334
+  offset: 0, 0
+  index: -1
 ic_pin
   rotate: false
   xy: 389, 506

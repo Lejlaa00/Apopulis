@@ -64,23 +64,40 @@ public class MapScreen implements Screen {
 
     private EarClippingTriangulator triangulator = new EarClippingTriangulator();
 
-    // Map bounds for camera constraints
     private float mapMinX = Float.MAX_VALUE;
     private float mapMaxX = Float.MIN_VALUE;
     private float mapMinY = Float.MAX_VALUE;
     private float mapMaxY = Float.MIN_VALUE;
 
-    // Panning state
     private boolean isPanning = false;
     private float lastScreenX = 0;
     private float lastScreenY = 0;
     private static final float DRAG_THRESHOLD = 5.0f;
+
+    private boolean uiConsumedTouch = false;
 
     // Zoom constants
     private static final float MIN_ZOOM = 0.1f;
     private static final float MAX_ZOOM = 3.0f;
     private static final float ZOOM_SPEED = 0.1f;
     private static final float DEFAULT_ZOOM = 1.0f;
+
+    // Smooth camera animation for region selection
+    private boolean isAnimatingCamera = false;
+    private boolean isRegionZoomed = false;
+    private float targetZoom;
+    private Vector2 targetPosition = new Vector2();
+    private Vector2 startPosition = new Vector2();
+    private float startZoom;
+    private float animationProgress = 0f;
+    private static final float ZOOM_ANIMATION_DURATION = 0.65f;
+    private static final float REGION_ZOOM_IN_AMOUNT = 0.28f;
+
+    private boolean isTwoPhaseAnimation = false;
+    private float intermediateZoom;
+    private Vector2 intermediatePosition = new Vector2();
+    private float phase1Progress = 0f;
+    private float phase2Progress = 0f;
 
     // UI components
     private Stage uiStage;
@@ -103,26 +120,21 @@ public class MapScreen implements Screen {
     private String selectedCategory = "Splosno";
     private Table categoryChipsWrapper;
 
-
-    // News markers
     private Array<ProvinceNewsMarker> newsMarkers;
     private float timeSinceLastFetch = 0;
-    private static final float FETCH_INTERVAL = 60f; // 60 seconds
+    private static final float FETCH_INTERVAL = 60f;
     private boolean isFetchingNews = false;
     private Array<NewsItem> displayedNews = new Array<>();
 
-    // News items for side panel
     private Array<NewsItem> newsItems;
     private Table newsContentTable;
     private Table newsWrapperTable;
     private ScrollPane newsScrollPane;
     private boolean isFetchingNewsItems = false;
 
-    // News dots inside selected region
     private ObjectMap<String, Vector2> newsDotCache = new ObjectMap<>();
     private Array<Vector2> selectedNewsDots = new Array<>();
 
-    // Pin
     private List<Marker> markers;
     private SpriteBatch batch;
     private TextureRegion pinRegion;
@@ -230,14 +242,14 @@ public class MapScreen implements Screen {
             newsContentTable.clear();
             newsContentTable.top();
 
-
-            Array<NewsItem> sourceNews =
-                (selectedRegion != null && displayedNews != null)
-                    ? displayedNews
-                    : newsItems;
+            Array<NewsItem> sourceNews = (selectedRegion != null && displayedNews != null && displayedNews.size > 0)
+                ? displayedNews
+                : newsItems;
 
             Array<NewsItem> filteredNews = new Array<>();
             for (NewsItem item : sourceNews) {
+                if (item == null) continue;
+
                 if (selectedCategory.equals("Splosno") ||
                     (item.getCategory() != null && item.getCategory().getName() != null &&
                         item.getCategory().getName().equals(selectedCategory))) {
@@ -246,10 +258,11 @@ public class MapScreen implements Screen {
             }
 
             if (filteredNews.size == 0) {
-                newsContentTable.top();
-
+                BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
+                BitmapFont descFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
+                descFont.getData().setScale(0.82f);
                 Label.LabelStyle emptyStyle = new Label.LabelStyle(
-                    assetManager.get(AssetDescriptors.UI_FONT),
+                    descFont,
                     new Color(0.75f, 0.75f, 0.75f, 1f)
                 );
 
@@ -257,24 +270,19 @@ public class MapScreen implements Screen {
                     "Ni novic za izbrano kategorijo",
                     emptyStyle
                 );
-
                 emptyLabel.setAlignment(Align.left);
                 emptyLabel.setWrap(false);
 
                 newsContentTable.add(emptyLabel)
                     .padTop(20)
                     .left();
-
                 newsContentTable.row();
-
-
-                newsContentTable.row();
-
                 newsContentTable.add().expandY();
 
-                newsScrollPane.layout();
-                newsScrollPane.setScrollY(0);
-
+                if (newsScrollPane != null) {
+                    newsScrollPane.layout();
+                    newsScrollPane.setScrollY(0);
+                }
                 return;
             }
 
@@ -297,9 +305,13 @@ public class MapScreen implements Screen {
                 }
             }
 
-            // Add spacer row at the end to fill remaining vertical space
             newsContentTable.row();
             newsContentTable.add().expandY();
+
+            if (newsScrollPane != null) {
+                newsScrollPane.layout();
+                newsScrollPane.setScrollY(0);
+            }
         } catch (Exception e) {
             System.err.println("Error updating news cards: " + e.getMessage());
             e.printStackTrace();
@@ -410,7 +422,6 @@ public class MapScreen implements Screen {
             }
         }
 
-        // fallback - centar bounding boxa
         return new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
     }
 
@@ -622,64 +633,37 @@ public class MapScreen implements Screen {
         header.add().expandX();
         header.add(exitButton).size(24, 24).right();
 
+        newsContentTable = new Table();
+        newsContentTable.top().left();
+        newsContentTable.pad(12);
+        newsContentTable.defaults().expandX().fillX();
 
-        Table content = new Table();
-        content.top().left();
-        content.pad(0, 12, 12, 12);
-        content.defaults().expandX().fillX();
+        Table contentWrapper = new Table();
+        contentWrapper.top().left();
+        contentWrapper.add(newsContentTable).expand().fill().top().left();
+        contentWrapper.row();
+        contentWrapper.add().expandY();
 
-        newsContentTable = content;
-        addNewsCards(content, uiFont);
-
-        // Wrap content in a table that fills ScrollPane viewport
-        // This ensures the content table always fills the full height
-        Table wrapperTable = new Table();
-        wrapperTable.top().left();
-        wrapperTable.add(content).expand().fill().top().left();
-        // Add expandable row to ensure wrapper fills viewport height
-        wrapperTable.row();
-        wrapperTable.add().expandY();
-        newsWrapperTable = wrapperTable;
-
-        // Set wrapper size to fill viewport (header is ~60px)
-        float headerHeight = 60f;
-        wrapperTable.setSize(panelWidth, panelHeight - headerHeight);
-
-        // Create ScrollPane style with visible scrollbars
         ScrollPane.ScrollPaneStyle scrollPaneStyle = createNewsScrollPaneStyle();
-
-        ScrollPane scrollPane = new ScrollPane(wrapperTable, scrollPaneStyle);
-        scrollPane.setScrollY(0);
-        scrollPane.setForceScroll(false, true);
-        scrollPane.setFlickScroll(false);
-        scrollPane.setOverscroll(false, false);
-        scrollPane.setClamp(true);
-        scrollPane.setScrollingDisabled(true, false);
-        scrollPane.layout();
-
-        scrollPane.setFadeScrollBars(false);
-        scrollPane.setScrollingDisabled(true, false);
-        scrollPane.setScrollbarsVisible(true);
-        scrollPane.setScrollBarPositions(false, true); // horizontal: left, vertical: right
-        scrollPane.setOverscroll(false, false); // Disable overscroll
-
-        // 🔴 OVO JE KLJUČ
-        scrollPane.setForceScroll(false, true); // force vertical logic
-        scrollPane.setScrollY(0);               // uvijek počni od vrha
-        scrollPane.layout();
-        newsScrollPane = scrollPane;
+        newsScrollPane = new ScrollPane(contentWrapper, scrollPaneStyle);
+        newsScrollPane.setFadeScrollBars(false);
+        newsScrollPane.setScrollingDisabled(true, false);
+        newsScrollPane.setOverscroll(false, false);
+        newsScrollPane.setClamp(true);
+        newsScrollPane.setScrollBarPositions(false, true);
+        newsScrollPane.setScrollY(0);
 
         Table panelTable = new Table();
         panelTable.setBackground(createPanelBackground());
-        panelTable.top();
+        panelTable.setFillParent(false);
 
         panelTable.add(header)
             .expandX()
             .fillX()
-            .padBottom(10);
+            .height(48);
         panelTable.row();
 
-        panelTable.add(scrollPane)
+        panelTable.add(newsScrollPane)
             .expand()
             .fill();
 
@@ -687,19 +671,21 @@ public class MapScreen implements Screen {
         sidePanel.setSize(panelWidth, panelHeight);
         sidePanel.setPosition(Gdx.graphics.getWidth(), 0);
         sidePanel.setTransform(true);
-    }
 
-    private void addNewsCards(Table container, BitmapFont font) {
-        Label.LabelStyle titleStyle = new Label.LabelStyle(font, new Color(0.15f, 0.15f, 0.15f, 1f));
+        sidePanel.fill();
 
-        BitmapFont descFont = new BitmapFont(font.getData(), font.getRegions(), false);
-        descFont.getData().setScale(0.82f);
-        Label.LabelStyle descStyle = new Label.LabelStyle(descFont, new Color(0.45f, 0.45f, 0.45f, 1f));
+        if (newsContentTable != null && assetManager != null) {
+            BitmapFont loadingFont = assetManager.get(AssetDescriptors.UI_FONT);
+            BitmapFont descFont = new BitmapFont(loadingFont.getData(), loadingFont.getRegions(), false);
+            descFont.getData().setScale(0.82f);
+            Label.LabelStyle descStyle = new Label.LabelStyle(descFont, new Color(0.75f, 0.75f, 0.75f, 1f));
 
-        float cardWidth = panelWidth - 24;
-
-        Label loadingLabel = new Label("Nalaganje novic...", descStyle);
-        container.add(loadingLabel).padTop(20);
+            Label loadingLabel = new Label("Nalaganje novic...", descStyle);
+            loadingLabel.setAlignment(Align.left);
+            newsContentTable.add(loadingLabel).padTop(20).left();
+            newsContentTable.row();
+            newsContentTable.add().expandY();
+        }
     }
 
     private void addNewsCard(Table container, NewsItem item, Label.LabelStyle titleStyle, Label.LabelStyle descStyle, float cardWidth) {
@@ -738,7 +724,6 @@ public class MapScreen implements Screen {
 
         cardWrapper.add(card).expand().fill();
 
-        // Make card clickable to open detail screen
         cardWrapper.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -961,7 +946,7 @@ public class MapScreen implements Screen {
                 activeChipCategory = category;
                 selectedCategory = category;
                 fetchNewsItems(category);
-                rebuildCategoryChips();   // refresh UI
+                rebuildCategoryChips();
             }
         });
 
@@ -971,13 +956,13 @@ public class MapScreen implements Screen {
     private Drawable createCategoryChipDrawable(TextureAtlas atlas) {
         return new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(1f, 1f, 1f, 0.3f)); // normal
+        ).tint(new Color(1f, 1f, 1f, 0.3f));
     }
 
     private Drawable createActiveCategoryChipDrawable(TextureAtlas atlas) {
         return new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(1f, 1f, 1f, 0.6f)); // accent (active)
+        ).tint(new Color(1f, 1f, 1f, 0.6f));
     }
 
     private void setupCategoryChips(BitmapFont font) {
@@ -1075,25 +1060,23 @@ public class MapScreen implements Screen {
         isPanelOpen = false;
         isPanelPinned = false;
 
-        // PANEL
         if (sidePanel != null) {
             sidePanel.clearActions();
             sidePanel.setPosition(Gdx.graphics.getWidth(), 0);
         }
 
-        // CATEGORY CHIPS
         adjustCategoryChipsForPanel(false);
 
-        // ZOOM BUTTONS
         if (bottomRightTable != null) {
             bottomRightTable.clearActions();
             bottomRightTable.setPosition(zoomButtonsBaseX, bottomRightTable.getY());
         }
 
-        // CAMERA
         camera.zoom = DEFAULT_ZOOM;
         camera.update();
         clampCameraToMap();
+
+        isRegionZoomed = false;
     }
 
     private void adjustCameraForPanel(boolean open) {
@@ -1154,15 +1137,121 @@ public class MapScreen implements Screen {
         clampCameraToMap();
     }
 
+    private Vector2 calculateRegionCentroid(Region region) {
+        if (region == null || region.vertices == null || region.vertices.length < 4) {
+            return new Vector2(0, 0);
+        }
+
+        float sumX = 0f;
+        float sumY = 0f;
+        int vertexCount = region.vertices.length / 2;
+
+        for (int i = 0; i < region.vertices.length; i += 2) {
+            sumX += region.vertices[i];
+            sumY += region.vertices[i + 1];
+        }
+
+        return new Vector2(sumX / vertexCount, sumY / vertexCount);
+    }
+
+    private void smoothZoomToRegion(Region region) {
+        if (region == null) return;
+
+        Vector2 centroid = calculateRegionCentroid(region);
+
+        startPosition.set(camera.position.x, camera.position.y);
+        startZoom = camera.zoom;
+
+        if (isRegionZoomed) {
+            isTwoPhaseAnimation = true;
+
+            intermediateZoom = DEFAULT_ZOOM;
+            intermediatePosition.set((mapMinX + mapMaxX) * 0.5f, (mapMinY + mapMaxY) * 0.5f);
+
+            targetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, DEFAULT_ZOOM - REGION_ZOOM_IN_AMOUNT));
+            targetPosition.set(centroid.x, centroid.y);
+
+            phase1Progress = 0f;
+            phase2Progress = 0f;
+        } else {
+            isTwoPhaseAnimation = false;
+            targetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, camera.zoom - REGION_ZOOM_IN_AMOUNT));
+            targetPosition.set(centroid.x, centroid.y);
+        }
+
+        isAnimatingCamera = true;
+        animationProgress = 0f;
+    }
+    private void updateCameraAnimation(float delta) {
+        if (!isAnimatingCamera) return;
+
+        if (isTwoPhaseAnimation) {
+            if (phase1Progress < 1f) {
+                phase1Progress += delta / ZOOM_ANIMATION_DURATION;
+                if (phase1Progress >= 1f) {
+                    phase1Progress = 1f;
+                }
+
+                float t1 = phase1Progress;
+                float t1Squared = t1 * t1;
+                float t1Cubed = t1Squared * t1;
+                t1 = t1 < 0.5f ? 4f * t1Cubed : 1f - (float)Math.pow(-2f * t1 + 2f, 3f) / 2f;
+
+                float currentX = startPosition.x + (intermediatePosition.x - startPosition.x) * t1;
+                float currentY = startPosition.y + (intermediatePosition.y - startPosition.y) * t1;
+                camera.position.set(currentX, currentY, 0);
+                camera.zoom = startZoom + (intermediateZoom - startZoom) * t1;
+            }
+            else if (phase2Progress < 1f) {
+                phase2Progress += delta / ZOOM_ANIMATION_DURATION;
+                if (phase2Progress >= 1f) {
+                    phase2Progress = 1f;
+                    isAnimatingCamera = false;
+                    isRegionZoomed = true;
+                }
+
+                float t2 = phase2Progress;
+                float t2Squared = t2 * t2;
+                float t2Cubed = t2Squared * t2;
+                t2 = t2 < 0.5f ? 4f * t2Cubed : 1f - (float)Math.pow(-2f * t2 + 2f, 3f) / 2f;
+
+                float currentX = intermediatePosition.x + (targetPosition.x - intermediatePosition.x) * t2;
+                float currentY = intermediatePosition.y + (targetPosition.y - intermediatePosition.y) * t2;
+                camera.position.set(currentX, currentY, 0);
+                camera.zoom = intermediateZoom + (targetZoom - intermediateZoom) * t2;
+            }
+        } else {
+            animationProgress += delta / ZOOM_ANIMATION_DURATION;
+
+            if (animationProgress >= 1f) {
+                animationProgress = 1f;
+                isAnimatingCamera = false;
+                isRegionZoomed = true;
+            }
+
+            float t = animationProgress;
+            float tSquared = t * t;
+            float tCubed = tSquared * t;
+            t = t < 0.5f ? 4f * tCubed : 1f - (float)Math.pow(-2f * t + 2f, 3f) / 2f;
+
+            float currentX = startPosition.x + (targetPosition.x - startPosition.x) * t;
+            float currentY = startPosition.y + (targetPosition.y - startPosition.y) * t;
+            camera.position.set(currentX, currentY, 0);
+
+            camera.zoom = startZoom + (targetZoom - startZoom) * t;
+        }
+
+        camera.update();
+        clampCameraToMap();
+    }
+
 
     @Override
     public void render(float delta) {
-        // Update fetch timer
         timeSinceLastFetch += delta;
         if (timeSinceLastFetch >= FETCH_INTERVAL) {
             timeSinceLastFetch = 0;
             fetchNewsMarkers();
-            // Also refresh news items when refreshing markers
             fetchNewsItems(selectedCategory);
         }
 
@@ -1171,6 +1260,8 @@ public class MapScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         uiStage.act(delta);
+
+        updateCameraAnimation(delta);
 
         camera.update();
         shapeRenderer.setProjectionMatrix(camera.combined);
@@ -1184,15 +1275,24 @@ public class MapScreen implements Screen {
 
         updateHover(mousePos);
 
-        if (Gdx.input.justTouched() && hoveredRegion != null) {
+        boolean uiHit = false;
+        if (Gdx.input.justTouched() && uiStage != null) {
+            int touchX = Gdx.input.getX();
+            int touchY = Gdx.input.getY();
+            float stageY = Gdx.graphics.getHeight() - touchY;
+            uiHit = (uiStage.hit(touchX, (int)stageY, true) != null);
+        }
+
+        if (Gdx.input.justTouched() && hoveredRegion != null && !uiHit) {
             selectedRegion = hoveredRegion;
             System.out.println("Clicked region: " + selectedRegion.id);
+
+            smoothZoomToRegion(selectedRegion);
 
             displayedNews = filterNewsForRegion(selectedRegion);
             rebuildNewsDotsForSelectedRegion();
             updateNewsCards();
 
-            // auto-open panel
             if (!isPanelOpen) {
                 toggleSidePanel();
             }
@@ -1217,15 +1317,12 @@ public class MapScreen implements Screen {
             shapeRenderer.end();
         }
 
-        // Draw borders
         drawBorders();
 
-        // Draw news markers
         drawSelectedRegionNewsPins();
 
         drawPPJMarkers();
 
-        // Draw UI on top
         uiStage.draw();
     }
 
@@ -1254,7 +1351,6 @@ public class MapScreen implements Screen {
         shapeRenderer.setColor(color);
 
         for (Region region : regions) {
-            // Skip selected and hovered regions (they will be drawn separately)
             if (region == excludeRegion1 || region == excludeRegion2) {
                 continue;
             }
@@ -1297,7 +1393,6 @@ public class MapScreen implements Screen {
         viewport.update(width, height);
         uiStage.getViewport().update(width, height, true);
 
-        // Update panel width and position on resize
         if (sidePanel != null) {
             panelWidth = width * 0.33f;
             panelHeight = height;
@@ -1305,21 +1400,6 @@ public class MapScreen implements Screen {
             float targetX = isPanelOpen ? width - panelWidth : width;
             sidePanel.setPosition(targetX, 0);
         }
-
-        // Update wrapper table size to fill ScrollPane viewport
-        // Header is approximately 60px (36px selectbox + 24px padding)
-        if (newsWrapperTable != null && newsScrollPane != null) {
-            float headerHeight = 60f;
-            newsWrapperTable.setSize(panelWidth, panelHeight - headerHeight);
-            newsWrapperTable.invalidate();
-            newsScrollPane.invalidate();
-        }
-
-        // Invalidate layout to ensure expandable rows recalculate
-        if (newsContentTable != null) {
-            newsContentTable.invalidate();
-        }
-
     }
 
     @Override public void pause() {}
@@ -1337,6 +1417,13 @@ public class MapScreen implements Screen {
 
         @Override
         public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+            float stageY = Gdx.graphics.getHeight() - screenY;
+            if (uiStage != null && uiStage.hit(screenX, (int)stageY, true) != null) {
+                uiConsumedTouch = true;
+                return false;
+            }
+
+            uiConsumedTouch = false;
             lastScreenX = screenX;
             lastScreenY = screenY;
             isPanning = false;
@@ -1345,6 +1432,10 @@ public class MapScreen implements Screen {
 
         @Override
         public boolean touchDragged(int screenX, int screenY, int pointer) {
+            if (uiConsumedTouch) {
+                return false;
+            }
+
             float deltaScreenX = screenX - lastScreenX;
             float deltaScreenY = screenY - lastScreenY;
             float distance = (float) Math.sqrt(deltaScreenX * deltaScreenX + deltaScreenY * deltaScreenY);
@@ -1362,7 +1453,6 @@ public class MapScreen implements Screen {
                 camera.position.add(deltaWorldX, deltaWorldY, 0);
                 camera.update();
 
-                // Clamp camera to ensure map stays visible after panning
                 clampCameraToMap();
 
                 isPanning = true;
@@ -1376,8 +1466,10 @@ public class MapScreen implements Screen {
 
         @Override
         public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+            boolean wasConsumed = uiConsumedTouch;
+            uiConsumedTouch = false;
             isPanning = false;
-            return false;
+            return wasConsumed;
         }
 
         @Override
