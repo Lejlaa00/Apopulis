@@ -1201,9 +1201,16 @@ public class MapScreen implements Screen {
         Color regionColor = new Color(0.75f, 0.6f, 0.85f, 1f);
         Color hoverColor  = new Color(0.6f, 0.45f, 0.75f, 1f);
 
-        drawRegions(regionColor);
+        drawRegions(regionColor, selectedRegion, hoveredRegion);
 
-        if (hoveredRegion != null) {
+        if (selectedRegion != null) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(hoverColor);
+            drawRegion(selectedRegion, selectedRegion.vertices);
+            shapeRenderer.end();
+        }
+
+        if (hoveredRegion != null && hoveredRegion != selectedRegion) {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(hoverColor);
             drawRegion(hoveredRegion, hoveredRegion.vertices);
@@ -1242,11 +1249,15 @@ public class MapScreen implements Screen {
         }
     }
 
-    private void drawRegions(Color color) {
+    private void drawRegions(Color color, Region excludeRegion1, Region excludeRegion2) {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(color);
 
         for (Region region : regions) {
+            // Skip selected and hovered regions (they will be drawn separately)
+            if (region == excludeRegion1 || region == excludeRegion2) {
+                continue;
+            }
             drawRegion(region, region.vertices);
         }
 
