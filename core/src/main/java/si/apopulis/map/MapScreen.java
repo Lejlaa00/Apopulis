@@ -133,7 +133,7 @@ public class MapScreen implements Screen {
     private boolean isFetchingNewsItems = false;
 
     private ObjectMap<String, Vector2> newsDotCache = new ObjectMap<>();
-    private Array<Vector2> selectedNewsDots = new Array<>();
+    private Array<NewsPin> selectedNewsPins = new Array<>();
 
     private List<Marker> markers;
     private SpriteBatch batch;
@@ -382,15 +382,34 @@ public class MapScreen implements Screen {
     }
 
     private void rebuildNewsDotsForSelectedRegion() {
-        selectedNewsDots.clear();
+        selectedNewsPins.clear();
 
-        if (selectedRegion == null || displayedNews == null || displayedNews.size == 0) {
+        if (selectedRegion == null) {
             return;
         }
 
+        if (displayedNews == null || displayedNews.size == 0) {
+            System.out.println("DOTS DEBUG: displayedNews is empty for region=" + selectedRegion.id);
+            return;
+        }
+
+        Array<NewsItem> filteredNews = new Array<>();
         for (NewsItem item : displayedNews) {
             if (item == null) continue;
 
+            if (selectedCategory.equals("Splosno") ||
+                (item.getCategory() != null && item.getCategory().getName() != null &&
+                    item.getCategory().getName().equals(selectedCategory))) {
+                filteredNews.add(item);
+            }
+        }
+
+        if (filteredNews.size == 0) {
+            System.out.println("DOTS DEBUG: No news items after category filter for region=" + selectedRegion.id + ", category=" + selectedCategory);
+            return;
+        }
+
+        for (NewsItem item : filteredNews) {
             String cacheKey = item.getId() + "_" + selectedRegion.id;
 
             Vector2 pos = newsDotCache.get(cacheKey);
@@ -399,10 +418,10 @@ public class MapScreen implements Screen {
                 newsDotCache.put(cacheKey, pos);
             }
 
-            selectedNewsDots.add(pos);
+            selectedNewsPins.add(new NewsPin(pos, item));
         }
 
-        System.out.println("DOTS DEBUG: built " + selectedNewsDots.size + " dots for region=" + selectedRegion.id);
+        System.out.println("DOTS DEBUG: built " + selectedNewsPins.size + " pins for region=" + selectedRegion.id + ", category=" + selectedCategory + ", from " + filteredNews.size + " filtered items");
     }
 
     private Vector2 generateDeterministicPointInRegion(Region region, String seedKey) {
@@ -427,18 +446,18 @@ public class MapScreen implements Screen {
 
     private void drawSelectedRegionNewsPins() {
         if (batch == null) return;
-        if (selectedRegion == null || selectedNewsDots.size == 0) return;
+        if (selectedRegion == null || selectedNewsPins.size == 0) return;
         if (pinRegion == null) return;
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        float w = PIN_BASE_W ;
-        float h = PIN_BASE_H ;
+        float w = PIN_BASE_W;
+        float h = PIN_BASE_H;
 
-        for (Vector2 p : selectedNewsDots) {
-            float drawX = p.x - w * 0.5f;
-            float drawY = p.y;
+        for (NewsPin pin : selectedNewsPins) {
+            float drawX = pin.position.x - w * 0.5f;
+            float drawY = pin.position.y;
 
             batch.draw(pinRegion, drawX, drawY, w, h);
         }
@@ -947,6 +966,9 @@ public class MapScreen implements Screen {
                 selectedCategory = category;
                 fetchNewsItems(category);
                 rebuildCategoryChips();
+                if (selectedRegion != null) {
+                    rebuildNewsDotsForSelectedRegion();
+                }
             }
         });
 
@@ -1283,18 +1305,26 @@ public class MapScreen implements Screen {
             uiHit = (uiStage.hit(touchX, (int)stageY, true) != null);
         }
 
-        if (Gdx.input.justTouched() && hoveredRegion != null && !uiHit) {
-            selectedRegion = hoveredRegion;
-            System.out.println("Clicked region: " + selectedRegion.id);
+        if (Gdx.input.justTouched() && !uiHit) {
+            NewsPin clickedPin = findClickedPin(mousePos);
+            if (clickedPin != null) {
+                openNewsDetailScreen(clickedPin.newsItem);
+                return;
+            }
 
-            smoothZoomToRegion(selectedRegion);
+            if (hoveredRegion != null) {
+                selectedRegion = hoveredRegion;
+                System.out.println("Clicked region: " + selectedRegion.id);
 
-            displayedNews = filterNewsForRegion(selectedRegion);
-            rebuildNewsDotsForSelectedRegion();
-            updateNewsCards();
+                smoothZoomToRegion(selectedRegion);
 
-            if (!isPanelOpen) {
-                toggleSidePanel();
+                displayedNews = filterNewsForRegion(selectedRegion);
+                rebuildNewsDotsForSelectedRegion();
+                updateNewsCards();
+
+                if (!isPanelOpen) {
+                    toggleSidePanel();
+                }
             }
         }
 
@@ -1478,5 +1508,37 @@ public class MapScreen implements Screen {
             zoomAtPoint(Gdx.input.getX(), Gdx.input.getY(), zoomDelta);
             return true;
         }
+    }
+
+    private static class NewsPin {
+        final Vector2 position;
+        final NewsItem newsItem;
+
+        NewsPin(Vector2 position, NewsItem newsItem) {
+            this.position = position;
+            this.newsItem = newsItem;
+        }
+    }
+
+    private NewsPin findClickedPin(Vector3 worldPos) {
+        if (selectedNewsPins.size == 0) return null;
+
+        float clickX = worldPos.x;
+        float clickY = worldPos.y;
+        float pinHalfWidth = PIN_BASE_W * 0.5f;
+        float pinHeight = PIN_BASE_H;
+        float clickRadius = Math.max(pinHalfWidth, pinHeight * 0.5f) * 1.5f;
+
+        for (NewsPin pin : selectedNewsPins) {
+            float dx = clickX - pin.position.x;
+            float dy = clickY - pin.position.y;
+            float distanceSq = dx * dx + dy * dy;
+
+            if (distanceSq <= clickRadius * clickRadius) {
+                return pin;
+            }
+        }
+
+        return null;
     }
 }

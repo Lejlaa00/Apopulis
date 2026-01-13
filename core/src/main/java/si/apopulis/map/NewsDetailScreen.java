@@ -18,6 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import si.apopulis.map.assets.AssetDescriptors;
@@ -58,7 +59,9 @@ public class NewsDetailScreen implements Screen {
         Table root = new Table();
         root.setFillParent(true);
         root.setBackground(bg(new Color(0.10f, 0.10f, 0.11f, 1f)));
+        root.setColor(1f, 1f, 1f, 0f);
         stage.addActor(root);
+        root.addAction(Actions.fadeIn(0.4f));
 
         Table header = new Table();
         header.setBackground(bg(new Color(0.12f, 0.12f, 0.13f, 1f)));
@@ -92,10 +95,10 @@ public class NewsDetailScreen implements Screen {
 
         // CONTENT CARD
         float maxWidth = Math.min(900, Gdx.graphics.getWidth() - 64);
-        float paddingLeft = 20f;
-        float paddingRight = 48f;
-        float paddingTop = 32f;
-        float paddingBottom = 32f;
+        float paddingLeft = 24f;
+        float paddingRight = 24f;
+        float paddingTop = 20f;
+        float paddingBottom = 20f;
 
         Table content = new Table();
         content.top().left();
@@ -207,13 +210,20 @@ public class NewsDetailScreen implements Screen {
         card.setBackground(bg(new Color(0.15f, 0.15f, 0.16f, 1f)));
         card.add(scroll).expand().fill();
         card.pad(8);
+        card.setColor(1f, 1f, 1f, 0f);
+        card.setScale(0.96f);
 
         root.add(card)
             .expand()
             .fill()
             .padBottom(24)
-            .padLeft(100)
+            .padLeft(130)
             .padRight(100);
+
+        card.addAction(Actions.parallel(
+            Actions.fadeIn(0.45f),
+            Actions.scaleTo(1f, 1f, 0.45f)
+        ));
     }
 
     private String getBodyText() {
