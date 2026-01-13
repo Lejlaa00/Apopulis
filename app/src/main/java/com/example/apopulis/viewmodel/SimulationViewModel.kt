@@ -1,11 +1,13 @@
-package com.example.apopulis.simulation
+package com.example.apopulis.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.apopulis.R
+import com.example.apopulis.simulation.CommentSimulationManager
 import org.json.JSONObject
+import kotlinx.coroutines.launch
 
 data class RegionOption(val id: String, val name: String)
 
@@ -32,6 +34,12 @@ class Event<out T>(private val content: T) {
 
 class SimulationViewModel : ViewModel() {
      private val simManager = CommentSimulationManager()
+
+    private var candidateProvider: (() -> List<String>)? = null
+
+    private val _currentConfig = MutableLiveData<SimulationConfig?>()
+    val currentConfig: LiveData<SimulationConfig?> = _currentConfig
+
     // Region list
     private val _regions = MutableLiveData<List<RegionOption>>(emptyList())
     val regions: LiveData<List<RegionOption>> = _regions
@@ -43,10 +51,28 @@ class SimulationViewModel : ViewModel() {
     private val _isRunning = MutableLiveData(false)
     val isRunning: LiveData<Boolean> = _isRunning
 
+    private val _simulatedNewsIds = MutableLiveData<Set<String>>(emptySet())
+    val simulatedNewsIds: LiveData<Set<String>> = _simulatedNewsIds
+
     fun ensureRegionsLoaded(context: Context) {
         if (!_regions.value.isNullOrEmpty()) return
         _regions.value = loadRegionsFromRaw(context)
     }
+
+    //helpers
+    fun setCandidateProvider(provider: (() -> List<String>)?) {
+        candidateProvider = provider
+    }
+
+    fun getCandidates(): List<String> {
+        return candidateProvider?.invoke() ?: emptyList()
+    }
+
+    fun setCurrentConfig(config: SimulationConfig?) {
+        _currentConfig.value = config
+    }
+
+
 
     private fun loadRegionsFromRaw(context: Context): List<RegionOption> {
         val jsonText = context.resources.openRawResource(R.raw.sr_regions)
@@ -90,6 +116,7 @@ class SimulationViewModel : ViewModel() {
         if (simManager.isRunning()) return
 
         _isRunning.value = true
+        _currentConfig.value = config
 
         simManager.startRegionRandom(
             periodMinutes = config.periodMinutes,
@@ -98,6 +125,33 @@ class SimulationViewModel : ViewModel() {
             getCandidateNewsIds = getCandidateNewsIds,
             onEvent = { ev ->
                 android.util.Log.d("SIM", "event=$ev")
+
+                when (ev) {
+
+                    is CommentSimulationManager.Event.BurstStarted -> {
+                        // New burst - reset
+                        _simulatedNewsIds.postValue(emptySet())
+                    }
+
+                    is CommentSimulationManager.Event.CommentSent -> {
+                        val current = _simulatedNewsIds.value ?: emptySet()
+                        _simulatedNewsIds.postValue(current + ev.newsItemId)
+                    }
+
+                    is CommentSimulationManager.Event.BurstFinished -> {
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+                            kotlinx.coroutines.delay(4000)
+                            _simulatedNewsIds.postValue(emptySet())
+                        }
+                    }
+
+                    is CommentSimulationManager.Event.Stopped -> {
+                        _isRunning.postValue(false)
+                        _simulatedNewsIds.postValue(emptySet())
+                    }
+
+                    else -> Unit
+                }
             }
         )
     }
@@ -105,6 +159,7 @@ class SimulationViewModel : ViewModel() {
     fun requestStop() {
         simManager.stop()
         _isRunning.value = false
+        _simulatedNewsIds.value = emptySet()
     }
 
     override fun onCleared() {

@@ -35,6 +35,9 @@ class CommentSimulationManager {
             Log.d("SIM", "START simId=$simulationId every=${safePeriodMs}ms count=$safeComments")
             onEvent?.invoke(Event.Started(simulationId))
 
+            Log.d("SIM", "Waiting first period ${safePeriodMs}ms before first burst.")
+            delay(safePeriodMs)
+
             while (isActive) {
                 val pool = getCandidateNewsIds().distinct()
 

@@ -42,12 +42,14 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.maps.android.PolyUtil
 import android.content.res.Configuration
-import android.util.TypedValue
 import android.view.animation.AccelerateDecelerateInterpolator
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.navigation.fragment.findNavController
 import com.example.apopulis.repository.CategoryRepository
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.gms.maps.model.Circle
+import androidx.fragment.app.activityViewModels
+import com.example.apopulis.viewmodel.SimulationViewModel
 
 class MapFragment : Fragment(), OnMapReadyCallback {
 
@@ -57,6 +59,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     private lateinit var bottomSheetBinding: BottomSheetNewsBinding
 
     private lateinit var viewModel: MapViewModel
+
+    private val simVm: SimulationViewModel by activityViewModels()
     private lateinit var googleMap: GoogleMap
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     private lateinit var newsAdapter: NewsAdapter
@@ -70,8 +74,14 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     private var newsList: List<NewsItem> = emptyList()
     private val newsMarkers = mutableListOf<Marker>()
+
     // Map to store marker -> news item relationship
     private val markerToNewsMap = mutableMapOf<Marker, NewsItem>()
+    private val markerByNewsId = mutableMapOf<String, Marker>()
+    private val haloByNewsId = mutableMapOf<String, Circle>()
+    private val haloAnimatorByNewsId = mutableMapOf<String, android.animation.ValueAnimator>()
+    private val haloStopJobByNewsId = mutableMapOf<String, kotlinx.coroutines.Job>()
+
 
     // Cache for stable marker positions: key = "newsId_regionId" or "newsId_null"
     private val markerPositionCache = mutableMapOf<String, LatLng>()
@@ -90,6 +100,21 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     private val saturationRange = 0.65f..0.95f
     private val brightnessRange = 0.70f..0.95f
 
+    private val isPickerMode: Boolean by lazy {
+        arguments?.getBoolean(ARG_PICKER_MODE, false) == true
+    }
+
+    companion object {
+        private const val ARG_PICKER_MODE = "picker_mode"
+        private var introPlayedThisProcess = false
+
+        fun newPickerInstance(): MapFragment {
+            return MapFragment().apply {
+                arguments = Bundle().apply { putBoolean(ARG_PICKER_MODE, true) }
+            }
+        }
+    }
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -104,18 +129,37 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         super.onViewCreated(view, savedInstanceState)
 
         // Initialize bottom sheet binding
-        bottomSheetBinding = BottomSheetNewsBinding.bind(binding.bottomSheetContent.root)
+        if (!isPickerMode) {
+            bottomSheetBinding = BottomSheetNewsBinding.bind(binding.bottomSheetContent.root)
+        }
 
-        // Setup UI components
+
+        if (isPickerMode) {
+            binding.bottomSheet.visibility = View.GONE
+            binding.rvCategories.visibility = View.GONE
+            binding.fabCreatePost.visibility = View.GONE
+            binding.fabSimulation.visibility = View.GONE
+        }
+
         setupViewModel()
-        viewModel.loadCategories()
-        setupCategoryChips()
-        setupBottomSheet()
-        setupNewsRecyclerView()
-        setupFloatingActionButton()
 
-        binding.fabSimulation.setOnClickListener {
-            findNavController().navigate(R.id.action_mapFragment_to_simulationFragment)
+        if (!isPickerMode) {
+            viewModel.loadCategories()
+            setupCategoryChips()
+            setupBottomSheet()
+            setupNewsRecyclerView()
+            setupFloatingActionButton()
+        }
+
+
+        simVm.setCandidateProvider { getCandidateNewsIdsForSelectedRegion() }
+
+        if (!isPickerMode) {
+            binding.fabSimulation.setOnClickListener {
+                findNavController().navigate(R.id.action_mapFragment_to_simulationFragment)
+            }
+        } else {
+            binding.fabSimulation.visibility = View.GONE
         }
 
         val mapFragment = SupportMapFragment.newInstance()
@@ -124,6 +168,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             .commit()
 
         mapFragment.getMapAsync(this)
+        observeSimulatedPins()
     }
 
     private fun setupViewModel() {
@@ -139,19 +184,25 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         // Observe news data - update both markers and bottom sheet
         viewModel.news.observe(viewLifecycleOwner) { list ->
             newsList = list
-
             Log.e("PIN_DEBUG", "Observer received ${list.size} news")
 
-            // Update markers
-            if (isMapLoaded) {
-                redrawPins(googleMap.cameraPosition.zoom)
+            if (!isPickerMode) {
+                // Update markers
+                if (isMapLoaded) {
+                    redrawPins(googleMap.cameraPosition.zoom)
+                }
+                // Update bottom sheet
+                updateBottomSheetNews()
             }
-
-            // Update bottom sheet
-            updateBottomSheetNews()
         }
-        viewModel.loadNews()
-        viewModel.loadCategories()
+
+        if (!isPickerMode) {
+            viewModel.loadNews()
+            viewModel.loadCategories()
+        } else {
+            viewModel.loadNews()
+        }
+
     }
 
     private fun setupCategoryChips() {
@@ -161,7 +212,8 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
 
         binding.rvCategories.apply {
-            layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+            layoutManager =
+                LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
             adapter = categoryAdapter
         }
 
@@ -361,6 +413,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun updateBottomSheetNews() {
+        if (isPickerMode) return
         val filteredNews = newsList.filter { news ->
             if (selectedCategoryId != null) {
                 if (news.categoryId?._id != selectedCategoryId) {
@@ -400,7 +453,33 @@ class MapFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun getCandidateNewsIdsForSelectedRegion(): List<String> {
-        val feature = selectedFeature ?: return emptyList()
+
+        if (isPickerMode) {
+            val featureFromClick = selectedFeature
+            if (featureFromClick != null) {
+                return newsList.mapNotNull { news ->
+                    val loc = news.locationId ?: return@mapNotNull null
+                    if (loc.latitude == 0.0 && loc.longitude == 0.0) return@mapNotNull null
+
+                    val point = LatLng(loc.latitude, loc.longitude)
+                    if (isPointInsideFeature(point, featureFromClick)) news._id else null
+                }
+            }
+        }
+
+        val wantedId = simVm.selectedRegionId.value ?: return emptyList()
+        val layer = geoJsonLayer ?: return emptyList()
+
+        var featureById: GeoJsonFeature? = null
+        for (f in layer.features) {
+            val gf = f as? GeoJsonFeature ?: continue
+            if (gf.getProperty("SR_ID")?.toString() == wantedId) {
+                featureById = gf
+                break
+            }
+        }
+
+        val feature = featureById ?: return emptyList()
 
         return newsList.mapNotNull { news ->
             val loc = news.locationId ?: return@mapNotNull null
@@ -411,25 +490,33 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
+
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
 
         map.setOnMapLoadedCallback {
             isMapLoaded = true
             loadGeoJsonLayer()
-            showAllSlovenia()
+
+            val animateIntro = !isPickerMode && !introPlayedThisProcess
+            showAllSlovenia(animateIntro)
+
+            if (animateIntro) {
+                introPlayedThisProcess = true
+            }
         }
 
         googleMap.setOnCameraIdleListener {
             redrawPins(googleMap.cameraPosition.zoom)
         }
 
-        googleMap.setOnMarkerClickListener { marker ->
-            // Find the news item associated with this marker
-            markerToNewsMap[marker]?.let { newsItem ->
-                openNewsDetailDialog(newsItem)
+        if (!isPickerMode) {
+            googleMap.setOnMarkerClickListener { marker ->
+                markerToNewsMap[marker]?.let { newsItem ->
+                    openNewsDetailDialog(newsItem)
+                }
+                true
             }
-            true // Consume the event to prevent region click
         }
 
         viewModel.loadNews()
@@ -442,6 +529,15 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         newsMarkers.forEach { it.remove() }
         newsMarkers.clear()
         markerToNewsMap.clear()
+        markerByNewsId.clear()
+
+        haloByNewsId.values.forEach { it.remove() }
+        haloAnimatorByNewsId.values.forEach { it.cancel() }
+        haloAnimatorByNewsId.clear()
+
+        haloStopJobByNewsId.values.forEach { it.cancel() }
+        haloStopJobByNewsId.clear()
+        haloByNewsId.clear()
 
         val feature = selectedFeature
 
@@ -482,12 +578,89 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
             marker?.let {
                 newsMarkers.add(it)
-                markerToNewsMap[it] = news // Store marker -> news mapping
+                markerToNewsMap[it] = news
+                markerByNewsId[news._id] = it
+            }
+        }
+        updateHalos(simVm.simulatedNewsIds.value ?: emptySet())
+        Log.e("PIN_DEBUG", "DRAWN markers=${newsMarkers.size}")
+    }
+
+    private fun observeSimulatedPins() {
+        simVm.simulatedNewsIds.observe(viewLifecycleOwner) { ids ->
+            if (!isMapLoaded) return@observe
+
+            updateHalos(ids)
+        }
+    }
+
+    private fun updateHalos(ids: Set<String>) {
+        Log.e(
+            "HALO",
+            "updateHalos ids=${ids.size}, markers=${markerByNewsId.size}, halos=${haloByNewsId.size}"
+        )
+
+        haloByNewsId.keys.toList().forEach { id ->
+            val markerExists = markerByNewsId.containsKey(id)
+            if (!ids.contains(id) || !markerExists) {
+                haloByNewsId[id]?.remove()
+                haloByNewsId.remove(id)
             }
         }
 
-        Log.e("PIN_DEBUG", "DRAWN markers=${newsMarkers.size}")
+        ids.forEach { id ->
+            if (haloByNewsId.containsKey(id)) return@forEach
+
+            val marker = markerByNewsId[id] ?: return@forEach
+
+            val radiusMeters = when {
+                googleMap.cameraPosition.zoom < 8f -> 4000.0
+                googleMap.cameraPosition.zoom < 10f -> 2000.0
+                googleMap.cameraPosition.zoom < 12f -> 900.0
+                else -> 250.0
+            }
+
+            val circle = googleMap.addCircle(
+                com.google.android.gms.maps.model.CircleOptions()
+                    .center(marker.position)
+                    .radius(radiusMeters)
+                    .strokeWidth(10f)
+                    .strokeColor(0xFFFFC107.toInt())
+                    .fillColor(0x33FFC107.toInt())
+                    .zIndex(100f)
+            )
+
+            haloByNewsId[id] = circle
+
+            val anim = android.animation.ValueAnimator.ofInt(30, 180).apply {
+                duration = 350
+                repeatMode = android.animation.ValueAnimator.REVERSE
+                repeatCount = android.animation.ValueAnimator.INFINITE
+                addUpdateListener { va ->
+                    val a = va.animatedValue as Int
+
+                    circle.fillColor = (a shl 24) or 0x00FFC107
+                    circle.strokeColor = ((a + 60).coerceAtMost(255) shl 24) or 0x00FFC107
+                }
+            }
+            anim.start()
+            haloAnimatorByNewsId[id] = anim
+
+            // Stop
+            haloStopJobByNewsId[id]?.cancel()
+            haloStopJobByNewsId[id] = viewLifecycleOwner.lifecycleScope.launch {
+                kotlinx.coroutines.delay(5000L)
+                haloAnimatorByNewsId[id]?.cancel()
+                haloAnimatorByNewsId.remove(id)
+
+                haloByNewsId[id]?.remove()
+                haloByNewsId.remove(id)
+
+                haloStopJobByNewsId.remove(id)
+            }
+        }
     }
+
 
     private fun getStableMarkerPosition(
         news: NewsItem,
@@ -525,9 +698,11 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             is GeoJsonPolygon -> {
                 listOf(geometry.coordinates[0])
             }
+
             is GeoJsonMultiPolygon -> {
                 geometry.polygons.map { it.coordinates[0] }
             }
+
             else -> emptyList()
         }
 
@@ -631,13 +806,18 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                         }
 
                         setOnFeatureClickListener { feature: Feature ->
-                            val geoFeature = feature as? GeoJsonFeature ?: return@setOnFeatureClickListener
+                            val geoFeature =
+                                feature as? GeoJsonFeature ?: return@setOnFeatureClickListener
                             handleFeatureClick(geoFeature)
                         }
                     }
                 }
             } catch (e: OutOfMemoryError) {
-                android.util.Log.e("MapFragment", "Out of memory loading GeoJSON. Consider simplifying the file.", e)
+                android.util.Log.e(
+                    "MapFragment",
+                    "Out of memory loading GeoJSON. Consider simplifying the file.",
+                    e
+                )
             } catch (e: Exception) {
                 android.util.Log.e("MapFragment", "Error loading GeoJSON layer", e)
                 e.printStackTrace()
@@ -647,9 +827,32 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     private fun handleFeatureClick(feature: GeoJsonFeature) {
 
+
+        if (isPickerMode && (simVm.isRunning.value == true)) {
+            Toast.makeText(
+                requireContext(),
+                "Simulation is running — region selection locked.",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        if (isPickerMode) {
+            val regionId = feature.getProperty("SR_ID")?.toString()
+            if (!regionId.isNullOrBlank()) {
+                simVm.setSelectedRegion(regionId)
+            }
+
+            selectedFeature?.let { resetStyle(it) }
+            selectedFeature = feature
+            highlightFeature(feature)
+
+            return
+        }
+
+        // Normal mode
         if (selectedFeature === feature) {
             deselectRegion()
-            showAllSlovenia()
+            showAllSlovenia(animate = !isPickerMode)
             return
         }
 
@@ -658,25 +861,26 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         selectedFeature = feature
         highlightFeature(feature)
 
-        // Update bottom sheet to show only news from selected region
         updateBottomSheetNews()
 
         lifecycleScope.launch {
-            val bounds = withContext(Dispatchers.Default) {
-                calculateBounds(feature)
-            }
-
+            val bounds = withContext(Dispatchers.Default) { calculateBounds(feature) }
             if (bounds != null) {
                 withContext(Dispatchers.Main) {
                     if (isMapLoaded) {
                         try {
                             googleMap.animateCamera(
-                                CameraUpdateFactory.newLatLngBounds(bounds, 120)
+                                CameraUpdateFactory.newLatLngBounds(
+                                    bounds,
+                                    120
+                                )
                             )
                         } catch (e: IllegalStateException) {
-                            // fallback — SIGURAN
                             googleMap.moveCamera(
-                                CameraUpdateFactory.newLatLngZoom(bounds.center, 8f)
+                                CameraUpdateFactory.newLatLngZoom(
+                                    bounds.center,
+                                    8f
+                                )
                             )
                         }
                     }
@@ -870,16 +1074,18 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    private fun showAllSlovenia() {
+    private fun showAllSlovenia(animate: Boolean) {
         if (!isMapLoaded) return
 
         val center = LatLng(46.1512, 14.9955)
-        googleMap?.animateCamera(
-            CameraUpdateFactory.newLatLngZoom(center, 7f)
-        )
-    }
+        val update = CameraUpdateFactory.newLatLngZoom(center, 7f)
 
-    fun getSelectedRegionId(): String? = selectedRegionId
+        if (!animate) {
+            googleMap.moveCamera(update)
+        } else {
+            googleMap.animateCamera(update)
+        }
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()
