@@ -1,0 +1,30 @@
+const { verifyToken } = require('../utils/auth');
+
+const optionalAuthMiddleware = (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+
+    // nema headera - guest
+    if (!authHeader?.startsWith('Bearer ')) {
+      req.user = null;
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = verifyToken(token);
+
+    // ima header ali token nije validan - guest
+    if (!decoded) {
+      req.user = null;
+      return next();
+    }
+
+    req.user = decoded;
+    return next();
+  } catch (error) {
+    req.user = null;
+    return next();
+  }
+};
+
+module.exports = optionalAuthMiddleware;

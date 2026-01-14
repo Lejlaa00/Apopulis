@@ -23,7 +23,11 @@ const healthRoutes = require('./routes/healthRoutes');
 const mlRoutes = require('./routes/mlRoutes');
 
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log("MongoDB connected"))
+    .then(() => {
+        console.log("MongoDB connected");
+        console.log("DB:", mongoose.connection.name);
+        console.log("Host:", mongoose.connection.host);
+    })
     .catch(err => console.error("MongoDB connection error:", err));
 
 // CORS configuration

@@ -54,15 +54,30 @@ exports.createComment = async (req, res) => {
   try {
     const { content, parentCommentId, isSimulated, simulationId } = req.body;
     const { newsItemId } = req.params;
-    const userId = req.user.id;
 
-    console.log("Incoming comment:", { content, parentCommentId, isSimulated, simulationId, newsItemId, userId });
+    const hasUser = !!req.user;
+    const userId = hasUser ? req.user.id : null;
 
+    if (!content || !content.trim()) {
+      return res.status(400).json({ msg: 'Content is required' });
+    }
 
+    // Ako nije ulogovan: dozvoli samo simulated top-level komentar
+    if (!hasUser) {
+      if (!isSimulated) {
+        return res.status(401).json({ msg: 'Authentication required for non-simulated comments.' });
+      }
+      if (parentCommentId) {
+        return res.status(400).json({ msg: 'Simulated comments cannot be replies.' });
+      }
+    }
+
+    // (ovo može ostati, i dalje štiti web app)
     if (isSimulated && parentCommentId) {
       return res.status(400).json({ msg: 'Simulated comments cannot be replies.' });
     }
 
+    // Validacija parent-a ostaje, ali će se aktivirati samo za web app (ulogovani)
     if (parentCommentId) {
       const mongoose = require('mongoose');
       if (!mongoose.Types.ObjectId.isValid(parentCommentId)) {
@@ -78,32 +93,31 @@ exports.createComment = async (req, res) => {
     const comment = new Comment({
       userId,
       newsItemId,
-      content,
+      content: content.trim(),
       parentCommentId: parentCommentId || null,
       isSimulated: !!isSimulated,
-      simulationId: simulationId || null
+      simulationId: simulationId || (hasUser ? null : 'MAP')
     });
 
-    await comment.save(); 
+    await comment.save();
 
-    console.log("Saved comment _id:", comment._id);
-    const check = await Comment.findById(comment._id).lean();
-    console.log("DB check:", check);
-
-    const newsItem = await NewsItem.findById(newsItemId);
-    if (newsItem && !newsItem.commentedBy.includes(userId)) {
-      newsItem.commentedBy.push(userId);
-      await newsItem.save();
+    // samo za prave korisnike vodi metrics u commentedBy
+    if (hasUser) {
+      const newsItem = await NewsItem.findById(newsItemId);
+      if (newsItem && !newsItem.commentedBy.includes(userId)) {
+        newsItem.commentedBy.push(userId);
+        await newsItem.save();
+      }
     }
 
     await updateNewsMetrics(newsItemId);
 
     const populatedComment = await Comment.findById(comment._id).populate('userId', 'username');
-    res.status(201).json(populatedComment);
+    return res.status(201).json(populatedComment);
 
   } catch (err) {
     console.error(' Error creating comment:', err);
-    res.status(500).json({ msg: 'Error creating comment', error: err.message });
+    return res.status(500).json({ msg: 'Error creating comment', error: err.message });
   }
 };
 
