@@ -7,7 +7,7 @@
 #include <iomanip>
 
 Block::Block(int idx, const std::string& blockData, const std::string& prevHash, int diff)
-    : index(idx), data(blockData), previousHash(prevHash), difficulty(diff), nonce(0) {
+    : index(idx), data(blockData), previousHash(prevHash), difficulty(diff), nonce(0), miningTime(0.0) {
     timestamp = std::time(nullptr);
     hash = "";
 }
@@ -62,7 +62,8 @@ std::string Block::toJson() const {
        << "\"previousHash\":\"" << previousHash << "\","
        << "\"difficulty\":" << difficulty << ","
        << "\"nonce\":" << nonce << ","
-       << "\"hash\":\"" << hash << "\""
+       << "\"hash\":\"" << hash << "\","
+       << "\"miningTime\":" << miningTime
        << "}";
     return ss.str();
 }
@@ -72,6 +73,7 @@ Block Block::fromJson(const std::string& json) {
     int idx = 0, diff = 0;
     time_t ts = 0;
     unsigned long long n = 0;
+    double mTime = 0.0;
     std::string blockData, prevHash, blockHash;
     
     // Extract values (simple parsing)
@@ -116,10 +118,16 @@ Block Block::fromJson(const std::string& json) {
         blockHash = json.substr(start, end - start);
     }
     
+    pos = json.find("\"miningTime\":");
+    if (pos != std::string::npos) {
+        sscanf(json.c_str() + pos + 13, "%lf", &mTime);
+    }
+    
     Block block(idx, blockData, prevHash, diff);
     block.timestamp = ts;
     block.nonce = n;
     block.hash = blockHash;
+    block.miningTime = mTime;
     return block;
 }
 

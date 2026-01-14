@@ -5,7 +5,7 @@
 
 class Blockchain {
 public:
-    static const int BLOCK_GENERATION_INTERVAL = 5; // seconds
+    static const int BLOCK_GENERATION_INTERVAL = 10; // seconds
     static const int DIFFICULTY_ADJUSTMENT_INTERVAL = 2; // blocks
     
     Blockchain();
@@ -30,6 +30,7 @@ public:
     
     // Get current difficulty
     int getDifficulty() const;
+    int getDifficulty(int mpiRank) const; // Version with rank for logging control
     
     // Calculate cumulative difficulty
     double getCumulativeDifficulty(const std::vector<Block>& chain) const;
@@ -44,7 +45,7 @@ private:
     std::vector<Block> chain;
     
     Block createGenesisBlock();
-    int calculateDifficulty() const;
+    int calculateDifficulty(bool enableLogging = true) const;
     bool isValidTimestamp(const Block& newBlock, const Block& previousBlock) const;
     bool hasValidHash(const Block& block) const;
 };

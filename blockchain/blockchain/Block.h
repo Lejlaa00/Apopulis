@@ -13,6 +13,7 @@ public:
     int difficulty;
     unsigned long long nonce;
     std::string hash;
+    double miningTime;  // Time in seconds it took to mine this block
 
     Block(int idx, const std::string& blockData, const std::string& prevHash, int diff);
     

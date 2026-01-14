@@ -2,15 +2,17 @@
 #include <iostream>
 #include <cmath>
 #include <ctime>
+#include <sstream>
 
 Blockchain::Blockchain() {
     chain.push_back(createGenesisBlock());
 }
 
 Block Blockchain::createGenesisBlock() {
-    Block genesis(0, "Genesis Block", "0", 0);
+    Block genesis(0, "Genesis Block", "0", 2); // Start with difficulty 2 for parallel mining
     genesis.timestamp = std::time(nullptr);
     genesis.hash = genesis.calculateHash();
+    genesis.miningTime = 0.0;  // Genesis block not mined
     return genesis;
 }
 
@@ -136,10 +138,14 @@ double Blockchain::getCumulativeDifficulty(const std::vector<Block>& chainToChec
 }
 
 int Blockchain::getDifficulty() const {
-    return calculateDifficulty();
+    return calculateDifficulty(false); // No logging for backward compatibility
 }
 
-int Blockchain::calculateDifficulty() const {
+int Blockchain::getDifficulty(int mpiRank) const {
+    return calculateDifficulty(mpiRank == 0); // Only log on rank 0
+}
+
+int Blockchain::calculateDifficulty(bool enableLogging) const {
     const Block& latestBlock = getLatestBlock();
     
     // If we haven't reached the adjustment interval, keep the same difficulty
@@ -150,46 +156,46 @@ int Blockchain::calculateDifficulty() const {
     // Get the adjustment block
     const Block& adjustmentBlock = chain[chain.size() - DIFFICULTY_ADJUSTMENT_INTERVAL];
     
-    // Calculate expected and actual time (cast to avoid overflow warning)
-    time_t expectedTime = static_cast<time_t>(BLOCK_GENERATION_INTERVAL) * static_cast<time_t>(DIFFICULTY_ADJUSTMENT_INTERVAL);
-    time_t actualTime = latestBlock.timestamp - adjustmentBlock.timestamp;
+    // Calculate expected and actual MINING time (not wall-clock time)
+    double expectedTime = static_cast<double>(BLOCK_GENERATION_INTERVAL) * static_cast<double>(DIFFICULTY_ADJUSTMENT_INTERVAL);
     
-    std::cout << "[DIFFICULTY] Adjustment - Expected: " << expectedTime 
-              << "s, Actual: " << actualTime << "s" << std::endl;
-    
-    // More aggressive adjustment for very fast blocks
-    if (actualTime < expectedTime / 4) {
-        int increase = 2;
-        std::cout << "[DIFFICULTY] VERY FAST! Increasing difficulty from " 
-                  << adjustmentBlock.difficulty << " to " << (adjustmentBlock.difficulty + increase) << std::endl;
-        return adjustmentBlock.difficulty + increase;
+    // Sum actual mining time for the last DIFFICULTY_ADJUSTMENT_INTERVAL blocks
+    double actualMiningTime = 0.0;
+    for (size_t i = chain.size() - DIFFICULTY_ADJUSTMENT_INTERVAL; i < chain.size(); i++) {
+        actualMiningTime += chain[i].miningTime;
     }
-    // Standard fast adjustment
-    else if (actualTime < expectedTime * 2 / 3) {
-        std::cout << "[DIFFICULTY] Too fast. Increasing difficulty from " 
-                  << adjustmentBlock.difficulty << " to " << (adjustmentBlock.difficulty + 1) << std::endl;
-        return adjustmentBlock.difficulty + 1;
+    
+    // Calculate adjustment factor
+    double timeFactor = actualMiningTime / expectedTime;
+    
+    int newDiff = adjustmentBlock.difficulty;
+    
+    // Adjust difficulty based on mining time (only ±1 at a time for smoother adjustment)
+    if (timeFactor < 0.5) {
+        // Mining was 2x faster than target - increase difficulty
+        newDiff = adjustmentBlock.difficulty + 1;
+        if (enableLogging) {
+            std::cout << "[DIFFICULTY] Mining too fast (" << actualMiningTime << "s vs " << expectedTime 
+                      << "s target). Increasing: " << adjustmentBlock.difficulty << " -> " << newDiff << std::endl;
+        }
     } 
-    // Very slow blocks
-    else if (actualTime > expectedTime * 4) {
-        int newDiff = adjustmentBlock.difficulty - 2;
-        if (newDiff < 0) newDiff = 0;
-        std::cout << "[DIFFICULTY] VERY SLOW! Decreasing difficulty from " 
-                  << adjustmentBlock.difficulty << " to " << newDiff << std::endl;
-        return newDiff;
+    else if (timeFactor > 2.0) {
+        // Mining was 2x slower than target - decrease difficulty
+        newDiff = adjustmentBlock.difficulty - 1;
+        if (newDiff < 1) newDiff = 1; // Minimum difficulty of 1
+        if (enableLogging) {
+            std::cout << "[DIFFICULTY] Mining too slow (" << actualMiningTime << "s vs " << expectedTime 
+                      << "s target). Decreasing: " << adjustmentBlock.difficulty << " -> " << newDiff << std::endl;
+        }
     }
-    // Standard slow adjustment
-    else if (actualTime > expectedTime * 3 / 2) {
-        int newDiff = adjustmentBlock.difficulty - 1;
-        if (newDiff < 0) newDiff = 0;
-        std::cout << "[DIFFICULTY] Too slow. Decreasing difficulty from " 
-                  << adjustmentBlock.difficulty << " to " << newDiff << std::endl;
-        return newDiff;
+    else {
+        if (enableLogging) {
+            std::cout << "[DIFFICULTY] Mining time acceptable (" << actualMiningTime << "s vs " << expectedTime 
+                      << "s target). Keeping difficulty at " << adjustmentBlock.difficulty << std::endl;
+        }
     }
     
-    std::cout << "[DIFFICULTY] Block time is within acceptable range. Keeping difficulty at " 
-              << adjustmentBlock.difficulty << std::endl;
-    return adjustmentBlock.difficulty;
+    return newDiff;
 }
 
 std::string Blockchain::toJson() const {
