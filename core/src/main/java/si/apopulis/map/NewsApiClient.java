@@ -2,15 +2,19 @@ package si.apopulis.map;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Net;
-import com.badlogic.gdx.net.HttpRequestBuilder;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
+
+import si.apopulis.map.model.CommentItem;
+import si.apopulis.map.model.NewsItem;
 
 public class NewsApiClient {
     // You can change this to your production API URL
     private static final String API_BASE_URL = System.getProperty("api.base.url", "http://localhost:5001/api");
     private static final String PROVINCE_NEWS_STATS_ENDPOINT = "/provinces/stats/news";
+
+    private static final String COMMENTS_ENDPOINT = "/comments/news/";
     private static final String NEWS_ENDPOINT = "/news";
 
     public interface ProvinceNewsCallback {
@@ -23,6 +27,150 @@ public class NewsApiClient {
         void onFailure(Throwable error);
     }
 
+    public interface CommentsCallback {
+        void onSuccess(Array<CommentItem> comments);
+        void onFailure(Throwable error);
+    }
+
+    public interface CreateCommentCallback {
+        void onSuccess(CommentItem created);
+        void onFailure(Throwable error);
+    }
+
+    // Comments
+    public static void fetchCommentsForNews(String newsId, final CommentsCallback callback) {
+        String url = API_BASE_URL + COMMENTS_ENDPOINT + newsId;
+
+        Net.HttpRequest request = new Net.HttpRequest(Net.HttpMethods.GET);
+        request.setUrl(url);
+        request.setHeader("Content-Type", "application/json");
+
+        Gdx.net.sendHttpRequest(request, new Net.HttpResponseListener() {
+            @Override
+            public void handleHttpResponse(Net.HttpResponse httpResponse) {
+                try {
+                    String responseStr = httpResponse.getResultAsString();
+                    if (responseStr == null || responseStr.isEmpty()) {
+                        Gdx.app.postRunnable(() -> callback.onFailure(new Exception("Empty response")));
+                        return;
+                    }
+                    Array<CommentItem> comments = parseComments(responseStr);
+                    Gdx.app.postRunnable(() -> callback.onSuccess(comments));
+                } catch (Exception e) {
+                    Gdx.app.error("NewsApiClient", "Error parsing comments response", e);
+                    Gdx.app.postRunnable(() -> callback.onFailure(e));
+                }
+            }
+
+            @Override public void failed(Throwable t) {
+                Gdx.app.error("NewsApiClient", "Comments request failed", t);
+                Gdx.app.postRunnable(() -> callback.onFailure(t));
+            }
+
+            @Override public void cancelled() {
+                Gdx.app.log("NewsApiClient", "Comments request cancelled");
+                Gdx.app.postRunnable(() -> callback.onFailure(new Exception("Request cancelled")));
+            }
+        });
+    }
+
+    public static void createGuestComment(String newsId, String content, final CreateCommentCallback callback) {
+        String url = API_BASE_URL + COMMENTS_ENDPOINT + newsId;
+
+        // Minimalni payload: content + isSimulated + simulationId
+        String safeContent = content == null ? "" : content.replace("\\", "\\\\").replace("\"", "\\\"");
+        String jsonBody = "{"
+            + "\"content\":\"" + safeContent + "\","
+            + "\"isSimulated\":true,"
+            + "\"simulationId\":\"MAP\""
+            + "}";
+
+        Net.HttpRequest request = new Net.HttpRequest(Net.HttpMethods.POST);
+        request.setUrl(url);
+        request.setHeader("Content-Type", "application/json");
+        request.setContent(jsonBody);
+
+        Gdx.net.sendHttpRequest(request, new Net.HttpResponseListener() {
+            @Override
+            public void handleHttpResponse(Net.HttpResponse httpResponse) {
+                try {
+                    int status = httpResponse.getStatus().getStatusCode();
+                    String responseStr = httpResponse.getResultAsString();
+
+                    if (status < 200 || status >= 300) {
+                        Gdx.app.postRunnable(() ->
+                            callback.onFailure(new Exception("HTTP " + status + ": " + responseStr))
+                        );
+                        return;
+                    }
+
+                    if (responseStr == null || responseStr.isEmpty()) {
+                        Gdx.app.postRunnable(() -> callback.onFailure(new Exception("Empty response")));
+                        return;
+                    }
+
+                    CommentItem created = parseSingleComment(responseStr);
+                    Gdx.app.postRunnable(() -> callback.onSuccess(created));
+
+                } catch (Exception e) {
+                    Gdx.app.error("NewsApiClient", "Error creating comment", e);
+                    Gdx.app.postRunnable(() -> callback.onFailure(e));
+                }
+            }
+
+            @Override public void failed(Throwable t) {
+                Gdx.app.error("NewsApiClient", "Create comment failed", t);
+                Gdx.app.postRunnable(() -> callback.onFailure(t));
+            }
+
+            @Override public void cancelled() {
+                Gdx.app.postRunnable(() -> callback.onFailure(new Exception("Request cancelled")));
+            }
+        });
+    }
+
+
+    private static Array<CommentItem> parseComments(String jsonString) {
+        Array<CommentItem> comments = new Array<>();
+        JsonReader reader = new JsonReader();
+        JsonValue root = reader.parse(jsonString);
+
+        // Backend vraća: { comments: [...] }
+        JsonValue arr = root.has("comments") ? root.get("comments") : root;
+        if (arr == null || arr.size == 0) return comments;
+
+        for (JsonValue item : arr) {
+            if (item == null) continue;
+            comments.add(parseCommentObject(item));
+        }
+
+        return comments;
+    }
+
+    private static CommentItem parseSingleComment(String jsonString) {
+        JsonReader reader = new JsonReader();
+        JsonValue root = reader.parse(jsonString);
+        return parseCommentObject(root);
+    }
+
+    private static CommentItem parseCommentObject(JsonValue item) {
+        CommentItem c = new CommentItem();
+        c.setId(item.getString("_id", ""));
+        c.setContent(item.getString("content", ""));
+        c.setCreatedAt(item.getString("createdAt", ""));
+        c.setSimulated(item.getBoolean("isSimulated", false));
+
+        // userId može biti null ili object sa username
+        String username = "Guest";
+        if (item.has("userId") && item.get("userId") != null && item.get("userId").isObject()) {
+            username = item.get("userId").getString("username", "Guest");
+        }
+        c.setUsername(username);
+
+        return c;
+    }
+
+    // News
     public static void fetchProvinceNewsStats(int hours, final ProvinceNewsCallback callback) {
         String url = API_BASE_URL + PROVINCE_NEWS_STATS_ENDPOINT + "?hours=" + hours;
 

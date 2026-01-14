@@ -32,20 +32,22 @@ import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Container;
-import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+
 import si.apopulis.map.assets.AssetDescriptors;
 import si.apopulis.map.assets.RegionNames;
+import si.apopulis.map.model.Marker;
+import si.apopulis.map.model.NewsItem;
+import si.apopulis.map.model.Region;
+
 import java.util.List;
 import com.badlogic.gdx.math.Vector2;
 import java.util.Random;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Vector2;
 
 public class MapScreen implements Screen {
 

@@ -20,9 +20,20 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.graphics.g2d.NinePatch;
+import com.badlogic.gdx.graphics.g2d.NinePatch;
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
+
 import si.apopulis.map.assets.AssetDescriptors;
 import si.apopulis.map.assets.RegionNames;
+import si.apopulis.map.model.CommentItem;
+import si.apopulis.map.model.NewsItem;
+
 import com.badlogic.gdx.Net;
 import com.badlogic.gdx.net.HttpRequestBuilder;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
@@ -39,8 +50,12 @@ public class NewsDetailScreen implements Screen {
     private final AssetManager assetManager;
     private final NewsItem newsItem;
     private final Screen previousScreen;
-
+    private Table commentsTable;
+    private Label commentsStatusLabel;
+    private TextField commentInput;
+    private float commentsMaxWidth;
     private Stage stage;
+    private ScrollPane scrollPane;
 
     public NewsDetailScreen(AssetManager assetManager, NewsItem newsItem, Screen previousScreen) {
         this.assetManager = assetManager;
@@ -74,6 +89,11 @@ public class NewsDetailScreen implements Screen {
             @Override
             public void clicked(InputEvent event, float x, float y) {
 
+                if (newsItem.getId() == null || newsItem.getId().isEmpty()) {
+                    commentsStatusLabel.setText("Manjka ID novice.");
+                    return;
+                }
+
                 if (previousScreen instanceof MapScreen) {
                     ((MapScreen) previousScreen).resetSidePanelUI();
                 }
@@ -95,6 +115,7 @@ public class NewsDetailScreen implements Screen {
 
         // CONTENT CARD
         float maxWidth = Math.min(900, Gdx.graphics.getWidth() - 64);
+        commentsMaxWidth = maxWidth;
         float paddingLeft = 24f;
         float paddingRight = 24f;
         float paddingTop = 20f;
@@ -180,10 +201,83 @@ public class NewsDetailScreen implements Screen {
         body.setWrap(true);
         body.setAlignment(Align.left);
 
-        content.add(body)
-            .width(maxWidth)
-            .left();
+        content.add(body).width(maxWidth).left();
+        content.row();
 
+        // Comments
+        Label commentsTitle = new Label("Komentari", new Label.LabelStyle(uiFont, Color.WHITE));
+        content.add(commentsTitle).width(maxWidth).left().padTop(24).padBottom(10);
+        content.row();
+
+        Table dividerBeforeComments = new Table();
+        dividerBeforeComments.setBackground(bg(new Color(0.25f, 0.25f, 0.26f, 1f)));
+        content.add(dividerBeforeComments).width(maxWidth).height(1).padTop(18).padBottom(16);
+        content.row();
+
+        // Status
+        commentsStatusLabel = new Label("Učitavam...", new Label.LabelStyle(metaFont, metaColor));
+        content.add(commentsStatusLabel).width(maxWidth).left().padBottom(8);
+        content.row();
+
+        // Comments list
+        commentsTable = new Table();
+        commentsTable.left().top();
+        content.add(commentsTable).width(maxWidth).left();
+        content.row();
+
+        // Input and send
+        TextField.TextFieldStyle tfStyle = new TextField.TextFieldStyle();
+        tfStyle.font = metaFont;
+        tfStyle.fontColor = new Color(0.9f, 0.9f, 0.9f, 1f);
+        tfStyle.background = bg(new Color(0.18f, 0.18f, 0.19f, 1f));
+        tfStyle.cursor = bg(Color.WHITE);
+        tfStyle.selection = bg(new Color(0.3f, 0.3f, 0.35f, 1f));
+
+        commentInput = new TextField("", tfStyle);
+        commentInput.setMessageText("  Napiši komentar...");
+        commentInput.setMaxLength(200);
+        commentInput.setAlignment(Align.left);
+
+        TextButton.TextButtonStyle btnStyle = new TextButton.TextButtonStyle();
+        btnStyle.font = metaFont;
+        btnStyle.fontColor = Color.WHITE;
+        btnStyle.up = bg(new Color(0.55f, 0.35f, 0.80f, 1f));
+        btnStyle.down = bg(new Color(0.45f, 0.28f, 0.70f, 1f));
+
+        TextButton sendBtn = new TextButton("Pošalji", btnStyle);
+
+        sendBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                String txt = commentInput.getText();
+                if (txt == null || txt.trim().isEmpty()) {
+                    commentsStatusLabel.setText("Komentar ne sme biti prazan.");
+                    return;
+                }
+
+                commentsStatusLabel.setText("Pošiljam...");
+
+                NewsApiClient.createGuestComment(newsItem.getId(), txt.trim(), new NewsApiClient.CreateCommentCallback() {
+                    @Override
+                    public void onSuccess(CommentItem created) {
+                        commentInput.setText("");
+                        loadComments(); // refresh
+                    }
+
+                    @Override
+                    public void onFailure(Throwable error) {
+                        commentsStatusLabel.setText("Napaka pri pošiljanju komentarja.");
+                        Gdx.app.error("COMMENTS", "Create failed", error);
+                    }
+                });
+            }
+        });
+
+        Table inputRow = new Table();
+        inputRow.add(commentInput).width(maxWidth - 140).height(42).padRight(10);
+        inputRow.add(sendBtn).width(130).height(42);
+
+        content.add(inputRow).width(maxWidth).left().padTop(14);
         content.row();
 
         content.add().expandY().minHeight(40);
@@ -199,16 +293,16 @@ public class NewsDetailScreen implements Screen {
         contentWrapper.row();
         contentWrapper.add().expandY();
 
-        ScrollPane scroll = new ScrollPane(contentWrapper);
-        scroll.setFadeScrollBars(false);
-        scroll.setScrollingDisabled(true, false);
-        scroll.setOverscroll(false, false);
-        scroll.setClamp(true);
-        scroll.setFillParent(false);
+        scrollPane = new ScrollPane(contentWrapper);
+        scrollPane.setFadeScrollBars(false);
+        scrollPane.setScrollingDisabled(true, false);
+        scrollPane.setOverscroll(false, false);
+        scrollPane.setClamp(true);
+        scrollPane.setFillParent(false);
 
         Table card = new Table();
         card.setBackground(bg(new Color(0.15f, 0.15f, 0.16f, 1f)));
-        card.add(scroll).expand().fill();
+        card.add(scrollPane).expand().fill();
         card.pad(8);
         card.setColor(1f, 1f, 1f, 0f);
         card.setScale(0.96f);
@@ -224,6 +318,10 @@ public class NewsDetailScreen implements Screen {
             Actions.fadeIn(0.45f),
             Actions.scaleTo(1f, 1f, 0.45f)
         ));
+
+        loadComments();
+        stage.setScrollFocus(scrollPane);
+        stage.setKeyboardFocus(scrollPane);
     }
 
     private String getBodyText() {
@@ -297,9 +395,69 @@ public class NewsDetailScreen implements Screen {
             }
 
             @Override
-            public void cancelled() {}
+            public void cancelled() {
+            }
         });
     }
+
+    private void loadComments() {
+
+        if (newsItem.getId() == null || newsItem.getId().isEmpty()) {
+            commentsStatusLabel.setText("Manjka ID novice.");
+            return;
+        }
+        commentsStatusLabel.setText("Učitavam...");
+
+        NewsApiClient.fetchCommentsForNews(newsItem.getId(), new NewsApiClient.CommentsCallback() {
+            @Override
+            public void onSuccess(Array<CommentItem> comments) {
+                renderComments(comments);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                commentsTable.clear();
+                commentsStatusLabel.setText("Napaka pri nalaganju komentarjev.");
+                Gdx.app.error("COMMENTS", "Load failed", error);
+            }
+        });
+    }
+
+    private void renderComments(Array<CommentItem> comments) {
+        commentsTable.clear();
+
+        if (comments == null || comments.size == 0) {
+            commentsStatusLabel.setText("Ni komentarjev.");
+            return;
+        }
+
+        commentsStatusLabel.setText("");
+
+        BitmapFont cFont = new BitmapFont(Gdx.files.internal("fonts/arial-32.fnt"));
+        cFont.getData().setScale(0.6f);
+
+        Label.LabelStyle userStyle = new Label.LabelStyle(cFont, new Color(0.55f, 0.35f, 0.80f, 1f));
+        Label.LabelStyle textStyle = new Label.LabelStyle(cFont, new Color(0.82f, 0.82f, 0.82f, 1f));
+
+        for (CommentItem c : comments) {
+            String user = (c.getUsername() == null || c.getUsername().isEmpty()) ? "Guest" : c.getUsername();
+
+            Label userLbl = new Label(user, userStyle);
+            Label textLbl = new Label(c.getContent() == null ? "" : c.getContent(), textStyle);
+            textLbl.setWrap(true);
+
+            Table one = new Table();
+            one.left().top();
+            one.add(userLbl).left().padBottom(4);
+            one.row();
+            one.add(textLbl).width(commentsMaxWidth).left().padBottom(12);
+
+            commentsTable.add(one).left().padBottom(8);
+            commentsTable.row();
+        }
+    }
+
+
 
 
     private TextureRegionDrawable bg(Color c) {
@@ -319,9 +477,25 @@ public class NewsDetailScreen implements Screen {
         stage.draw();
     }
 
-    @Override public void resize(int w, int h) { stage.getViewport().update(w, h, true); }
-    @Override public void pause() {}
-    @Override public void resume() {}
-    @Override public void hide() {}
-    @Override public void dispose() { stage.dispose(); }
+    @Override
+    public void resize(int w, int h) {
+        stage.getViewport().update(w, h, true);
+    }
+
+    @Override
+    public void pause() {
+    }
+
+    @Override
+    public void resume() {
+    }
+
+    @Override
+    public void hide() {
+    }
+
+    @Override
+    public void dispose() {
+        stage.dispose();
+    }
 }

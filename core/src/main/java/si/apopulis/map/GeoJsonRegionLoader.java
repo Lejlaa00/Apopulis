@@ -8,6 +8,8 @@ import com.badlogic.gdx.utils.JsonValue;
 import java.util.ArrayList;
 import java.util.List;
 
+import si.apopulis.map.model.Region;
+
 public class GeoJsonRegionLoader {
 
     // Transformation parameters for converting lat/lon to map coordinates

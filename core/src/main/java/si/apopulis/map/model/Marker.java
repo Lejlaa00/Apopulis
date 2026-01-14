@@ -1,4 +1,4 @@
-package si.apopulis.map;
+package si.apopulis.map.model;
 
 import com.badlogic.gdx.graphics.Color;
 

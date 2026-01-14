@@ -7,6 +7,8 @@ import com.badlogic.gdx.utils.JsonValue;
 import java.util.ArrayList;
 import java.util.List;
 
+import si.apopulis.map.model.Marker;
+
 public class GeoJsonMarkerLoader {
 
     public static List<Marker> loadMarkers(String geoJson) {
