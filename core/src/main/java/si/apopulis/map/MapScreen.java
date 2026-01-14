@@ -32,6 +32,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Container;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
@@ -148,7 +149,7 @@ public class MapScreen implements Screen {
     private Table categoryChipsTable;
     private ScrollPane categoryChipsScroll;
     private String activeChipCategory = "Splosno";
-
+    private Label regionTitleLabel;
 
     public MapScreen(AssetManager assetManager) {
         this.assetManager = assetManager;
@@ -244,6 +245,17 @@ public class MapScreen implements Screen {
             newsContentTable.clear();
             newsContentTable.top();
 
+            float cardWidth = panelWidth - 24;
+            BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
+
+            if (selectedRegion != null && regionTitleLabel != null) {
+                String regionName = getRegionDisplayName(selectedRegion.id);
+                regionTitleLabel.setText(regionName);
+                regionTitleLabel.setVisible(true);
+            } else if (regionTitleLabel != null) {
+                regionTitleLabel.setVisible(false);
+            }
+
             Array<NewsItem> sourceNews = (selectedRegion != null && displayedNews != null && displayedNews.size > 0)
                 ? displayedNews
                 : newsItems;
@@ -260,7 +272,6 @@ public class MapScreen implements Screen {
             }
 
             if (filteredNews.size == 0) {
-                BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
                 BitmapFont descFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
                 descFont.getData().setScale(0.82f);
                 Label.LabelStyle emptyStyle = new Label.LabelStyle(
@@ -291,14 +302,11 @@ public class MapScreen implements Screen {
             Color softWhite = new Color(0.88f, 0.88f, 0.88f, 1f);
             Color mutedWhite = new Color(0.75f, 0.75f, 0.75f, 1f);
 
-            BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
             Label.LabelStyle titleStyle = new Label.LabelStyle(uiFont, softWhite);
 
             BitmapFont descFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
             descFont.getData().setScale(0.82f);
             Label.LabelStyle descStyle = new Label.LabelStyle(descFont, mutedWhite);
-
-            float cardWidth = panelWidth - 24;
 
             for (int i = 0; i < filteredNews.size && i < 10; i++) {
                 NewsItem item = filteredNews.get(i);
@@ -651,6 +659,15 @@ public class MapScreen implements Screen {
         Table header = new Table();
         header.top().left();
         header.pad(12);
+
+        BitmapFont regionTitleFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
+        regionTitleFont.getData().setScale(1.1f);
+        Label.LabelStyle regionTitleStyle = new Label.LabelStyle(regionTitleFont, new Color(0.95f, 0.95f, 0.95f, 1f));
+        regionTitleLabel = new Label("", regionTitleStyle);
+        regionTitleLabel.setAlignment(Align.left);
+        regionTitleLabel.setVisible(false);
+
+        header.add(regionTitleLabel).left().padRight(8);
         header.add().expandX();
         header.add(exitButton).size(24, 24).right();
 
@@ -745,14 +762,34 @@ public class MapScreen implements Screen {
 
         cardWrapper.add(card).expand().fill();
 
-        cardWrapper.addListener(new ClickListener() {
+        com.badlogic.gdx.scenes.scene2d.utils.Drawable normalBg = createCardBackground();
+        com.badlogic.gdx.scenes.scene2d.utils.Drawable hoverBg = createCardHoverBackground();
+
+        Container<Table> cardContainer = new Container<>(cardWrapper);
+        cardContainer.fill();
+
+        cardContainer.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 openNewsDetailScreen(item);
             }
         });
 
-        container.add(cardWrapper).width(cardWidth).padBottom(8).left();
+        cardContainer.addListener(new InputListener() {
+            @Override
+            public void enter(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
+                card.clearActions();
+                card.setBackground(hoverBg);
+            }
+
+            @Override
+            public void exit(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor toActor) {
+                card.clearActions();
+                card.setBackground(normalBg);
+            }
+        });
+
+        container.add(cardContainer).width(cardWidth).padBottom(8).left();
         container.row();
     }
 
@@ -785,6 +822,24 @@ public class MapScreen implements Screen {
         return text;
     }
 
+    private String getRegionDisplayName(String regionId) {
+        if (regionId == null) return "";
+        switch (regionId) {
+            case "1": return "Pomurska";
+            case "2": return "Podravska";
+            case "3": return "Koroška";
+            case "4": return "Savinjska";
+            case "5": return "Zasavska";
+            case "6": return "Posavska";
+            case "7": return "Jugovzhodna";
+            case "8": return "Osrednjeslovenska";
+            case "9": return "Gorenjska";
+            case "10": return "Primorsko-notranjska";
+            case "11": return "Goriška";
+            case "12": return "Obalno-kraška";
+            default: return regionId;
+        }
+    }
 
     private void openNewsDetailScreen(NewsItem item) {
         com.badlogic.gdx.Game game =
@@ -822,6 +877,31 @@ public class MapScreen implements Screen {
 
         pixmap.fillRectangle(size - 1, 0, 1, size);
         pixmap.setColor(new Color(0.25f, 0.25f, 0.26f, 1f));
+
+        pixmap.fillRectangle(0, size - 1, size, 1);
+
+        com.badlogic.gdx.graphics.Texture texture = new com.badlogic.gdx.graphics.Texture(pixmap);
+        texture.setFilter(com.badlogic.gdx.graphics.Texture.TextureFilter.Linear, com.badlogic.gdx.graphics.Texture.TextureFilter.Linear);
+        pixmap.dispose();
+        return new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+            new com.badlogic.gdx.graphics.g2d.TextureRegion(texture)
+        );
+    }
+
+    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createCardHoverBackground() {
+        int size = 100;
+        Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+
+        pixmap.setColor(new Color(0.20f, 0.20f, 0.21f, 1f));
+        pixmap.fill();
+
+        pixmap.setColor(new Color(0.28f, 0.28f, 0.29f, 1f));
+        pixmap.fillRectangle(0, 0, size, 1);
+        pixmap.fillRectangle(0, 0, 1, size);
+        pixmap.setColor(new Color(0.28f, 0.28f, 0.29f, 1f));
+
+        pixmap.fillRectangle(size - 1, 0, 1, size);
+        pixmap.setColor(new Color(0.28f, 0.28f, 0.29f, 1f));
 
         pixmap.fillRectangle(0, size - 1, size, 1);
 
@@ -954,12 +1034,14 @@ public class MapScreen implements Screen {
 
         boolean active = category.equals(activeChipCategory);
 
-        chip.setBackground(
-            active
-                ? createActiveCategoryChipDrawable(atlas)
-                : createCategoryChipDrawable(atlas)
-        );
+        com.badlogic.gdx.scenes.scene2d.utils.Drawable normalBg = active
+            ? createActiveCategoryChipDrawable(atlas)
+            : createCategoryChipDrawable(atlas);
+        com.badlogic.gdx.scenes.scene2d.utils.Drawable hoverBg = active
+            ? createActiveCategoryChipHoverDrawable(atlas)
+            : createCategoryChipHoverDrawable(atlas);
 
+        chip.setBackground(normalBg);
 
         chip.addListener(new ClickListener() {
             @Override
@@ -971,6 +1053,20 @@ public class MapScreen implements Screen {
                 if (selectedRegion != null) {
                     rebuildNewsDotsForSelectedRegion();
                 }
+            }
+        });
+
+        chip.addListener(new InputListener() {
+            @Override
+            public void enter(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
+                chip.clearActions();
+                chip.setBackground(hoverBg);
+            }
+
+            @Override
+            public void exit(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor toActor) {
+                chip.clearActions();
+                chip.setBackground(normalBg);
             }
         });
 
@@ -987,6 +1083,18 @@ public class MapScreen implements Screen {
         return new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
         ).tint(new Color(1f, 1f, 1f, 0.6f));
+    }
+
+    private Drawable createCategoryChipHoverDrawable(TextureAtlas atlas) {
+        return new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(1f, 1f, 1f, 0.45f));
+    }
+
+    private Drawable createActiveCategoryChipHoverDrawable(TextureAtlas atlas) {
+        return new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(1f, 1f, 1f, 0.75f));
     }
 
     private void setupCategoryChips(BitmapFont font) {
@@ -1206,6 +1314,20 @@ public class MapScreen implements Screen {
         isAnimatingCamera = true;
         animationProgress = 0f;
     }
+
+    private void smoothZoomOutToDefault() {
+        startPosition.set(camera.position.x, camera.position.y);
+        startZoom = camera.zoom;
+
+        isTwoPhaseAnimation = false;
+        targetZoom = DEFAULT_ZOOM;
+        targetPosition.set((mapMinX + mapMaxX) * 0.5f, (mapMinY + mapMaxY) * 0.5f);
+
+        isAnimatingCamera = true;
+        animationProgress = 0f;
+        isRegionZoomed = false;
+    }
+
     private void updateCameraAnimation(float delta) {
         if (!isAnimatingCamera) return;
 
@@ -1315,17 +1437,30 @@ public class MapScreen implements Screen {
             }
 
             if (hoveredRegion != null) {
-                selectedRegion = hoveredRegion;
-                System.out.println("Clicked region: " + selectedRegion.id);
+                if (hoveredRegion == selectedRegion) {
+                    selectedRegion = null;
+                    displayedNews.clear();
+                    selectedNewsPins.clear();
+                    updateNewsCards();
 
-                smoothZoomToRegion(selectedRegion);
+                    smoothZoomOutToDefault();
 
-                displayedNews = filterNewsForRegion(selectedRegion);
-                rebuildNewsDotsForSelectedRegion();
-                updateNewsCards();
+                    if (isPanelOpen) {
+                        toggleSidePanel();
+                    }
+                } else {
+                    selectedRegion = hoveredRegion;
+                    System.out.println("Clicked region: " + selectedRegion.id);
 
-                if (!isPanelOpen) {
-                    toggleSidePanel();
+                    smoothZoomToRegion(selectedRegion);
+
+                    displayedNews = filterNewsForRegion(selectedRegion);
+                    rebuildNewsDotsForSelectedRegion();
+                    updateNewsCards();
+
+                    if (!isPanelOpen) {
+                        toggleSidePanel();
+                    }
                 }
             }
         }
