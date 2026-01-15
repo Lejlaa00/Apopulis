@@ -146,6 +146,22 @@ public class MapScreen implements Screen {
     private static final float PIN_BASE_W = 14f;
     private static final float PIN_BASE_H = 18f;
 
+    private static class AnimatedPin {
+        Marker marker;
+        Vector2 startPos = new Vector2();
+        Vector2 targetPos = new Vector2();
+        Vector2 currentPos = new Vector2();
+        float progress = 0f;
+        float delay = 0f;
+        float scale = 0.3f;
+        boolean isAnimating = true;
+    }
+
+    private Array<AnimatedPin> animatedCityPins = new Array<>();
+    private static final float PIN_ANIMATION_DURATION = 1.2f;
+    private static final float PIN_ANIMATION_DELAY_MAX = 0.8f;
+    private static final float PIN_OFFSET_DISTANCE = 300f;
+
     private Table categoryChipsTable;
     private ScrollPane categoryChipsScroll;
     private String activeChipCategory = "Splosno";
@@ -193,6 +209,8 @@ public class MapScreen implements Screen {
         clampCameraToMap();
 
         setupUI();
+
+        initializePinAnimations();
 
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
         inputMultiplexer.addProcessor(uiStage);
@@ -475,6 +493,91 @@ public class MapScreen implements Screen {
         batch.end();
     }
 
+    private void initializePinAnimations() {
+        animatedCityPins.clear();
+
+        if (markers == null) return;
+
+        Random rng = new Random();
+        int pinIndex = 0;
+
+        for (Marker m : markers) {
+            if (!"region".equals(m.level)) continue;
+
+            float[] map = GeoJsonRegionLoader.latLonToMapCoords(m.lat, m.lon);
+            float targetX = map[0];
+            float targetY = map[1];
+
+            AnimatedPin animPin = new AnimatedPin();
+            animPin.marker = m;
+            animPin.targetPos.set(targetX, targetY);
+            animPin.currentPos.set(targetX, targetY);
+
+            int directionIndex = pinIndex % 4;
+            animPin.delay = rng.nextFloat() * PIN_ANIMATION_DELAY_MAX;
+
+            float offsetX = 0f;
+            float offsetY = 0f;
+
+            switch (directionIndex) {
+                case 0:
+                    offsetY = PIN_OFFSET_DISTANCE;
+                    break;
+                case 1:
+                    offsetX = PIN_OFFSET_DISTANCE;
+                    break;
+                case 2:
+                    offsetY = -PIN_OFFSET_DISTANCE;
+                    break;
+                case 3:
+                    offsetX = -PIN_OFFSET_DISTANCE;
+                    break;
+            }
+
+            animPin.startPos.set(targetX + offsetX, targetY + offsetY);
+            animPin.currentPos.set(animPin.startPos);
+
+            animatedCityPins.add(animPin);
+            pinIndex++;
+        }
+    }
+
+    private void updatePinAnimations(float delta) {
+        if (animatedCityPins == null) return;
+
+        for (AnimatedPin animPin : animatedCityPins) {
+            if (!animPin.isAnimating) continue;
+
+            if (animPin.delay > 0f) {
+                animPin.delay -= delta;
+                continue;
+            }
+
+            animPin.progress += delta / PIN_ANIMATION_DURATION;
+
+            if (animPin.progress >= 1f) {
+                animPin.progress = 1f;
+                animPin.isAnimating = false;
+                animPin.currentPos.set(animPin.targetPos);
+                animPin.scale = 1f;
+            } else {
+                float t = Math.min(1f, animPin.progress);
+                
+                float easedT = 1f - (float)Math.pow(1f - t, 3f);
+
+                float deltaX = animPin.targetPos.x - animPin.startPos.x;
+                float deltaY = animPin.targetPos.y - animPin.startPos.y;
+                
+                animPin.currentPos.x = animPin.startPos.x + deltaX * easedT;
+                animPin.currentPos.y = animPin.startPos.y + deltaY * easedT;
+
+                float scaleStart = 0.3f;
+                float scaleTarget = 1f;
+                animPin.scale = scaleStart + (scaleTarget - scaleStart) * easedT;
+            }
+        }
+    }
+
     private void drawPPJMarkers() {
         if (markers == null || markers.isEmpty()) return;
         if (batch == null) return;
@@ -482,23 +585,41 @@ public class MapScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
+        ObjectMap<Marker, AnimatedPin> pinMap = new ObjectMap<>();
+        for (AnimatedPin animPin : animatedCityPins) {
+            pinMap.put(animPin.marker, animPin);
+        }
+
         for (Marker m : markers) {
-
-            float[] map = GeoJsonRegionLoader.latLonToMapCoords(m.lat, m.lon);
-            float x = map[0];
-            float y = map[1];
-
             boolean isPPJ = "region".equals(m.level);
+            AnimatedPin animPin = pinMap.get(m);
 
-            TextureRegion region = isPPJ ? ppjPinRegion : pinRegion;
+            if (isPPJ && animPin != null) {
+                float x = animPin.currentPos.x;
+                float y = animPin.currentPos.y;
 
-            float w = isPPJ ? PIN_BASE_W * 1.3f : PIN_BASE_W;
-            float h = isPPJ ? PIN_BASE_H * 1.3f : PIN_BASE_H;
+                TextureRegion region = ppjPinRegion;
+                float w = PIN_BASE_W * 1.3f * animPin.scale;
+                float h = PIN_BASE_H * 1.3f * animPin.scale;
 
-            float drawX = x - w * 0.5f;
-            float drawY = y;
+                float drawX = x - w * 0.5f;
+                float drawY = y;
 
-            batch.draw(region, drawX, drawY, w, h);
+                batch.draw(region, drawX, drawY, w, h);
+            } else if (!isPPJ) {
+                float[] map = GeoJsonRegionLoader.latLonToMapCoords(m.lat, m.lon);
+                float x = map[0];
+                float y = map[1];
+
+                TextureRegion region = pinRegion;
+                float w = PIN_BASE_W;
+                float h = PIN_BASE_H;
+
+                float drawX = x - w * 0.5f;
+                float drawY = y;
+
+                batch.draw(region, drawX, drawY, w, h);
+            }
         }
 
         batch.end();
@@ -1408,6 +1529,7 @@ public class MapScreen implements Screen {
         uiStage.act(delta);
 
         updateCameraAnimation(delta);
+        updatePinAnimations(delta);
 
         camera.update();
         shapeRenderer.setProjectionMatrix(camera.combined);
