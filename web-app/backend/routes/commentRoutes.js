@@ -4,7 +4,9 @@ const {
     getComments, 
     createComment, 
     updateComment, 
-    deleteComment 
+    deleteComment,
+    updateCommentMap,
+    deleteCommentMap
 } = require('../controllers/commentController');
 const authMiddleware = require('../middleware/authMiddleware');
 const optionalAuthMiddleware = require('../middleware/optionalAuthMiddleware');
@@ -14,6 +16,10 @@ router.get('/news/:newsItemId', getComments);
 
 // Create a new comment for a news item
 router.post('/news/:newsItemId', optionalAuthMiddleware, createComment);
+
+// MAP (guest/simulated) update/delete without auth, based on ownerKey
+router.put('/map/:id', updateCommentMap);
+router.delete('/map/:id', deleteCommentMap);
 
 // Update a comment
 router.put('/:id',authMiddleware, updateComment);

@@ -52,7 +52,7 @@ exports.getComments = async (req, res) => {
 
 exports.createComment = async (req, res) => {
   try {
-    const { content, parentCommentId, isSimulated, simulationId } = req.body;
+    const { content, parentCommentId, isSimulated, simulationId, ownerKey } = req.body;
     const { newsItemId } = req.params;
 
     const hasUser = !!req.user;
@@ -62,7 +62,6 @@ exports.createComment = async (req, res) => {
       return res.status(400).json({ msg: 'Content is required' });
     }
 
-    // Ako nije ulogovan: dozvoli samo simulated top-level komentar
     if (!hasUser) {
       if (!isSimulated) {
         return res.status(401).json({ msg: 'Authentication required for non-simulated comments.' });
@@ -72,12 +71,11 @@ exports.createComment = async (req, res) => {
       }
     }
 
-    // (ovo može ostati, i dalje štiti web app)
     if (isSimulated && parentCommentId) {
       return res.status(400).json({ msg: 'Simulated comments cannot be replies.' });
     }
 
-    // Validacija parent-a ostaje, ali će se aktivirati samo za web app (ulogovani)
+  
     if (parentCommentId) {
       const mongoose = require('mongoose');
       if (!mongoose.Types.ObjectId.isValid(parentCommentId)) {
@@ -96,12 +94,12 @@ exports.createComment = async (req, res) => {
       content: content.trim(),
       parentCommentId: parentCommentId || null,
       isSimulated: !!isSimulated,
-      simulationId: simulationId || (hasUser ? null : 'MAP')
+      simulationId: simulationId || (hasUser ? null : 'MAP'),
+      ownerKey: ownerKey || null
     });
 
     await comment.save();
 
-    // samo za prave korisnike vodi metrics u commentedBy
     if (hasUser) {
       const newsItem = await NewsItem.findById(newsItemId);
       if (newsItem && !newsItem.commentedBy.includes(userId)) {
@@ -185,4 +183,59 @@ exports.deleteComment = async (req, res) => {
         res.status(500).json({ msg: 'Error deleting comment', error: err.message });
     }
 };
+
+// MAP: Update simulated comment without auth, based on ownerKey
+exports.updateCommentMap = async (req, res) => {
+  try {
+    const { content, ownerKey } = req.body;
+    const { id } = req.params;
+
+    if (!ownerKey) return res.status(400).json({ msg: 'ownerKey is required' });
+    if (!content || !content.trim()) return res.status(400).json({ msg: 'content is required' });
+
+    const comment = await Comment.findById(id);
+    if (!comment) return res.status(404).json({ msg: 'Comment not found' });
+
+    // Only allow for simulated comments created from map (guest)
+    if (!comment.isSimulated) return res.status(403).json({ msg: 'Not allowed' });
+    if (!comment.ownerKey || comment.ownerKey !== ownerKey) return res.status(403).json({ msg: 'Not allowed' });
+
+    comment.content = content.trim();
+    await comment.save();
+
+    await updateNewsMetrics(comment.newsItemId);
+
+    const populated = await Comment.findById(comment._id).populate('userId', 'username');
+    res.json(populated);
+  } catch (err) {
+    console.error('Error updating map comment:', err);
+    res.status(500).json({ msg: 'Error updating comment', error: err.message });
+  }
+};
+
+// MAP: Delete simulated comment without auth, based on ownerKey
+exports.deleteCommentMap = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const ownerKey = req.query.ownerKey || (req.body && req.body.ownerKey);
+    if (!ownerKey) return res.status(400).json({ msg: 'ownerKey is required' });
+
+    const comment = await Comment.findById(id);
+    if (!comment) return res.status(404).json({ msg: 'Comment not found' });
+
+    if (!comment.isSimulated) return res.status(403).json({ msg: 'Not allowed' });
+    if (!comment.ownerKey || comment.ownerKey !== ownerKey) return res.status(403).json({ msg: 'Not allowed' });
+
+    await Comment.deleteOne({ _id: id });
+
+    await updateNewsMetrics(comment.newsItemId);
+
+    res.json({ msg: 'Comment deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting map comment:', err);
+    res.status(500).json({ msg: 'Error deleting comment', error: err.message });
+  }
+};
+
   
