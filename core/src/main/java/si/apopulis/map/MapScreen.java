@@ -1250,7 +1250,7 @@ public class MapScreen implements Screen {
         categoryChipsTable.clear();
 
         String[] categories = {
-            "Splosno", "Biznis", "Politika",
+            "Splošno", "Biznis", "Politika",
             "Kultura", "Lifestyle", "Gospodarstvo",
             "Tehnologija", "Vreme"
         };

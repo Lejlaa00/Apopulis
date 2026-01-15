@@ -56,6 +56,9 @@ public class NewsDetailScreen implements Screen {
     private float commentsMaxWidth;
     private Stage stage;
     private ScrollPane scrollPane;
+    private String editingCommentId = null;
+    private TextButton sendBtn;
+    private String myOwnerKey;
 
     public NewsDetailScreen(AssetManager assetManager, NewsItem newsItem, Screen previousScreen) {
         this.assetManager = assetManager;
@@ -67,6 +70,8 @@ public class NewsDetailScreen implements Screen {
     public void show() {
         stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
+
+        myOwnerKey = NewsApiClient.getLocalOwnerKey();
 
         BitmapFont uiFont = assetManager.get(AssetDescriptors.UI_FONT);
         TextureAtlas uiAtlas = assetManager.get(AssetDescriptors.UI_ATLAS);
@@ -88,11 +93,6 @@ public class NewsDetailScreen implements Screen {
         back.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-
-                if (newsItem.getId() == null || newsItem.getId().isEmpty()) {
-                    commentsStatusLabel.setText("Manjka ID novice.");
-                    return;
-                }
 
                 if (previousScreen instanceof MapScreen) {
                     ((MapScreen) previousScreen).resetSidePanelUI();
@@ -142,7 +142,7 @@ public class NewsDetailScreen implements Screen {
             addHeroImage(content, maxWidth, newsItem.getImageUrl());
         }
 
-        BitmapFont metaFont = new BitmapFont(Gdx.files.internal("fonts/arial-32.fnt"));
+        BitmapFont metaFont = new BitmapFont(Gdx.files.internal("fonts/font.fnt"));
         metaFont.getData().setScale(0.55f);
 
         Color metaColor = new Color(0.6f, 0.6f, 0.6f, 1f);
@@ -190,7 +190,7 @@ public class NewsDetailScreen implements Screen {
         content.row();
 
 
-        BitmapFont bodyFont = new BitmapFont(Gdx.files.internal("fonts/arial-32.fnt"));
+        BitmapFont bodyFont = new BitmapFont(Gdx.files.internal("fonts/font.fnt"));
         bodyFont.getData().setScale(0.65f);
 
         Label body = new Label(
@@ -244,7 +244,7 @@ public class NewsDetailScreen implements Screen {
         btnStyle.up = bg(new Color(0.55f, 0.35f, 0.80f, 1f));
         btnStyle.down = bg(new Color(0.45f, 0.28f, 0.70f, 1f));
 
-        TextButton sendBtn = new TextButton("Pošalji", btnStyle);
+        sendBtn = new TextButton("Pošalji", btnStyle);
 
         sendBtn.addListener(new ClickListener() {
             @Override
@@ -255,13 +255,37 @@ public class NewsDetailScreen implements Screen {
                     return;
                 }
 
+                // Edit mode
+                if (editingCommentId != null) {
+                    commentsStatusLabel.setText("Shranjujem...");
+
+                    NewsApiClient.updateMyComment(editingCommentId, txt.trim(), new NewsApiClient.UpdateCommentCallback() {
+                        @Override
+                        public void onSuccess(CommentItem updated) {
+                            editingCommentId = null;
+                            commentInput.setText("");
+                            sendBtn.setText("Pošalji");
+                            loadComments();
+                        }
+
+                        @Override
+                        public void onFailure(Throwable error) {
+                            commentsStatusLabel.setText("Napaka pri shranjevanju.");
+                            Gdx.app.error("COMMENTS", "Update failed", error);
+                        }
+                    });
+
+                    return;
+                }
+
+                // Create/Normal mode
                 commentsStatusLabel.setText("Pošiljam...");
 
                 NewsApiClient.createGuestComment(newsItem.getId(), txt.trim(), new NewsApiClient.CreateCommentCallback() {
                     @Override
                     public void onSuccess(CommentItem created) {
                         commentInput.setText("");
-                        loadComments(); // refresh
+                        loadComments();
                     }
 
                     @Override
@@ -433,7 +457,7 @@ public class NewsDetailScreen implements Screen {
 
         commentsStatusLabel.setText("");
 
-        BitmapFont cFont = new BitmapFont(Gdx.files.internal("fonts/arial-32.fnt"));
+        BitmapFont cFont = new BitmapFont(Gdx.files.internal("fonts/font.fnt"));
         cFont.getData().setScale(0.6f);
 
         Label.LabelStyle userStyle = new Label.LabelStyle(cFont, new Color(0.55f, 0.35f, 0.80f, 1f));
@@ -448,7 +472,50 @@ public class NewsDetailScreen implements Screen {
 
             Table one = new Table();
             one.left().top();
-            one.add(userLbl).left().padBottom(4);
+
+            Table topRow = new Table();
+            topRow.left();
+            topRow.add(userLbl).left().expandX();
+
+            boolean isMine = c.isSimulated()
+                && c.getOwnerKey() != null
+                && myOwnerKey != null
+                && c.getOwnerKey().equals(myOwnerKey);
+
+            if (isMine) {
+                TextButton.TextButtonStyle smallBtn = new TextButton.TextButtonStyle();
+                smallBtn.font = cFont;
+                smallBtn.fontColor = Color.WHITE;
+                smallBtn.up = bg(new Color(0.30f, 0.30f, 0.32f, 1f));
+                smallBtn.down = bg(new Color(0.22f, 0.22f, 0.24f, 1f));
+
+                TextButton editBtn = new TextButton("Uredi", smallBtn);
+                TextButton delBtn = new TextButton("Izbriši", smallBtn);
+
+                editBtn.addListener(new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        editingCommentId = c.getId();
+                        commentInput.setText(c.getContent() == null ? "" : c.getContent());
+                        sendBtn.setText("Sačuvaj");
+                        commentsStatusLabel.setText("Uređivanje komentara...");
+                        stage.setKeyboardFocus(commentInput);
+                        scrollPane.setScrollY(scrollPane.getMaxY());
+                    }
+                });
+
+                delBtn.addListener(new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        showDeleteConfirmDialog(c.getId());
+                    }
+                });
+
+                topRow.add(editBtn).padLeft(10).height(28);
+                topRow.add(delBtn).padLeft(6).height(28);
+            }
+
+            one.add(topRow).width(commentsMaxWidth).left().padBottom(4);
             one.row();
             one.add(textLbl).width(commentsMaxWidth).left().padBottom(12);
 
@@ -457,8 +524,90 @@ public class NewsDetailScreen implements Screen {
         }
     }
 
+    private void showDeleteConfirmDialog(String commentId) {
+        Table overlay = new Table();
+        overlay.setFillParent(true);
+        overlay.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
+        overlay.setBackground(bg(new Color(0f, 0f, 0f, 0.55f)));
 
+        // Card
+        Table card = new Table();
+        card.setBackground(bg(new Color(0.16f, 0.16f, 0.18f, 1f)));
+        card.pad(18);
 
+        BitmapFont font = new BitmapFont(Gdx.files.internal("fonts/font.fnt"));
+        font.getData().setScale(0.62f);
+
+        Label title = new Label("Ste prepričani?", new Label.LabelStyle(font, Color.WHITE));
+        Label msg = new Label("Ali želite izbrisati komentar?", new Label.LabelStyle(font, new Color(0.85f, 0.85f, 0.85f, 1f)));
+        msg.setWrap(true);
+
+        // Buttons
+        TextButton.TextButtonStyle cancelStyle = new TextButton.TextButtonStyle();
+        cancelStyle.font = font;
+        cancelStyle.fontColor = Color.WHITE;
+        cancelStyle.up = bg(new Color(0.30f, 0.30f, 0.32f, 1f));
+        cancelStyle.down = bg(new Color(0.22f, 0.22f, 0.24f, 1f));
+
+        TextButton.TextButtonStyle deleteStyle = new TextButton.TextButtonStyle();
+        deleteStyle.font = font;
+        deleteStyle.fontColor = Color.WHITE;
+        deleteStyle.up = bg(new Color(0.70f, 0.22f, 0.22f, 1f));
+        deleteStyle.down = bg(new Color(0.58f, 0.18f, 0.18f, 1f));
+
+        TextButton cancelBtn = new TextButton("Prekliči", cancelStyle);
+        TextButton deleteBtn = new TextButton("Izbriši", deleteStyle);
+
+        // Layout carda
+        card.add(title).left().padBottom(10);
+        card.row();
+        card.add(msg).width(Math.min(520, commentsMaxWidth)).left().padBottom(16);
+        card.row();
+
+        Table btnRow = new Table();
+        float btnW = 100f;
+        btnRow.add(cancelBtn).width(btnW).height(38).padRight(10);
+        btnRow.add(deleteBtn).width(btnW).height(38);
+
+        card.add(btnRow).right();
+        overlay.add(card).center();
+
+        cancelBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                overlay.remove();
+            }
+        });
+
+        deleteBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                overlay.remove();
+                commentsStatusLabel.setText("Brišem...");
+
+                NewsApiClient.deleteMyComment(commentId, new NewsApiClient.SimpleCallback() {
+                    @Override
+                    public void onSuccess() {
+                        if (editingCommentId != null && editingCommentId.equals(commentId)) {
+                            editingCommentId = null;
+                            commentInput.setText("");
+                            sendBtn.setText("Pošalji");
+                        }
+                        loadComments();
+                    }
+
+                    @Override
+                    public void onFailure(Throwable error) {
+                        commentsStatusLabel.setText("Napaka pri brisanju.");
+                        Gdx.app.error("COMMENTS", "Delete failed", error);
+                    }
+                });
+            }
+        });
+
+        stage.addActor(overlay);
+        stage.setKeyboardFocus(null);
+    }
 
     private TextureRegionDrawable bg(Color c) {
         Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
