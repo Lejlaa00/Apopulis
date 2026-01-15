@@ -6,6 +6,7 @@ public class CommentItem {
     private String createdAt;
     private String username;
     private boolean isSimulated;
+    private String ownerKey;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -21,4 +22,8 @@ public class CommentItem {
 
     public boolean isSimulated() { return isSimulated; }
     public void setSimulated(boolean simulated) { isSimulated = simulated; }
+
+    public String getOwnerKey() { return ownerKey; }
+    public void setOwnerKey(String ownerKey) { this.ownerKey = ownerKey; }
+
 }
