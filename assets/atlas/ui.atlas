@@ -11,6 +11,20 @@ btn_category
   orig: 460, 161
   offset: 0, 0
   index: -1
+btn_delete
+  rotate: false
+  xy: 1738, 556
+  size: 291, 377
+  orig: 291, 377
+  offset: 0, 0
+  index: -1
+btn_edit
+  rotate: false
+  xy: 1386, 590
+  size: 350, 343
+  orig: 350, 343
+  offset: 0, 0
+  index: -1
 btn_exit
   rotate: false
   xy: 1022, 565
@@ -20,7 +34,7 @@ btn_exit
   index: -1
 btn_menu
   rotate: false
-  xy: 1386, 615
+  xy: 1022, 245
   size: 365, 318
   orig: 365, 318
   offset: 0, 0
@@ -41,7 +55,7 @@ btn_plus
   index: -1
 btn_x
   rotate: false
-  xy: 1022, 229
+  xy: 1389, 254
   size: 341, 334
   orig: 341, 334
   offset: 0, 0

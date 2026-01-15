@@ -24,10 +24,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
-import com.badlogic.gdx.graphics.g2d.NinePatch;
-import com.badlogic.gdx.graphics.g2d.NinePatch;
-import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
-import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 
 import si.apopulis.map.assets.AssetDescriptors;
 import si.apopulis.map.assets.RegionNames;
@@ -59,6 +55,9 @@ public class NewsDetailScreen implements Screen {
     private String editingCommentId = null;
     private TextButton sendBtn;
     private String myOwnerKey;
+    private TextureRegion editRegion;
+    private TextureRegion delRegion;
+    private float iconBtnSize = 26f;
 
     public NewsDetailScreen(AssetManager assetManager, NewsItem newsItem, Screen previousScreen) {
         this.assetManager = assetManager;
@@ -86,6 +85,11 @@ public class NewsDetailScreen implements Screen {
         Table header = new Table();
         header.setBackground(bg(new Color(0.12f, 0.12f, 0.13f, 1f)));
         header.pad(16);
+
+        TextureAtlas atlas = assetManager.get(AssetDescriptors.UI_ATLAS);
+
+        editRegion = atlas.findRegion(RegionNames.BTN_EDIT);
+        delRegion  = atlas.findRegion(RegionNames.BTN_DELETE);
 
         ImageButton back = new ImageButton(
             new TextureRegionDrawable(uiAtlas.findRegion(RegionNames.BTN_X))
@@ -489,8 +493,15 @@ public class NewsDetailScreen implements Screen {
                 smallBtn.up = bg(new Color(0.30f, 0.30f, 0.32f, 1f));
                 smallBtn.down = bg(new Color(0.22f, 0.22f, 0.24f, 1f));
 
-                TextButton editBtn = new TextButton("Uredi", smallBtn);
-                TextButton delBtn = new TextButton("Izbriši", smallBtn);
+                ImageButton.ImageButtonStyle editStyle = new ImageButton.ImageButtonStyle();
+                editStyle.imageUp = new TextureRegionDrawable(editRegion);
+                editStyle.imageDown = new TextureRegionDrawable(editRegion);
+                ImageButton editBtn = new ImageButton(editStyle);
+
+                ImageButton.ImageButtonStyle delStyle = new ImageButton.ImageButtonStyle();
+                delStyle.imageUp = new TextureRegionDrawable(delRegion);
+                delStyle.imageDown = new TextureRegionDrawable(delRegion);
+                ImageButton delBtn = new ImageButton(delStyle);
 
                 editBtn.addListener(new ClickListener() {
                     @Override
@@ -511,8 +522,8 @@ public class NewsDetailScreen implements Screen {
                     }
                 });
 
-                topRow.add(editBtn).padLeft(10).height(28);
-                topRow.add(delBtn).padLeft(6).height(28);
+                topRow.add(editBtn).size(iconBtnSize).padLeft(10);
+                topRow.add(delBtn).size(iconBtnSize).padLeft(8);
             }
 
             one.add(topRow).width(commentsMaxWidth).left().padBottom(4);
