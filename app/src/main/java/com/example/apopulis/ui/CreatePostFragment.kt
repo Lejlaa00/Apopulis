@@ -16,8 +16,14 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import com.example.apopulis.MainActivity
 import com.example.apopulis.databinding.FragmentCreatePostBinding
 import com.example.apopulis.network.RetrofitInstance
+import com.example.apopulis.repository.CategoryRepository
+import com.example.apopulis.repository.NewsRepository
+import com.example.apopulis.viewmodel.MapViewModel
+import com.example.apopulis.viewmodel.MapViewModelFactory
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.*
@@ -38,18 +44,34 @@ class CreatePostFragment : Fragment() {
     private var selectedImageBitmap: Bitmap? = null
     private var hasSelectedImage: Boolean = false
     private val uiScope = CoroutineScope(Dispatchers.Main)
-    
+
+    // Shared MapViewModel to trigger news refresh after post creation
+    private val mapViewModel: MapViewModel? by lazy {
+        try {
+            val activity = requireActivity() as? MainActivity
+            val factory = activity?.mapViewModelFactory
+                ?: MapViewModelFactory(
+                    NewsRepository(RetrofitInstance.newsApi),
+                    CategoryRepository(RetrofitInstance.categoryApi)
+                )
+            ViewModelProvider(requireActivity(), factory).get(MapViewModel::class.java)
+        } catch (e: Exception) {
+            Log.e("CreatePost", "Failed to access MapViewModel", e)
+            null
+        }
+    }
+
     // GPS location
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var currentLatitude: Double? = null
     private var currentLongitude: Double? = null
-    
+
     // Location permission request
-    private val locationPermissionLauncher = 
+    private val locationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
             val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
-            
+
             if (fineLocationGranted || coarseLocationGranted) {
                 getCurrentLocation()
             } else {
@@ -93,11 +115,11 @@ class CreatePostFragment : Fragment() {
 
         // Initialize location services
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-        
+
         setupClicks()
         setupTextWatcher()
         updatePublishState()
-        
+
         // Request location permission and get current location
         requestLocationPermission()
     }
@@ -240,11 +262,11 @@ class CreatePostFragment : Fragment() {
                     val imageFile = prepareImageFile()
                     if (imageFile != null) {
                         val isFake = checkImageWithAI(imageFile)
-                        
+
                         if (isFake) {
                             binding.tvAiStatus.text = "⚠️ Potentially fake – review recommended"
                             binding.tvAiStatus.setTextColor(resources.getColor(android.R.color.holo_orange_dark, null))
-                            
+
                             // Show warning dialog
                             withContext(Dispatchers.Main) {
                                 showFakeImageWarningDialog {
@@ -261,10 +283,10 @@ class CreatePostFragment : Fragment() {
                         }
                     }
                 }
-                
+
                 // Proceed with publishing
                 publishPost(if (hasSelectedImage) prepareImageFile() else null)
-                
+
             } catch (e: Exception) {
                 Log.e("CreatePost", "Error during AI check", e)
                 withContext(Dispatchers.Main) {
@@ -281,9 +303,9 @@ class CreatePostFragment : Fragment() {
             try {
                 val requestBody = imageFile.asRequestBody("image/*".toMediaTypeOrNull())
                 val imagePart = MultipartBody.Part.createFormData("image", imageFile.name, requestBody)
-                
+
                 val response = RetrofitInstance.mlApi.predictImage(imagePart)
-                
+
                 if (response.isSuccessful) {
                     val result = response.body()
                     Log.d("CreatePost", "AI Result: ${result?.data?.prediction}, confidence: ${result?.data?.confidence}")
@@ -326,7 +348,7 @@ class CreatePostFragment : Fragment() {
             try {
                 val title = binding.etPostText.text.toString()
                 val content = binding.etPostText.text.toString()
-                
+
                 // Prepare request parts
                 val titleBody = title.toRequestBody("text/plain".toMediaTypeOrNull())
                 val contentBody = content.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -334,12 +356,12 @@ class CreatePostFragment : Fragment() {
                 val locationBody = "User Location".toRequestBody("text/plain".toMediaTypeOrNull())
                 val latitudeBody = currentLatitude.toString().toRequestBody("text/plain".toMediaTypeOrNull())
                 val longitudeBody = currentLongitude.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-                
+
                 val imagePart = imageFile?.let {
                     val requestBody = it.asRequestBody("image/*".toMediaTypeOrNull())
                     MultipartBody.Part.createFormData("image", it.name, requestBody)
                 }
-                
+
                 // Upload news
                 val response = RetrofitInstance.newsApi.uploadNewsWithImage(
                     titleBody,
@@ -350,14 +372,17 @@ class CreatePostFragment : Fragment() {
                     longitudeBody,
                     imagePart
                 )
-                
+
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
                         binding.tvAiStatus.text = "✅ Post published successfully!"
                         binding.tvAiStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
-                        
+
                         Toast.makeText(requireContext(), "News posted successfully!", Toast.LENGTH_LONG).show()
-                        
+
+                        // Refresh news list in MapFragment immediately
+                        mapViewModel?.loadNews()
+
                         // Clear form after successful post
                         delay(1500)
                         clearForm()
@@ -367,7 +392,7 @@ class CreatePostFragment : Fragment() {
                         updatePublishState()
                     }
                 }
-                
+
             } catch (e: Exception) {
                 Log.e("CreatePost", "Error publishing post", e)
                 withContext(Dispatchers.Main) {
@@ -378,13 +403,13 @@ class CreatePostFragment : Fragment() {
             }
         }
     }
-    
+
     private fun prepareImageFile(): File? {
         return try {
             val context = requireContext()
             val cacheDir = context.cacheDir
             val imageFile = File(cacheDir, "upload_image_${System.currentTimeMillis()}.jpg")
-            
+
             if (selectedImageBitmap != null) {
                 // Use bitmap from camera
                 val outputStream = FileOutputStream(imageFile)
@@ -401,21 +426,21 @@ class CreatePostFragment : Fragment() {
             } else {
                 return null
             }
-            
+
             imageFile
         } catch (e: Exception) {
             Log.e("CreatePost", "Error preparing image file", e)
             null
         }
     }
-    
+
     private fun clearForm() {
         binding.etPostText.text?.clear()
         removeImage()
         binding.tvAiStatus.visibility = View.GONE
         Toast.makeText(requireContext(), "Form cleared", Toast.LENGTH_SHORT).show()
     }
-    
+
     /* GPS LOCATION */
     private fun requestLocationPermission() {
         when {
@@ -435,12 +460,12 @@ class CreatePostFragment : Fragment() {
             }
         }
     }
-    
+
     private fun getCurrentLocation() {
         if (ActivityCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && 
+            ) != PackageManager.PERMISSION_GRANTED &&
             ActivityCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.ACCESS_COARSE_LOCATION
@@ -448,15 +473,15 @@ class CreatePostFragment : Fragment() {
         ) {
             return
         }
-        
+
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
                 currentLatitude = location.latitude
                 currentLongitude = location.longitude
                 Log.d("CreatePost", "Location obtained: $currentLatitude, $currentLongitude")
                 Toast.makeText(
-                    requireContext(), 
-                    "Location: ${String.format("%.4f", currentLatitude)}, ${String.format("%.4f", currentLongitude)}", 
+                    requireContext(),
+                    "Location: ${String.format("%.4f", currentLatitude)}, ${String.format("%.4f", currentLongitude)}",
                     Toast.LENGTH_SHORT
                 ).show()
             } else {

@@ -10,7 +10,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Category chips at the top -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/categoryChipsContainer"
         android:layout_width="match_parent"
@@ -62,7 +61,6 @@
         android:elevation="8dp"
         app:fabSize="normal" />
 
-    <!-- Floating Action Button for simulation settings -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabSimulation"
         android:layout_width="wrap_content"
@@ -74,6 +72,42 @@
         android:elevation="8dp"
         app:fabSize="normal"
         app:srcCompat="@android:drawable/ic_menu_manage" />
+
+    <LinearLayout
+        android:id="@+id/zoomControlsContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginLeft="16dp"
+        android:layout_marginBottom="150dp"
+        android:orientation="vertical"
+        android:elevation="8dp"
+        android:background="?android:attr/selectableItemBackground">
+
+        <ImageButton
+            android:id="@+id/btnZoomIn"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/btn_plus"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Zoom In"
+            android:padding="0dp"
+            android:layout_marginBottom="5dp"
+            android:scaleType="fitCenter"
+            android:elevation="4dp" />
+
+        <ImageButton
+            android:id="@+id/btnZoomOut"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/btn_minus"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Zoom Out"
+            android:padding="0dp"
+            android:scaleType="fitCenter"
+            android:elevation="4dp" />
+
+    </LinearLayout>
 
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

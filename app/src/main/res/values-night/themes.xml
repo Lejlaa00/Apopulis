@@ -16,6 +16,10 @@
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
 
+        <!-- Input fields focused color (cursor, underline, outline, accent) -->
+        <item name="colorControlActivated">@color/apopulis_purple</item>
+        <item name="colorAccent">@color/apopulis_purple</item>
+
     </style>
 
 
