@@ -120,7 +120,7 @@ public class MapScreen implements Screen {
     private Table bottomRightTable;
     private float zoomButtonsBaseX;
 
-    private String selectedCategory = "Splosno";
+    private String selectedCategory = "Splošno";
     private Table categoryChipsWrapper;
 
     private Array<ProvinceNewsMarker> newsMarkers;
@@ -164,7 +164,7 @@ public class MapScreen implements Screen {
 
     private Table categoryChipsTable;
     private ScrollPane categoryChipsScroll;
-    private String activeChipCategory = "Splosno";
+    private String activeChipCategory = "Splošno";
     private Label regionTitleLabel;
 
     public MapScreen(AssetManager assetManager) {
@@ -282,9 +282,9 @@ public class MapScreen implements Screen {
             for (NewsItem item : sourceNews) {
                 if (item == null) continue;
 
-                if (selectedCategory.equals("Splosno") ||
+                if (selectedCategory.equals("Splošno") ||
                     (item.getCategory() != null && item.getCategory().getName() != null &&
-                        item.getCategory().getName().equals(selectedCategory))) {
+                        item.getCategory().getName().trim().equalsIgnoreCase(selectedCategory.trim()))) {
                     filteredNews.add(item);
                 }
             }
@@ -425,9 +425,9 @@ public class MapScreen implements Screen {
         for (NewsItem item : displayedNews) {
             if (item == null) continue;
 
-            if (selectedCategory.equals("Splosno") ||
+            if (selectedCategory.equals("Splošno") ||
                 (item.getCategory() != null && item.getCategory().getName() != null &&
-                    item.getCategory().getName().equals(selectedCategory))) {
+                    item.getCategory().getName().trim().equalsIgnoreCase(selectedCategory.trim()))) {
                 filteredNews.add(item);
             }
         }
@@ -562,12 +562,12 @@ public class MapScreen implements Screen {
                 animPin.scale = 1f;
             } else {
                 float t = Math.min(1f, animPin.progress);
-                
+
                 float easedT = 1f - (float)Math.pow(1f - t, 3f);
 
                 float deltaX = animPin.targetPos.x - animPin.startPos.x;
                 float deltaY = animPin.targetPos.y - animPin.startPos.y;
-                
+
                 animPin.currentPos.x = animPin.startPos.x + deltaX * easedT;
                 animPin.currentPos.y = animPin.startPos.y + deltaY * easedT;
 
@@ -1250,7 +1250,7 @@ public class MapScreen implements Screen {
         categoryChipsTable.clear();
 
         String[] categories = {
-            "Splošno", "Biznis", "Politika",
+            "Splosno", "Biznis", "Politika",
             "Kultura", "Lifestyle", "Gospodarstvo",
             "Tehnologija", "Vreme"
         };
