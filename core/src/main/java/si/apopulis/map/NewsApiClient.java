@@ -333,10 +333,26 @@ public class NewsApiClient {
     }
 
     public static void fetchNewsByCategory(String categoryName, int limit, final NewsItemsCallback callback) {
-        // Use the /news endpoint with limit
-        // Note: Category filtering by name would require category ID lookup
-        // For now, fetch all recent news (they'll be filtered by published date)
-        String url = API_BASE_URL + NEWS_ENDPOINT + "?limit=" + limit + "&page=1";
+        Array<String> categories = new Array<>();
+        categories.add(categoryName);
+        fetchNewsByCategories(categories, limit, callback);
+    }
+
+    public static void fetchNewsByCategories(Array<String> categoryNames, int limit, final NewsItemsCallback callback) {
+        // Build URL with category parameter
+        // If "Splošno" is in the list or list is empty, fetch all news
+        String url;
+        if (categoryNames == null || categoryNames.size == 0 || categoryNames.contains("Splošno", false)) {
+            url = API_BASE_URL + NEWS_ENDPOINT + "?limit=" + limit + "&page=1";
+        } else {
+            // Join categories with comma for backend
+            StringBuilder categoriesParam = new StringBuilder();
+            for (int i = 0; i < categoryNames.size; i++) {
+                if (i > 0) categoriesParam.append(",");
+                categoriesParam.append(categoryNames.get(i));
+            }
+            url = API_BASE_URL + NEWS_ENDPOINT + "?limit=" + limit + "&page=1&category=" + categoriesParam.toString();
+        }
 
         Net.HttpRequest request = new Net.HttpRequest(Net.HttpMethods.GET);
         request.setUrl(url);

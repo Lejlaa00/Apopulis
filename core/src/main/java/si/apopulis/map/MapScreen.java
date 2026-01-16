@@ -120,7 +120,7 @@ public class MapScreen implements Screen {
     private Table bottomRightTable;
     private float zoomButtonsBaseX;
 
-    private String selectedCategory = "Splošno";
+    private Array<String> selectedCategories = new Array<>();
     private Table categoryChipsWrapper;
 
     private Array<ProvinceNewsMarker> newsMarkers;
@@ -164,13 +164,15 @@ public class MapScreen implements Screen {
 
     private Table categoryChipsTable;
     private ScrollPane categoryChipsScroll;
-    private String activeChipCategory = "Splošno";
     private Label regionTitleLabel;
 
     public MapScreen(AssetManager assetManager) {
         this.assetManager = assetManager;
         this.newsMarkers = new Array<>();
         this.newsItems = new Array<>();
+        // Initialize with "Splošno" as default (show all)
+        this.selectedCategories = new Array<>();
+        this.selectedCategories.add("Splošno");
     }
 
     @Override
@@ -219,18 +221,25 @@ public class MapScreen implements Screen {
 
         fetchNewsMarkers();
 
-        fetchNewsItems(selectedCategory);
+        fetchNewsItems();
     }
 
-    private void fetchNewsItems(String category) {
+    private void fetchNewsItems() {
         if (isFetchingNewsItems) {
             return;
         }
 
         isFetchingNewsItems = true;
-        System.out.println("Fetching news items for category: " + category);
+        
+        // Build category list for logging
+        StringBuilder categoriesStr = new StringBuilder();
+        for (int i = 0; i < selectedCategories.size; i++) {
+            if (i > 0) categoriesStr.append(", ");
+            categoriesStr.append(selectedCategories.get(i));
+        }
+        System.out.println("Fetching news items for categories: " + categoriesStr.toString());
 
-        NewsApiClient.fetchNewsByCategory(category, 50, new NewsApiClient.NewsItemsCallback() {
+        NewsApiClient.fetchNewsByCategories(selectedCategories, 50, new NewsApiClient.NewsItemsCallback() {
             @Override
             public void onSuccess(Array<NewsItem> items) {
                 newsItems = items;
@@ -282,10 +291,19 @@ public class MapScreen implements Screen {
             for (NewsItem item : sourceNews) {
                 if (item == null) continue;
 
-                if (selectedCategory.equals("Splošno") ||
-                    (item.getCategory() != null && item.getCategory().getName() != null &&
-                        item.getCategory().getName().trim().equalsIgnoreCase(selectedCategory.trim()))) {
+                // If "Splošno" is selected, show all news
+                if (selectedCategories.contains("Splošno", false)) {
                     filteredNews.add(item);
+                } else {
+                    // Check if item's category matches any of the selected categories
+                    if (item.getCategory() != null && item.getCategory().getName() != null) {
+                        for (String selectedCat : selectedCategories) {
+                            if (item.getCategory().getName().trim().equalsIgnoreCase(selectedCat.trim())) {
+                                filteredNews.add(item);
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -297,8 +315,11 @@ public class MapScreen implements Screen {
                     new Color(0.75f, 0.75f, 0.75f, 1f)
                 );
 
+                String emptyMessage = selectedCategories.size == 1 
+                    ? "Ni novic za izbrano kategorijo" 
+                    : "Ni novic za izbrane kategorije";
                 Label emptyLabel = new Label(
-                    "Ni novic za izbrano kategorijo",
+                    emptyMessage,
                     emptyStyle
                 );
                 emptyLabel.setAlignment(Align.left);
@@ -425,15 +446,24 @@ public class MapScreen implements Screen {
         for (NewsItem item : displayedNews) {
             if (item == null) continue;
 
-            if (selectedCategory.equals("Splošno") ||
-                (item.getCategory() != null && item.getCategory().getName() != null &&
-                    item.getCategory().getName().trim().equalsIgnoreCase(selectedCategory.trim()))) {
+            // If "Splošno" is selected, show all news
+            if (selectedCategories.contains("Splošno", false)) {
                 filteredNews.add(item);
+            } else {
+                // Check if item's category matches any of the selected categories
+                if (item.getCategory() != null && item.getCategory().getName() != null) {
+                    for (String selectedCat : selectedCategories) {
+                        if (item.getCategory().getName().trim().equalsIgnoreCase(selectedCat.trim())) {
+                            filteredNews.add(item);
+                            break;
+                        }
+                    }
+                }
             }
         }
 
         if (filteredNews.size == 0) {
-            System.out.println("DOTS DEBUG: No news items after category filter for region=" + selectedRegion.id + ", category=" + selectedCategory);
+            System.out.println("DOTS DEBUG: No news items after category filter for region=" + selectedRegion.id + ", categories=" + selectedCategories.toString());
             return;
         }
 
@@ -449,7 +479,7 @@ public class MapScreen implements Screen {
             selectedNewsPins.add(new NewsPin(pos, item));
         }
 
-        System.out.println("DOTS DEBUG: built " + selectedNewsPins.size + " pins for region=" + selectedRegion.id + ", category=" + selectedCategory + ", from " + filteredNews.size + " filtered items");
+        System.out.println("DOTS DEBUG: built " + selectedNewsPins.size + " pins for region=" + selectedRegion.id + ", categories=" + selectedCategories.toString() + ", from " + filteredNews.size + " filtered items");
     }
 
     private Vector2 generateDeterministicPointInRegion(Region region, String seedKey) {
@@ -1153,7 +1183,7 @@ public class MapScreen implements Screen {
         chip.minWidth(100);
         chip.maxWidth(200);
 
-        boolean active = category.equals(activeChipCategory);
+        boolean active = selectedCategories.contains(category, false);
 
         com.badlogic.gdx.scenes.scene2d.utils.Drawable normalBg = active
             ? createActiveCategoryChipDrawable(atlas)
@@ -1167,9 +1197,29 @@ public class MapScreen implements Screen {
         chip.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                activeChipCategory = category;
-                selectedCategory = category;
-                fetchNewsItems(category);
+                // Multi-select with toggle behavior
+                if (selectedCategories.contains(category, false)) {
+                    // Deselect this category
+                    selectedCategories.removeValue(category, false);
+                    
+                    // If no categories selected, default to "Splošno" (show all)
+                    if (selectedCategories.size == 0) {
+                        selectedCategories.add("Splošno");
+                    }
+                } else {
+                    // Select this category
+                    // If we're selecting a specific category and "Splošno" is active, remove it
+                    if (!category.equals("Splošno") && selectedCategories.contains("Splošno", false)) {
+                        selectedCategories.removeValue("Splošno", false);
+                    }
+                    // If selecting "Splošno", clear all other categories
+                    if (category.equals("Splošno")) {
+                        selectedCategories.clear();
+                    }
+                    selectedCategories.add(category);
+                }
+                
+                fetchNewsItems();
                 rebuildCategoryChips();
                 if (selectedRegion != null) {
                     rebuildNewsDotsForSelectedRegion();
@@ -1250,7 +1300,7 @@ public class MapScreen implements Screen {
         categoryChipsTable.clear();
 
         String[] categories = {
-            "Splosno", "Biznis", "Politika",
+            "Splošno", "Biznis", "Politika",
             "Kultura", "Lifestyle", "Gospodarstvo",
             "Tehnologija", "Vreme"
         };
@@ -1519,7 +1569,7 @@ public class MapScreen implements Screen {
         if (timeSinceLastFetch >= FETCH_INTERVAL) {
             timeSinceLastFetch = 0;
             fetchNewsMarkers();
-            fetchNewsItems(selectedCategory);
+            fetchNewsItems();
         }
 
         Gdx.gl.glClearColor(0.118f, 0.118f, 0.133f, 1f);
