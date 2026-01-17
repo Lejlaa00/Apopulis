@@ -587,31 +587,39 @@ public class MapScreen implements Screen {
             AnimatedPin animPin = new AnimatedPin();
             animPin.marker = m;
             animPin.targetPos.set(targetX, targetY);
-            animPin.currentPos.set(targetX, targetY);
 
-            int directionIndex = pinIndex % 4;
-            animPin.delay = rng.nextFloat() * PIN_ANIMATION_DELAY_MAX;
+            if (isSimulationActive) {
+                animPin.currentPos.set(targetX, targetY);
+                animPin.scale = 1f;
+                animPin.isAnimating = false;
+                animPin.progress = 1f;
+            } else {
+                animPin.currentPos.set(targetX, targetY);
 
-            float offsetX = 0f;
-            float offsetY = 0f;
+                int directionIndex = pinIndex % 4;
+                animPin.delay = rng.nextFloat() * PIN_ANIMATION_DELAY_MAX;
 
-            switch (directionIndex) {
-                case 0:
-                    offsetY = PIN_OFFSET_DISTANCE;
-                    break;
-                case 1:
-                    offsetX = PIN_OFFSET_DISTANCE;
-                    break;
-                case 2:
-                    offsetY = -PIN_OFFSET_DISTANCE;
-                    break;
-                case 3:
-                    offsetX = -PIN_OFFSET_DISTANCE;
-                    break;
+                float offsetX = 0f;
+                float offsetY = 0f;
+
+                switch (directionIndex) {
+                    case 0:
+                        offsetY = PIN_OFFSET_DISTANCE;
+                        break;
+                    case 1:
+                        offsetX = PIN_OFFSET_DISTANCE;
+                        break;
+                    case 2:
+                        offsetY = -PIN_OFFSET_DISTANCE;
+                        break;
+                    case 3:
+                        offsetX = -PIN_OFFSET_DISTANCE;
+                        break;
+                }
+
+                animPin.startPos.set(targetX + offsetX, targetY + offsetY);
+                animPin.currentPos.set(animPin.startPos);
             }
-
-            animPin.startPos.set(targetX + offsetX, targetY + offsetY);
-            animPin.currentPos.set(animPin.startPos);
 
             animatedCityPins.add(animPin);
             pinIndex++;
@@ -682,7 +690,7 @@ public class MapScreen implements Screen {
                 float drawY = y;
 
                 batch.draw(region, drawX, drawY, w, h);
-            } else if (!isPPJ) {
+            } else if (!isPPJ && !isSimulationActive) {
                 float[] map = GeoJsonRegionLoader.latLonToMapCoords(m.lat, m.lon);
                 float x = map[0];
                 float y = map[1];
@@ -1556,6 +1564,9 @@ public class MapScreen implements Screen {
         simulationStartTime = now - (simulationIntervalDays * 24L * 60L * 60L * 1000L);
         currentSimulationTime = simulationStartTime;
 
+        // Trigger pink city pin animations
+        initializePinAnimations();
+
         // Fetch news for the time range
         fetchSimulationNews();
     }
@@ -1677,6 +1688,10 @@ public class MapScreen implements Screen {
     private void rebuildNewsDotsForSimulation() {
         selectedNewsPins.clear();
 
+        if (selectedRegion == null) {
+            return;
+        }
+
         if (displayedNews == null || displayedNews.size == 0) {
             return;
         }
@@ -1700,26 +1715,15 @@ public class MapScreen implements Screen {
             }
         }
 
-        // Place news pins - works with or without region selected
+        // Place news pins - only when region is selected
         for (NewsItem item : filteredNews) {
             if (item.getLocation() == null) continue;
 
-            Vector2 pos;
-
-            if (selectedRegion != null) {
-                // If region selected, use cached position within region
-                String cacheKey = item.getId() + "_" + selectedRegion.id;
-                pos = newsDotCache.get(cacheKey);
-                if (pos == null) {
-                    pos = generateDeterministicPointInRegion(selectedRegion, cacheKey);
-                    newsDotCache.put(cacheKey, pos);
-                }
-            } else {
-                // No region selected - place at actual geographic location
-                double itemLat = item.getLocation().getLatitude();
-                double itemLon = item.getLocation().getLongitude();
-                float[] worldCoords = GeoJsonRegionLoader.latLonToMapCoords((float)itemLat, (float)itemLon);
-                pos = new Vector2(worldCoords[0], worldCoords[1]);
+            String cacheKey = item.getId() + "_" + selectedRegion.id;
+            Vector2 pos = newsDotCache.get(cacheKey);
+            if (pos == null) {
+                pos = generateDeterministicPointInRegion(selectedRegion, cacheKey);
+                newsDotCache.put(cacheKey, pos);
             }
 
             selectedNewsPins.add(new NewsPin(pos, item, true));
@@ -2025,27 +2029,38 @@ public class MapScreen implements Screen {
             if (hoveredRegion != null) {
                 if (hoveredRegion == selectedRegion) {
                     selectedRegion = null;
-                    displayedNews.clear();
-                    selectedNewsPins.clear();
-                    updateNewsCards();
+                    
+                    if (isSimulationActive) {
+                        initializePinAnimations();
+                        rebuildNewsDotsForSimulation();
+                    } else {
+                        displayedNews.clear();
+                        selectedNewsPins.clear();
+                        updateNewsCards();
+
+                        if (isPanelOpen) {
+                            toggleSidePanel();
+                        }
+                    }
 
                     smoothZoomOutToDefault();
-
-                    if (isPanelOpen) {
-                        toggleSidePanel();
-                    }
                 } else {
                     selectedRegion = hoveredRegion;
                     System.out.println("Clicked region: " + selectedRegion.id);
 
                     smoothZoomToRegion(selectedRegion);
 
-                    displayedNews = filterNewsForRegion(selectedRegion);
-                    rebuildNewsDotsForSelectedRegion();
-                    updateNewsCards();
+                    if (isSimulationActive) {
+                        initializePinAnimations();
+                        rebuildNewsDotsForSimulation();
+                    } else {
+                        displayedNews = filterNewsForRegion(selectedRegion);
+                        rebuildNewsDotsForSelectedRegion();
+                        updateNewsCards();
 
-                    if (!isPanelOpen) {
-                        toggleSidePanel();
+                        if (!isPanelOpen) {
+                            toggleSidePanel();
+                        }
                     }
                 }
             }
