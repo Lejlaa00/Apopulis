@@ -8,6 +8,8 @@ const cron = require('node-cron');
 const Category = require('../models/categoryModel');
 const Source = require('../models/sourceModel');
 const Location = require('../models/locationModel');
+const mongoose = require("mongoose");
+
 
 // Cache for news summary
 let summaryCache = {
@@ -103,23 +105,31 @@ exports.getNews = async (req, res) => {
         }
 
         // Support both single category and multiple categories (comma-separated)
+        // Also supports category values that are ObjectIds
         if (category) {
-            const categoryNames = category.includes(',') 
-                ? category.split(',').map(c => c.trim()) 
-                : [category.trim()];
-            
-            // Look up category IDs by name (case-insensitive using $or with regex)
-            const categoryDocs = await Category.find({ 
-                $or: categoryNames.map(name => ({
-                    name: new RegExp(`^${name}$`, 'i')
-                }))
-            });
-            
-            if (categoryDocs.length > 0) {
-                const categoryIds = categoryDocs.map(cat => cat._id);
-                query.categoryId = categoryIds.length > 1 ? { $in: categoryIds } : categoryIds[0];
-            } else {
-                // If no categories found, return empty result
+            const rawParts = category.includes(',')
+                ? category.split(',').map(c => c.trim()).filter(Boolean)
+                : [category.trim()].filter(Boolean);
+
+            const objectIds = rawParts
+                .filter(v => mongoose.Types.ObjectId.isValid(v))
+                .map(v => new mongoose.Types.ObjectId(v));
+
+            const names = rawParts.filter(v => !mongoose.Types.ObjectId.isValid(v));
+
+            const categoryIds = [...objectIds];
+
+            // Lookup category IDs by name (case-insensitive exact match)
+            if (names.length > 0) {
+                const categoryDocs = await Category.find({
+                    $or: names.map(name => ({ name: new RegExp(`^${name}$`, 'i') }))
+                }).select('_id');
+
+                categoryIds.push(...categoryDocs.map(c => c._id));
+            }
+
+            // If no categories matched, return empty
+            if (categoryIds.length === 0) {
                 return res.json({
                     news: [],
                     currentPage: parseInt(page),
@@ -127,7 +137,10 @@ exports.getNews = async (req, res) => {
                     totalItems: 0
                 });
             }
+
+            query.categoryId = categoryIds.length > 1 ? { $in: categoryIds } : categoryIds[0];
         }
+
         if (location) query.locationId = location;
         if (source) query.sourceId = source;
 
