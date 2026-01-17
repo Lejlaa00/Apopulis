@@ -169,14 +169,11 @@ public class MapScreen implements Screen {
     // Simulation variables
     private boolean isSimulationActive = false;
     private Table simulationControlsTable;
-    private ImageButton simulationToggleButton;
     private com.badlogic.gdx.scenes.scene2d.ui.SelectBox<String> timeIntervalSelectBox;
     private com.badlogic.gdx.scenes.scene2d.ui.Slider timeSlider;
     private Label timeLabel;
     private Array<NewsItem> simulationNews = new Array<>();
     private int currentSimulationIndex = 0;
-    private float simulationSpeed = 1.0f;
-    private boolean simulationPaused = false;
     private long simulationStartTime = 0;
     private long simulationEndTime = 0;
     private long currentSimulationTime = 0;
@@ -246,7 +243,7 @@ public class MapScreen implements Screen {
         }
 
         isFetchingNewsItems = true;
-        
+
         // Build category list for logging
         StringBuilder categoriesStr = new StringBuilder();
         for (int i = 0; i < selectedCategories.size; i++) {
@@ -299,22 +296,29 @@ public class MapScreen implements Screen {
                 regionTitleLabel.setVisible(false);
             }
 
-            Array<NewsItem> sourceNews = (selectedRegion != null && displayedNews != null && displayedNews.size > 0)
-                ? displayedNews
-                : newsItems;
+            Array<NewsItem> sourceNews;
+            if (selectedRegion != null) {
+                sourceNews = (displayedNews != null) ? displayedNews : new Array<>();
+            } else {
+                sourceNews = (newsItems != null) ? newsItems : new Array<>();
+            }
+
+            System.out.println("  sourceNews.size = " + (sourceNews != null ? sourceNews.size : -1));
+
 
             Array<NewsItem> filteredNews = new Array<>();
             for (NewsItem item : sourceNews) {
                 if (item == null) continue;
 
-                // If "Splošno" is selected, show all news
                 if (selectedCategories.contains("Splošno", false)) {
                     filteredNews.add(item);
                 } else {
-                    // Check if item's category matches any of the selected categories
                     if (item.getCategory() != null && item.getCategory().getName() != null) {
+                        String itemCat = item.getCategory().getName();
+
                         for (String selectedCat : selectedCategories) {
-                            if (item.getCategory().getName().trim().equalsIgnoreCase(selectedCat.trim())) {
+                            if (itemCat != null &&
+                                itemCat.trim().equalsIgnoreCase(selectedCat.trim())) {
                                 filteredNews.add(item);
                                 break;
                             }
@@ -322,6 +326,8 @@ public class MapScreen implements Screen {
                     }
                 }
             }
+
+            System.out.println("  filteredNews.size = " + filteredNews.size);
 
             if (filteredNews.size == 0) {
                 BitmapFont descFont = new BitmapFont(uiFont.getData(), uiFont.getRegions(), false);
@@ -331,13 +337,18 @@ public class MapScreen implements Screen {
                     new Color(0.75f, 0.75f, 0.75f, 1f)
                 );
 
-                String emptyMessage = selectedCategories.size == 1 
-                    ? "Ni novic za izbrano kategorijo" 
-                    : "Ni novic za izbrane kategorije";
-                Label emptyLabel = new Label(
-                    emptyMessage,
-                    emptyStyle
-                );
+                String emptyMessage;
+                if (selectedRegion != null) {
+                    emptyMessage = "Nema novic v tej regiji.";
+                } else {
+                    emptyMessage = selectedCategories.size == 1
+                        ? "Ni novic za izbrano kategorijo"
+                        : "Ni novic za izbrane kategorije";
+                }
+
+                System.out.println("  EMPTY MESSAGE = " + emptyMessage);
+
+                Label emptyLabel = new Label(emptyMessage, emptyStyle);
                 emptyLabel.setAlignment(Align.left);
                 emptyLabel.setWrap(false);
 
@@ -1218,7 +1229,7 @@ public class MapScreen implements Screen {
                 if (selectedCategories.contains(category, false)) {
                     // Deselect this category
                     selectedCategories.removeValue(category, false);
-                    
+
                     // If no categories selected, default to "Splošno" (show all)
                     if (selectedCategories.size == 0) {
                         selectedCategories.add("Splošno");
@@ -1235,12 +1246,16 @@ public class MapScreen implements Screen {
                     }
                     selectedCategories.add(category);
                 }
-                
-                fetchNewsItems();
+
                 rebuildCategoryChips();
+
                 if (selectedRegion != null) {
                     rebuildNewsDotsForSelectedRegion();
+                } else {
+                    selectedNewsPins.clear();
                 }
+
+                updateNewsCards();
             }
         });
 
@@ -1343,11 +1358,11 @@ public class MapScreen implements Screen {
         final Drawable btnBg = new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
         ).tint(new Color(1f, 1f, 1f, 0.3f));
-        
+
         final Drawable btnBgActive = new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
         ).tint(new Color(0.6f, 0.6f, 0.9f, 0.6f));
-        
+
         final Drawable btnBgHover = new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
         ).tint(new Color(1f, 1f, 1f, 0.45f));
@@ -1356,15 +1371,15 @@ public class MapScreen implements Screen {
         Label.LabelStyle btnLabelStyle = new Label.LabelStyle(font, new Color(0.88f, 0.88f, 0.88f, 1f));
         final Label toggleLabel = new Label("Simulacija", btnLabelStyle);
         toggleLabel.setAlignment(Align.center);
-        
+
         // Use Container for button - reduced width by 30%
         final Container<Label> btnContainer = new Container<>(toggleLabel);
         btnContainer.setTransform(true);
-        btnContainer.pad(8, 16, 8, 16);  
-        btnContainer.minHeight(45);       
+        btnContainer.pad(8, 16, 8, 16);
+        btnContainer.minHeight(45);
         btnContainer.maxHeight(45);
-        btnContainer.minWidth(70);        
-        btnContainer.maxWidth(140);       
+        btnContainer.minWidth(70);
+        btnContainer.maxWidth(140);
         btnContainer.setBackground(btnBg);
 
         btnContainer.addListener(new ClickListener() {
@@ -1374,12 +1389,12 @@ public class MapScreen implements Screen {
                     btnContainer.setBackground(btnBgHover);
                 }
             }
-            
+
             @Override
             public void exit(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor toActor) {
                 btnContainer.setBackground(isSimulationActive ? btnBgActive : btnBg);
             }
-            
+
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 toggleSimulation();
@@ -1395,23 +1410,23 @@ public class MapScreen implements Screen {
         });
 
         // Create dropdown for time interval - matching button style
-        com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle selectBoxStyle = 
+        com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle selectBoxStyle =
             new com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle();
         selectBoxStyle.font = font;
         selectBoxStyle.fontColor = new Color(0.88f, 0.88f, 0.88f, 1f);
-        
+
         // Add proper padding to background - don't cast, just create new drawables
         Drawable selectBg = new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
         ).tint(new Color(1f, 1f, 1f, 0.3f));
         selectBoxStyle.background = selectBg;
-        
+
         Drawable selectHover = new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
         ).tint(new Color(1f, 1f, 1f, 0.45f));
         selectBoxStyle.backgroundOver = selectHover;
-        
-        com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle listStyle = 
+
+        com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle listStyle =
             new com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle();
         listStyle.font = font;
         listStyle.fontColorSelected = Color.YELLOW;
@@ -1422,9 +1437,9 @@ public class MapScreen implements Screen {
         listStyle.background = new TextureRegionDrawable(
             atlas.findRegion(RegionNames.BTN_CATEGORY)
         ).tint(new Color(0.15f, 0.15f, 0.2f, 0.95f));
-        
+
         selectBoxStyle.listStyle = listStyle;
-        
+
         ScrollPane.ScrollPaneStyle scrollStyle = new ScrollPane.ScrollPaneStyle();
         selectBoxStyle.scrollStyle = scrollStyle;
 
@@ -1448,16 +1463,16 @@ public class MapScreen implements Screen {
         });
 
         // Create time slider with purple/blue theme
-        com.badlogic.gdx.scenes.scene2d.ui.Slider.SliderStyle sliderStyle = 
+        com.badlogic.gdx.scenes.scene2d.ui.Slider.SliderStyle sliderStyle =
             new com.badlogic.gdx.scenes.scene2d.ui.Slider.SliderStyle();
-        
+
         // Background track - subtle purple
         Pixmap pixmap = new Pixmap(220, 4, Pixmap.Format.RGBA8888);
         pixmap.setColor(new Color(0.5f, 0.5f, 0.7f, 0.4f));
         pixmap.fill();
         sliderStyle.background = new TextureRegionDrawable(new Texture(pixmap));
         pixmap.dispose();
-        
+
         // Knob - purple/blue circle
         pixmap = new Pixmap(12, 12, Pixmap.Format.RGBA8888);
         pixmap.setColor(new Color(0.6f, 0.6f, 0.9f, 1f));
@@ -1476,19 +1491,19 @@ public class MapScreen implements Screen {
 
         // Layout - slider on top, then time label, then button and dropdown at bottom
         Table mainSimTable = new Table();
-        
+
         // Slider at the top
         mainSimTable.add(timeSlider).width(220).left();
         mainSimTable.row();
-        
+
         // Time label below slider
         mainSimTable.add(timeLabel).padTop(8).left();
         mainSimTable.row();
-        
+
         Table bottomRow = new Table();
         bottomRow.add(btnContainer).padRight(12);
         bottomRow.add(timeIntervalSelectBox).minWidth(70).maxWidth(140).height(45);
-        
+
         mainSimTable.add(bottomRow).padTop(15).left();
 
         simulationControlsTable.add(mainSimTable);
@@ -1497,7 +1512,7 @@ public class MapScreen implements Screen {
 
     private void toggleSimulation() {
         isSimulationActive = !isSimulationActive;
-        
+
         if (isSimulationActive) {
             startSimulation();
         } else {
@@ -1510,18 +1525,18 @@ public class MapScreen implements Screen {
         if (isPanelOpen) {
             toggleSidePanel();
         }
-        
+
         // Show slider and time label
         timeSlider.setVisible(true);
         timeLabel.setVisible(true);
         timeSlider.setValue(0);
-        
+
         // Calculate time range
         long now = System.currentTimeMillis();
         simulationEndTime = now;
         simulationStartTime = now - (simulationIntervalDays * 24L * 60L * 60L * 1000L);
         currentSimulationTime = simulationStartTime;
-        
+
         // Fetch news for the time range
         fetchSimulationNews();
     }
@@ -1531,7 +1546,7 @@ public class MapScreen implements Screen {
         timeLabel.setVisible(false);
         simulationNews.clear();
         currentSimulationIndex = 0;
-        
+
         // Restore normal news display
         if (selectedRegion != null) {
             rebuildNewsDotsForSelectedRegion();
@@ -1539,16 +1554,16 @@ public class MapScreen implements Screen {
     }
 
     private void fetchSimulationNews() {
-        System.out.println("Fetching simulation news from " + 
+        System.out.println("Fetching simulation news from " +
             new java.util.Date(simulationStartTime) + " to " + new java.util.Date(simulationEndTime));
-        
+
         // Build URL with time range
         String startDateStr = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
             .format(new java.util.Date(simulationStartTime));
         String endDateStr = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
             .format(new java.util.Date(simulationEndTime));
-        
-        NewsApiClient.fetchNewsInTimeRange(startDateStr, endDateStr, selectedCategories, 1000, 
+
+        NewsApiClient.fetchNewsInTimeRange(startDateStr, endDateStr, selectedCategories, 1000,
             new NewsApiClient.NewsItemsCallback() {
                 @Override
                 public void onSuccess(Array<NewsItem> items) {
@@ -1585,16 +1600,16 @@ public class MapScreen implements Screen {
         if (!isSimulationActive || simulationNews.size == 0) {
             return;
         }
-        
+
         // Update current time based on slider
         float sliderValue = timeSlider.getValue();
-        currentSimulationTime = simulationStartTime + 
+        currentSimulationTime = simulationStartTime +
             (long)((simulationEndTime - simulationStartTime) * (sliderValue / 100f));
-        
+
         // Update time label
         java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm");
         timeLabel.setText(dateFormat.format(new java.util.Date(currentSimulationTime)));
-        
+
         // Filter and display news up to current time
         Array<NewsItem> visibleNews = new Array<>();
         for (NewsItem item : simulationNews) {
@@ -1603,7 +1618,7 @@ public class MapScreen implements Screen {
                 visibleNews.add(item);
             }
         }
-        
+
         // Update displayed news
         if (selectedRegion != null) {
             // Filter by region
@@ -1611,9 +1626,9 @@ public class MapScreen implements Screen {
         } else {
             displayedNews = visibleNews;
         }
-        
+
         rebuildNewsDotsForSimulation();
-        
+
         // Auto-advance slider
         if (!timeSlider.isDragging()) {
             float newValue = sliderValue + (delta * 5); // 5% per second
@@ -1628,11 +1643,11 @@ public class MapScreen implements Screen {
         Array<NewsItem> filtered = new Array<>();
         for (NewsItem item : newsToFilter) {
             if (item == null || item.getLocation() == null) continue;
-            
+
             double itemLat = item.getLocation().getLatitude();
             double itemLon = item.getLocation().getLongitude();
             float[] worldCoords = GeoJsonRegionLoader.latLonToMapCoords((float)itemLat, (float)itemLon);
-            
+
             if (Intersector.isPointInPolygon(region.vertices, 0, region.vertices.length, worldCoords[0], worldCoords[1])) {
                 filtered.add(item);
             }
@@ -1642,16 +1657,16 @@ public class MapScreen implements Screen {
 
     private void rebuildNewsDotsForSimulation() {
         selectedNewsPins.clear();
-        
+
         if (displayedNews == null || displayedNews.size == 0) {
             return;
         }
-        
+
         // Filter by selected categories
         Array<NewsItem> filteredNews = new Array<>();
         for (NewsItem item : displayedNews) {
             if (item == null) continue;
-            
+
             if (selectedCategories.contains("Splošno", false)) {
                 filteredNews.add(item);
             } else {
@@ -1665,13 +1680,13 @@ public class MapScreen implements Screen {
                 }
             }
         }
-        
+
         // Place news pins - works with or without region selected
         for (NewsItem item : filteredNews) {
             if (item.getLocation() == null) continue;
-            
+
             Vector2 pos;
-            
+
             if (selectedRegion != null) {
                 // If region selected, use cached position within region
                 String cacheKey = item.getId() + "_" + selectedRegion.id;
@@ -1687,7 +1702,7 @@ public class MapScreen implements Screen {
                 float[] worldCoords = GeoJsonRegionLoader.latLonToMapCoords((float)itemLat, (float)itemLon);
                 pos = new Vector2(worldCoords[0], worldCoords[1]);
             }
-            
+
             selectedNewsPins.add(new NewsPin(pos, item));
         }
     }
@@ -1944,7 +1959,7 @@ public class MapScreen implements Screen {
         if (isSimulationActive) {
             updateSimulation(delta);
         }
-        
+
         timeSinceLastFetch += delta;
         if (timeSinceLastFetch >= FETCH_INTERVAL && !isSimulationActive) {
             timeSinceLastFetch = 0;
