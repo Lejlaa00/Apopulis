@@ -92,10 +92,42 @@ async function updateNewsMetrics(newsItemId) {
 // Get all news items with optional filtering
 exports.getNews = async (req, res) => {
     try {
-        const { category, location, source, page = 1, limit = 10, search } = req.query;
+        const { category, location, source, page = 1, limit = 10, search, startDate, endDate } = req.query;
         const query = {};
 
-        if (category) query.categoryId = category;
+        // Time range filter for simulation
+        if (startDate || endDate) {
+            query.publishedAt = {};
+            if (startDate) query.publishedAt.$gte = new Date(startDate);
+            if (endDate) query.publishedAt.$lte = new Date(endDate);
+        }
+
+        // Support both single category and multiple categories (comma-separated)
+        if (category) {
+            const categoryNames = category.includes(',') 
+                ? category.split(',').map(c => c.trim()) 
+                : [category.trim()];
+            
+            // Look up category IDs by name (case-insensitive using $or with regex)
+            const categoryDocs = await Category.find({ 
+                $or: categoryNames.map(name => ({
+                    name: new RegExp(`^${name}$`, 'i')
+                }))
+            });
+            
+            if (categoryDocs.length > 0) {
+                const categoryIds = categoryDocs.map(cat => cat._id);
+                query.categoryId = categoryIds.length > 1 ? { $in: categoryIds } : categoryIds[0];
+            } else {
+                // If no categories found, return empty result
+                return res.json({
+                    news: [],
+                    currentPage: parseInt(page),
+                    totalPages: 0,
+                    totalItems: 0
+                });
+            }
+        }
         if (location) query.locationId = location;
         if (source) query.sourceId = source;
 
@@ -116,6 +148,7 @@ exports.getNews = async (req, res) => {
             .populate('categoryId', 'name')
             .sort({ publishedAt: -1 })
             .skip(skip)
+            .limit(parseInt(limit));
 
         const total = await NewsItem.countDocuments(query);
 
