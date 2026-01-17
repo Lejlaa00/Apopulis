@@ -1722,7 +1722,7 @@ public class MapScreen implements Screen {
                 pos = new Vector2(worldCoords[0], worldCoords[1]);
             }
 
-            selectedNewsPins.add(new NewsPin(pos, item));
+            selectedNewsPins.add(new NewsPin(pos, item, true));
         }
     }
 
