@@ -338,6 +338,60 @@ public class NewsApiClient {
         fetchNewsByCategories(categories, limit, callback);
     }
 
+    public static void fetchNewsInTimeRange(String startDate, String endDate, Array<String> categoryNames, 
+                                             int limit, final NewsItemsCallback callback) {
+        // Build URL with time range
+        StringBuilder url = new StringBuilder(API_BASE_URL + NEWS_ENDPOINT);
+        url.append("?limit=").append(limit);
+        url.append("&page=1");
+        url.append("&startDate=").append(startDate);
+        url.append("&endDate=").append(endDate);
+        
+        // Add categories if not "Splošno"
+        if (categoryNames != null && categoryNames.size > 0 && !categoryNames.contains("Splošno", false)) {
+            StringBuilder categoriesParam = new StringBuilder();
+            for (int i = 0; i < categoryNames.size; i++) {
+                if (i > 0) categoriesParam.append(",");
+                categoriesParam.append(categoryNames.get(i));
+            }
+            url.append("&category=").append(categoriesParam.toString());
+        }
+
+        Net.HttpRequest request = new Net.HttpRequest(Net.HttpMethods.GET);
+        request.setUrl(url.toString());
+        request.setHeader("Content-Type", "application/json");
+
+        Gdx.net.sendHttpRequest(request, new Net.HttpResponseListener() {
+            @Override
+            public void handleHttpResponse(Net.HttpResponse httpResponse) {
+                try {
+                    String responseStr = httpResponse.getResultAsString();
+                    if (responseStr == null || responseStr.isEmpty()) {
+                        Gdx.app.postRunnable(() -> callback.onFailure(new Exception("Empty response")));
+                        return;
+                    }
+                    Array<NewsItem> newsItems = parseNewsItems(responseStr);
+                    Gdx.app.postRunnable(() -> callback.onSuccess(newsItems));
+                } catch (Exception e) {
+                    Gdx.app.error("NewsApiClient", "Error parsing news response", e);
+                    Gdx.app.postRunnable(() -> callback.onFailure(e));
+                }
+            }
+
+            @Override
+            public void failed(Throwable t) {
+                Gdx.app.error("NewsApiClient", "News request failed", t);
+                Gdx.app.postRunnable(() -> callback.onFailure(t));
+            }
+
+            @Override
+            public void cancelled() {
+                Gdx.app.log("NewsApiClient", "News request cancelled");
+                Gdx.app.postRunnable(() -> callback.onFailure(new Exception("Request cancelled")));
+            }
+        });
+    }
+
     public static void fetchNewsByCategories(Array<String> categoryNames, int limit, final NewsItemsCallback callback) {
         // Build URL with category parameter
         // If "Splošno" is in the list or list is empty, fetch all news

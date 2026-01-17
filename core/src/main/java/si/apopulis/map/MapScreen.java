@@ -166,6 +166,22 @@ public class MapScreen implements Screen {
     private ScrollPane categoryChipsScroll;
     private Label regionTitleLabel;
 
+    // Simulation variables
+    private boolean isSimulationActive = false;
+    private Table simulationControlsTable;
+    private ImageButton simulationToggleButton;
+    private com.badlogic.gdx.scenes.scene2d.ui.SelectBox<String> timeIntervalSelectBox;
+    private com.badlogic.gdx.scenes.scene2d.ui.Slider timeSlider;
+    private Label timeLabel;
+    private Array<NewsItem> simulationNews = new Array<>();
+    private int currentSimulationIndex = 0;
+    private float simulationSpeed = 1.0f;
+    private boolean simulationPaused = false;
+    private long simulationStartTime = 0;
+    private long simulationEndTime = 0;
+    private long currentSimulationTime = 0;
+    private int simulationIntervalDays = 7;
+
     public MapScreen(AssetManager assetManager) {
         this.assetManager = assetManager;
         this.newsMarkers = new Array<>();
@@ -755,6 +771,7 @@ public class MapScreen implements Screen {
         zoomButtonsBaseX = bottomRightTable.getX();
 
         setupCategoryChips(uiFont);
+        setupSimulationControls(uiFont, uiAtlas);
     }
 
     private void setupZoomButtons(TextureAtlas uiAtlas) {
@@ -1316,6 +1333,364 @@ public class MapScreen implements Screen {
         }
     }
 
+    private void setupSimulationControls(BitmapFont font, TextureAtlas atlas) {
+        simulationControlsTable = new Table();
+        simulationControlsTable.setFillParent(true);
+        simulationControlsTable.bottom().left();
+        simulationControlsTable.pad(20);
+
+        // Create simulation toggle button - EXACT same style as category chips using Container
+        final Drawable btnBg = new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(1f, 1f, 1f, 0.3f));
+        
+        final Drawable btnBgActive = new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(0.6f, 0.6f, 0.9f, 0.6f));
+        
+        final Drawable btnBgHover = new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(1f, 1f, 1f, 0.45f));
+
+        // Button label
+        Label.LabelStyle btnLabelStyle = new Label.LabelStyle(font, new Color(0.88f, 0.88f, 0.88f, 1f));
+        final Label toggleLabel = new Label("Simulacija", btnLabelStyle);
+        toggleLabel.setAlignment(Align.center);
+        
+        // Use Container for button - reduced width by 30%
+        final Container<Label> btnContainer = new Container<>(toggleLabel);
+        btnContainer.setTransform(true);
+        btnContainer.pad(8, 16, 8, 16);  
+        btnContainer.minHeight(45);       
+        btnContainer.maxHeight(45);
+        btnContainer.minWidth(70);        
+        btnContainer.maxWidth(140);       
+        btnContainer.setBackground(btnBg);
+
+        btnContainer.addListener(new ClickListener() {
+            @Override
+            public void enter(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
+                if (!isSimulationActive) {
+                    btnContainer.setBackground(btnBgHover);
+                }
+            }
+            
+            @Override
+            public void exit(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor toActor) {
+                btnContainer.setBackground(isSimulationActive ? btnBgActive : btnBg);
+            }
+            
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                toggleSimulation();
+                // Update button appearance
+                if (isSimulationActive) {
+                    toggleLabel.setText("Zaustavi");
+                    btnContainer.setBackground(btnBgActive);
+                } else {
+                    toggleLabel.setText("Simulacija");
+                    btnContainer.setBackground(btnBg);
+                }
+            }
+        });
+
+        // Create dropdown for time interval - matching button style
+        com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle selectBoxStyle = 
+            new com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle();
+        selectBoxStyle.font = font;
+        selectBoxStyle.fontColor = new Color(0.88f, 0.88f, 0.88f, 1f);
+        
+        // Add proper padding to background - don't cast, just create new drawables
+        Drawable selectBg = new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(1f, 1f, 1f, 0.3f));
+        selectBoxStyle.background = selectBg;
+        
+        Drawable selectHover = new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(1f, 1f, 1f, 0.45f));
+        selectBoxStyle.backgroundOver = selectHover;
+        
+        com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle listStyle = 
+            new com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle();
+        listStyle.font = font;
+        listStyle.fontColorSelected = Color.YELLOW;
+        listStyle.fontColorUnselected = Color.WHITE;
+        listStyle.selection = new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(0.5f, 0.5f, 0.8f, 0.8f));
+        listStyle.background = new TextureRegionDrawable(
+            atlas.findRegion(RegionNames.BTN_CATEGORY)
+        ).tint(new Color(0.15f, 0.15f, 0.2f, 0.95f));
+        
+        selectBoxStyle.listStyle = listStyle;
+        
+        ScrollPane.ScrollPaneStyle scrollStyle = new ScrollPane.ScrollPaneStyle();
+        selectBoxStyle.scrollStyle = scrollStyle;
+
+        timeIntervalSelectBox = new com.badlogic.gdx.scenes.scene2d.ui.SelectBox<>(selectBoxStyle);
+        timeIntervalSelectBox.setItems("1 dan", "7 dni", "1 mesec");
+        timeIntervalSelectBox.setSelected("7 dni");
+        timeIntervalSelectBox.setAlignment(Align.center);
+        timeIntervalSelectBox.getList().setAlignment(Align.center);
+        timeIntervalSelectBox.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                String selected = timeIntervalSelectBox.getSelected();
+                if (selected.equals("1 dan")) {
+                    simulationIntervalDays = 1;
+                } else if (selected.equals("7 dni")) {
+                    simulationIntervalDays = 7;
+                } else if (selected.equals("1 mesec")) {
+                    simulationIntervalDays = 30;
+                }
+            }
+        });
+
+        // Create time slider with purple/blue theme
+        com.badlogic.gdx.scenes.scene2d.ui.Slider.SliderStyle sliderStyle = 
+            new com.badlogic.gdx.scenes.scene2d.ui.Slider.SliderStyle();
+        
+        // Background track - subtle purple
+        Pixmap pixmap = new Pixmap(220, 4, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(0.5f, 0.5f, 0.7f, 0.4f));
+        pixmap.fill();
+        sliderStyle.background = new TextureRegionDrawable(new Texture(pixmap));
+        pixmap.dispose();
+        
+        // Knob - purple/blue circle
+        pixmap = new Pixmap(12, 12, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(0.6f, 0.6f, 0.9f, 1f));
+        pixmap.fillCircle(6, 6, 6);
+        sliderStyle.knob = new TextureRegionDrawable(new Texture(pixmap));
+        pixmap.dispose();
+
+        timeSlider = new com.badlogic.gdx.scenes.scene2d.ui.Slider(0, 100, 1, false, sliderStyle);
+        timeSlider.setValue(0);
+        timeSlider.setVisible(false);
+
+        // Create time label
+        Label.LabelStyle timeLabelStyle = new Label.LabelStyle(font, new Color(0.9f, 0.9f, 0.9f, 1f));
+        timeLabel = new Label("", timeLabelStyle);
+        timeLabel.setVisible(false);
+
+        // Layout - slider on top, then time label, then button and dropdown at bottom
+        Table mainSimTable = new Table();
+        
+        // Slider at the top
+        mainSimTable.add(timeSlider).width(220).left();
+        mainSimTable.row();
+        
+        // Time label below slider
+        mainSimTable.add(timeLabel).padTop(8).left();
+        mainSimTable.row();
+        
+        Table bottomRow = new Table();
+        bottomRow.add(btnContainer).padRight(12);
+        bottomRow.add(timeIntervalSelectBox).minWidth(70).maxWidth(140).height(45);
+        
+        mainSimTable.add(bottomRow).padTop(15).left();
+
+        simulationControlsTable.add(mainSimTable);
+        uiStage.addActor(simulationControlsTable);
+    }
+
+    private void toggleSimulation() {
+        isSimulationActive = !isSimulationActive;
+        
+        if (isSimulationActive) {
+            startSimulation();
+        } else {
+            stopSimulation();
+        }
+    }
+
+    private void startSimulation() {
+        // Close side panel if open
+        if (isPanelOpen) {
+            toggleSidePanel();
+        }
+        
+        // Show slider and time label
+        timeSlider.setVisible(true);
+        timeLabel.setVisible(true);
+        timeSlider.setValue(0);
+        
+        // Calculate time range
+        long now = System.currentTimeMillis();
+        simulationEndTime = now;
+        simulationStartTime = now - (simulationIntervalDays * 24L * 60L * 60L * 1000L);
+        currentSimulationTime = simulationStartTime;
+        
+        // Fetch news for the time range
+        fetchSimulationNews();
+    }
+
+    private void stopSimulation() {
+        timeSlider.setVisible(false);
+        timeLabel.setVisible(false);
+        simulationNews.clear();
+        currentSimulationIndex = 0;
+        
+        // Restore normal news display
+        if (selectedRegion != null) {
+            rebuildNewsDotsForSelectedRegion();
+        }
+    }
+
+    private void fetchSimulationNews() {
+        System.out.println("Fetching simulation news from " + 
+            new java.util.Date(simulationStartTime) + " to " + new java.util.Date(simulationEndTime));
+        
+        // Build URL with time range
+        String startDateStr = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            .format(new java.util.Date(simulationStartTime));
+        String endDateStr = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            .format(new java.util.Date(simulationEndTime));
+        
+        NewsApiClient.fetchNewsInTimeRange(startDateStr, endDateStr, selectedCategories, 1000, 
+            new NewsApiClient.NewsItemsCallback() {
+                @Override
+                public void onSuccess(Array<NewsItem> items) {
+                    simulationNews = items;
+                    simulationNews.sort((a, b) -> {
+                        try {
+                            long timeA = parseNewsTime(a.getPublishedAt());
+                            long timeB = parseNewsTime(b.getPublishedAt());
+                            return Long.compare(timeA, timeB);
+                        } catch (Exception e) {
+                            return 0;
+                        }
+                    });
+                    System.out.println("Fetched " + simulationNews.size + " news items for simulation");
+                }
+
+                @Override
+                public void onFailure(Throwable error) {
+                    System.err.println("Failed to fetch simulation news: " + error.getMessage());
+                    stopSimulation();
+                }
+            });
+    }
+
+    private long parseNewsTime(String publishedAt) {
+        try {
+            return new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(publishedAt).getTime();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private void updateSimulation(float delta) {
+        if (!isSimulationActive || simulationNews.size == 0) {
+            return;
+        }
+        
+        // Update current time based on slider
+        float sliderValue = timeSlider.getValue();
+        currentSimulationTime = simulationStartTime + 
+            (long)((simulationEndTime - simulationStartTime) * (sliderValue / 100f));
+        
+        // Update time label
+        java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm");
+        timeLabel.setText(dateFormat.format(new java.util.Date(currentSimulationTime)));
+        
+        // Filter and display news up to current time
+        Array<NewsItem> visibleNews = new Array<>();
+        for (NewsItem item : simulationNews) {
+            long itemTime = parseNewsTime(item.getPublishedAt());
+            if (itemTime <= currentSimulationTime) {
+                visibleNews.add(item);
+            }
+        }
+        
+        // Update displayed news
+        if (selectedRegion != null) {
+            // Filter by region
+            displayedNews = filterNewsForRegion(selectedRegion, visibleNews);
+        } else {
+            displayedNews = visibleNews;
+        }
+        
+        rebuildNewsDotsForSimulation();
+        
+        // Auto-advance slider
+        if (!timeSlider.isDragging()) {
+            float newValue = sliderValue + (delta * 5); // 5% per second
+            if (newValue > 100) {
+                newValue = 0; // Loop
+            }
+            timeSlider.setValue(newValue);
+        }
+    }
+
+    private Array<NewsItem> filterNewsForRegion(Region region, Array<NewsItem> newsToFilter) {
+        Array<NewsItem> filtered = new Array<>();
+        for (NewsItem item : newsToFilter) {
+            if (item == null || item.getLocation() == null) continue;
+            
+            double itemLat = item.getLocation().getLatitude();
+            double itemLon = item.getLocation().getLongitude();
+            float[] worldCoords = GeoJsonRegionLoader.latLonToMapCoords((float)itemLat, (float)itemLon);
+            
+            if (Intersector.isPointInPolygon(region.vertices, 0, region.vertices.length, worldCoords[0], worldCoords[1])) {
+                filtered.add(item);
+            }
+        }
+        return filtered;
+    }
+
+    private void rebuildNewsDotsForSimulation() {
+        selectedNewsPins.clear();
+        
+        if (displayedNews == null || displayedNews.size == 0) {
+            return;
+        }
+        
+        // Filter by selected categories
+        Array<NewsItem> filteredNews = new Array<>();
+        for (NewsItem item : displayedNews) {
+            if (item == null) continue;
+            
+            if (selectedCategories.contains("Splošno", false)) {
+                filteredNews.add(item);
+            } else {
+                if (item.getCategory() != null && item.getCategory().getName() != null) {
+                    for (String selectedCat : selectedCategories) {
+                        if (item.getCategory().getName().trim().equalsIgnoreCase(selectedCat.trim())) {
+                            filteredNews.add(item);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Place news pins - works with or without region selected
+        for (NewsItem item : filteredNews) {
+            if (item.getLocation() == null) continue;
+            
+            Vector2 pos;
+            
+            if (selectedRegion != null) {
+                // If region selected, use cached position within region
+                String cacheKey = item.getId() + "_" + selectedRegion.id;
+                pos = newsDotCache.get(cacheKey);
+                if (pos == null) {
+                    pos = generateDeterministicPointInRegion(selectedRegion, cacheKey);
+                    newsDotCache.put(cacheKey, pos);
+                }
+            } else {
+                // No region selected - place at actual geographic location
+                double itemLat = item.getLocation().getLatitude();
+                double itemLon = item.getLocation().getLongitude();
+                float[] worldCoords = GeoJsonRegionLoader.latLonToMapCoords((float)itemLat, (float)itemLon);
+                pos = new Vector2(worldCoords[0], worldCoords[1]);
+            }
+            
+            selectedNewsPins.add(new NewsPin(pos, item));
+        }
+    }
 
     private void toggleSidePanel() {
         isPanelOpen = !isPanelOpen;
@@ -1565,8 +1940,13 @@ public class MapScreen implements Screen {
 
     @Override
     public void render(float delta) {
+        // Update simulation if active
+        if (isSimulationActive) {
+            updateSimulation(delta);
+        }
+        
         timeSinceLastFetch += delta;
-        if (timeSinceLastFetch >= FETCH_INTERVAL) {
+        if (timeSinceLastFetch >= FETCH_INTERVAL && !isSimulationActive) {
             timeSinceLastFetch = 0;
             fetchNewsMarkers();
             fetchNewsItems();
