@@ -6,31 +6,39 @@
 #include <climits>
 #include <mpi.h>
 
+std::atomic<int> Miner::threadOverride{-1};
+
+void Miner::setThreadOverride(int threads) {
+    threadOverride.store(threads);
+}
+
 int Miner::getOptimalThreadCount(int mpiSize) {
+    int override = threadOverride.load();
+    if (override > 0) {
+        return override;
+    }
+
     unsigned int hwThreads = std::thread::hardware_concurrency();
     if (hwThreads == 0) {
-        return 4; // fallback if detection fails
+        return 4;
     }
-    
-    // Divide threads among MPI processes to avoid oversubscription
-    // Reserve 1-2 cores for OS and other processes
-    int availableThreads = hwThreads - 1;
+
+    int availableThreads = static_cast<int>(hwThreads) - 1;
     if (availableThreads < 1) availableThreads = 1;
-    
+
     int threadsPerNode = availableThreads / mpiSize;
-    
-    // Ensure at least 1 thread per node
+
     if (threadsPerNode < 1) {
         threadsPerNode = 1;
     }
-    
-    // Cap at reasonable maximum (8 threads per node)
+
     if (threadsPerNode > 8) {
         threadsPerNode = 8;
     }
-    
+
     return threadsPerNode;
 }
+
 
 void Miner::mineWorker(Block* blockTemplate, int difficulty,
                        unsigned long long startNonce, unsigned long long stride,

@@ -18,6 +18,7 @@ public:
     
     // Get optimal thread count for this architecture (considers MPI processes)
     static int getOptimalThreadCount(int mpiSize = 1);
+    static void setThreadOverride(int threads);
 
 private:
     // Thread worker function for parallel mining with MPI awareness
@@ -26,5 +27,6 @@ private:
                           std::atomic<bool>* found, std::atomic<unsigned long long>* resultNonce,
                           std::string* resultHash, std::atomic<unsigned long long>* hashCount,
                           int mpiRank, int mpiSize);
+     static std::atomic<int> threadOverride;
 };
 

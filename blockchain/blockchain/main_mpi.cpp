@@ -156,6 +156,8 @@ int main(int argc, char* argv[]) {
     int mpiRank, mpiSize;
     MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+
+    Miner::setThreadOverride(1);
     
     // Only rank 0 prints the header
     if (mpiRank == 0) {
