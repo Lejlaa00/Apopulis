@@ -520,7 +520,8 @@ public class MapScreen implements Screen {
 
     private void drawSelectedRegionNewsPins() {
         if (batch == null) return;
-        if (selectedRegion == null || selectedNewsPins.size == 0) return;
+        if (!isSimulationActive && selectedRegion == null) return;
+        if (selectedNewsPins.size == 0) return;
         if (pinRegion == null) return;
 
         batch.setProjectionMatrix(camera.combined);
@@ -529,11 +530,29 @@ public class MapScreen implements Screen {
         float w = PIN_BASE_W;
         float h = PIN_BASE_H;
 
+        float delta = Gdx.graphics.getDeltaTime();
         for (NewsPin pin : selectedNewsPins) {
-            float drawX = pin.position.x - w * 0.5f;
+            if (pin.fadeTime < 1f) {
+                pin.fadeTime += delta * 1.5f;
+                if (pin.fadeTime > 1f) pin.fadeTime = 1f;
+                
+                float t = pin.fadeTime;
+                float easeOut = 1f - (1f - t) * (1f - t);
+                pin.alpha = easeOut;
+                pin.scale = 0.3f + (0.7f * easeOut);
+            }
+
+            Color originalColor = batch.getColor();
+            batch.setColor(1f, 1f, 1f, pin.alpha);
+
+            float scaledW = w * pin.scale;
+            float scaledH = h * pin.scale;
+            float drawX = pin.position.x - scaledW * 0.5f;
             float drawY = pin.position.y;
 
-            batch.draw(pinRegion, drawX, drawY, w, h);
+            batch.draw(pinRegion, drawX, drawY, scaledW, scaledH);
+
+            batch.setColor(originalColor);
         }
 
         batch.end();
@@ -1688,7 +1707,7 @@ public class MapScreen implements Screen {
                 pos = new Vector2(worldCoords[0], worldCoords[1]);
             }
             
-            selectedNewsPins.add(new NewsPin(pos, item));
+            selectedNewsPins.add(new NewsPin(pos, item, true));
         }
     }
 
@@ -2202,10 +2221,33 @@ public class MapScreen implements Screen {
     private static class NewsPin {
         final Vector2 position;
         final NewsItem newsItem;
+        float alpha;
+        float fadeTime;
+        float scale;
+        boolean skipAnimation;
 
         NewsPin(Vector2 position, NewsItem newsItem) {
             this.position = position;
             this.newsItem = newsItem;
+            this.alpha = 0f;
+            this.fadeTime = 0f;
+            this.scale = 0.3f;
+            this.skipAnimation = false;
+        }
+        
+        NewsPin(Vector2 position, NewsItem newsItem, boolean skipAnimation) {
+            this.position = position;
+            this.newsItem = newsItem;
+            if (skipAnimation) {
+                this.alpha = 1f;
+                this.fadeTime = 1f;
+                this.scale = 1f;
+            } else {
+                this.alpha = 0f;
+                this.fadeTime = 0f;
+                this.scale = 0.3f;
+            }
+            this.skipAnimation = skipAnimation;
         }
     }
 
