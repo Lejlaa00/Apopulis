@@ -233,12 +233,23 @@ public class NewsDetailScreen implements Screen {
         TextField.TextFieldStyle tfStyle = new TextField.TextFieldStyle();
         tfStyle.font = metaFont;
         tfStyle.fontColor = new Color(0.9f, 0.9f, 0.9f, 1f);
-        tfStyle.background = bg(new Color(0.18f, 0.18f, 0.19f, 1f));
+        
+        Pixmap bgPixmap = new Pixmap(100, 100, Pixmap.Format.RGBA8888);
+        bgPixmap.setColor(new Color(0.18f, 0.18f, 0.19f, 1f));
+        bgPixmap.fill();
+        Texture bgTexture = new Texture(bgPixmap);
+        bgTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        bgPixmap.dispose();
+        
+        com.badlogic.gdx.graphics.g2d.NinePatch ninePatch = new com.badlogic.gdx.graphics.g2d.NinePatch(bgTexture, 8, 8, 8, 8);
+        com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable npDrawable = new com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable(ninePatch);
+        tfStyle.background = npDrawable;
+        
         tfStyle.cursor = bg(Color.WHITE);
         tfStyle.selection = bg(new Color(0.3f, 0.3f, 0.35f, 1f));
 
         commentInput = new TextField("", tfStyle);
-        commentInput.setMessageText("  Napiši komentar...");
+        commentInput.setMessageText("Napiši komentar...");
         commentInput.setMaxLength(200);
         commentInput.setAlignment(Align.left);
 
