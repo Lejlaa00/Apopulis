@@ -45,3 +45,17 @@ assets/
 *.log
 **/*.pth
 **/*.ipynb
+
+# Visual Studio
+.vs/
+
+# Blockchain build files
+blockchain/**/x64/
+blockchain/**/*.obj
+blockchain/**/*.exe
+blockchain/**/*.ilk
+blockchain/**/*.pdb
+blockchain/**/*.idb
+blockchain/**/*.log
+blockchain/**/*.tlog/
+blockchain/**/*.recipe
