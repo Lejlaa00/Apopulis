@@ -140,6 +140,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             binding.rvCategories.visibility = View.GONE
             binding.fabCreatePost.visibility = View.GONE
             binding.fabSimulation.visibility = View.GONE
+            binding.fabSettings.visibility = View.GONE
             binding.zoomControlsContainer.visibility = View.GONE
         }
 
@@ -152,6 +153,7 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             setupNewsRecyclerView()
             setupFloatingActionButton()
             setupSimulationFloatingActionButton()
+            setupSettingsFloatingActionButton()
             setupZoomControls()
         }
 
@@ -370,6 +372,35 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
         fab.setOnClickListener {
             findNavController().navigate(R.id.action_mapFragment_to_simulationFragment)
+        }
+
+        fab.alpha = 1f
+        fab.scaleX = 1f
+        fab.scaleY = 1f
+    }
+
+    private fun setupSettingsFloatingActionButton() {
+        val fab = binding.fabSettings
+        val context = requireContext()
+
+        val isDarkMode = isDarkMode(context)
+
+        val iconTint = if (isDarkMode) {
+            Color.WHITE
+        } else {
+            Color.BLACK
+        }
+        fab.imageTintList = ColorStateList.valueOf(iconTint)
+
+        val backgroundColor = if (isDarkMode) {
+            ContextCompat.getColor(context, R.color.apopulis_gray)
+        } else {
+            Color.WHITE
+        }
+        fab.backgroundTintList = android.content.res.ColorStateList.valueOf(backgroundColor)
+
+        fab.setOnClickListener {
+            findNavController().navigate(R.id.action_mapFragment_to_settings)
         }
 
         fab.alpha = 1f

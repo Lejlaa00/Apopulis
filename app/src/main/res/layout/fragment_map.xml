@@ -72,6 +72,18 @@
         android:elevation="8dp"
         app:fabSize="normal"
         app:srcCompat="@android:drawable/ic_menu_manage" />
+        
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginRight="16dp"
+        android:layout_marginBottom="290dp"
+        android:contentDescription="Settings"
+        android:elevation="8dp"
+        app:fabSize="normal"
+        app:srcCompat="@android:drawable/ic_menu_preferences" />
 
     <LinearLayout
         android:id="@+id/zoomControlsContainer"

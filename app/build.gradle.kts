@@ -68,6 +68,12 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.0.1")
 
     implementation("androidx.core:core-ktx:1.12.0")
+    
+    // WorkManager for background periodic tasks
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    
+    // Material Design for settings UI
+    implementation("com.google.android.material:material:1.11.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

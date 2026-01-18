@@ -3,6 +3,7 @@ package com.example.apopulis.network
 import com.example.apopulis.model.CreateNewsRequest
 import com.example.apopulis.model.NewsItem
 import com.example.apopulis.model.NewsResponse
+import com.example.apopulis.model.ViralNewsResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -37,4 +38,10 @@ interface NewsApi {
         @Part("longitude") longitude: RequestBody,
         @Part image: MultipartBody.Part?
     ): Response<NewsItem>
+    
+    @GET("news/viral")
+    suspend fun checkViralNews(
+        @Query("threshold") threshold: Int,
+        @Query("since") since: Long
+    ): Response<ViralNewsResponse>
 }
