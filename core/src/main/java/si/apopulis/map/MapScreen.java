@@ -16,6 +16,8 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
+import com.badlogic.gdx.scenes.scene2d.ui.Slider;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
@@ -49,6 +51,9 @@ import com.badlogic.gdx.math.Vector2;
 import java.util.Random;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle;
 
 public class MapScreen implements Screen {
 
@@ -546,7 +551,7 @@ public class MapScreen implements Screen {
             if (pin.fadeTime < 1f) {
                 pin.fadeTime += delta * 1.5f;
                 if (pin.fadeTime > 1f) pin.fadeTime = 1f;
-                
+
                 float t = pin.fadeTime;
                 float easeOut = 1f - (1f - t) * (1f - t);
                 pin.alpha = easeOut;
@@ -982,13 +987,11 @@ public class MapScreen implements Screen {
         });
 
         cardContainer.addListener(new InputListener() {
-            @Override
             public void enter(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
                 card.clearActions();
                 card.setBackground(hoverBg);
             }
 
-            @Override
             public void exit(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor toActor) {
                 card.clearActions();
                 card.setBackground(normalBg);
@@ -1168,35 +1171,17 @@ public class MapScreen implements Screen {
         return new TextureRegionDrawable(new TextureRegion(texture));
     }
 
-    private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownListBackground() {
-        int width = 200;
-        int height = 200;
-
-        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-
-        pixmap.setColor(new Color(1f, 1f, 1f, 1f));
+    private Drawable createDropdownListBackground() {
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(0.12f, 0.12f, 0.13f, 1f));
         pixmap.fill();
 
-        pixmap.setColor(new Color(0.9f, 0.9f, 0.9f, 1f));
-
-        pixmap.drawLine(0, height - 1, width, height - 1);
-        pixmap.drawLine(width - 1, 0, width - 1, height);
-        pixmap.drawLine(0, 0, width, 0);
-
         Texture texture = new Texture(pixmap);
-        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         pixmap.dispose();
 
-        NinePatch ninePatch = new NinePatch(
-            texture,
-            4,
-            0,
-            0,
-            0
-        );
-
-        return new NinePatchDrawable(ninePatch);
+        return new TextureRegionDrawable(new TextureRegion(texture));
     }
+
 
 
     private com.badlogic.gdx.scenes.scene2d.utils.Drawable createDropdownSelectionBackground() {
@@ -1376,56 +1361,43 @@ public class MapScreen implements Screen {
     }
 
     private void setupSimulationControls(BitmapFont font, TextureAtlas atlas) {
+
         simulationControlsTable = new Table();
         simulationControlsTable.setFillParent(true);
         simulationControlsTable.bottom().left();
         simulationControlsTable.pad(20);
 
-        // Create simulation toggle button - EXACT same style as category chips using Container
-        final Drawable btnBg = new TextureRegionDrawable(
-            atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(1f, 1f, 1f, 0.3f));
+        final Drawable btnBg = createCategoryChipDrawable(atlas);
+        final Drawable btnBgHover = createCategoryChipHoverDrawable(atlas);
+        final Drawable btnBgActive = createActiveCategoryChipDrawable(atlas);
 
-        final Drawable btnBgActive = new TextureRegionDrawable(
-            atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(0.6f, 0.6f, 0.9f, 0.6f));
+        Label.LabelStyle btnLabelStyle =
+            new Label.LabelStyle(font, new Color(0.88f, 0.88f, 0.88f, 1f));
 
-        final Drawable btnBgHover = new TextureRegionDrawable(
-            atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(1f, 1f, 1f, 0.45f));
-
-        // Button label
-        Label.LabelStyle btnLabelStyle = new Label.LabelStyle(font, new Color(0.88f, 0.88f, 0.88f, 1f));
         final Label toggleLabel = new Label("Simulacija", btnLabelStyle);
         toggleLabel.setAlignment(Align.center);
 
-        // Use Container for button - reduced width by 30%
         final Container<Label> btnContainer = new Container<>(toggleLabel);
-        btnContainer.setTransform(true);
-        btnContainer.pad(8, 16, 8, 16);
-        btnContainer.minHeight(45);
+        btnContainer.pad(8, 20, 8, 20);
+        btnContainer.minHeight(10);
         btnContainer.maxHeight(45);
-        btnContainer.minWidth(70);
-        btnContainer.maxWidth(140);
+        btnContainer.maxWidth(190);
         btnContainer.setBackground(btnBg);
 
         btnContainer.addListener(new ClickListener() {
             @Override
-            public void enter(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
-                if (!isSimulationActive) {
-                    btnContainer.setBackground(btnBgHover);
-                }
+            public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+                if (!isSimulationActive) btnContainer.setBackground(btnBgHover);
             }
 
             @Override
-            public void exit(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor toActor) {
+            public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
                 btnContainer.setBackground(isSimulationActive ? btnBgActive : btnBg);
             }
 
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 toggleSimulation();
-                // Update button appearance
                 if (isSimulationActive) {
                     toggleLabel.setText("Zaustavi");
                     btnContainer.setBackground(btnBgActive);
@@ -1436,104 +1408,105 @@ public class MapScreen implements Screen {
             }
         });
 
-        // Create dropdown for time interval - matching button style
-        com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle selectBoxStyle =
-            new com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle();
-        selectBoxStyle.font = font;
-        selectBoxStyle.fontColor = new Color(0.88f, 0.88f, 0.88f, 1f);
 
-        // Add proper padding to background - don't cast, just create new drawables
-        Drawable selectBg = new TextureRegionDrawable(
-            atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(1f, 1f, 1f, 0.3f));
-        selectBoxStyle.background = selectBg;
+        SelectBox.SelectBoxStyle selectStyle = new SelectBox.SelectBoxStyle();
+        selectStyle.font = font;
+        selectStyle.fontColor = new Color(0.88f, 0.88f, 0.88f, 1f);
 
-        Drawable selectHover = new TextureRegionDrawable(
-            atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(1f, 1f, 1f, 0.45f));
-        selectBoxStyle.backgroundOver = selectHover;
+        selectStyle.background = btnBg;
+        selectStyle.backgroundOver = btnBgHover;
+        selectStyle.backgroundOpen = btnBgActive;
 
-        com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle listStyle =
-            new com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle();
+        com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle listStyle = new com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle();
         listStyle.font = font;
-        listStyle.fontColorSelected = Color.YELLOW;
-        listStyle.fontColorUnselected = Color.WHITE;
-        listStyle.selection = new TextureRegionDrawable(
-            atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(0.5f, 0.5f, 0.8f, 0.8f));
-        listStyle.background = new TextureRegionDrawable(
-            atlas.findRegion(RegionNames.BTN_CATEGORY)
-        ).tint(new Color(0.15f, 0.15f, 0.2f, 0.95f));
+        listStyle.fontColorUnselected = new Color(0.85f, 0.85f, 0.85f, 1f);
+        listStyle.fontColorSelected = Color.WHITE;
 
-        selectBoxStyle.listStyle = listStyle;
+        Pixmap sel = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        sel.setColor(new Color(0.6f, 0.45f, 0.75f, 1f));
+        sel.fill();
+        listStyle.selection = new TextureRegionDrawable(new Texture(sel));
+        sel.dispose();
+
+        listStyle.background = createDropdownListBackground();
+        selectStyle.listStyle = listStyle;
 
         ScrollPane.ScrollPaneStyle scrollStyle = new ScrollPane.ScrollPaneStyle();
-        selectBoxStyle.scrollStyle = scrollStyle;
+        scrollStyle.background = createDropdownListBackground();
+        selectStyle.scrollStyle = scrollStyle;
 
-        timeIntervalSelectBox = new com.badlogic.gdx.scenes.scene2d.ui.SelectBox<>(selectBoxStyle);
+        timeIntervalSelectBox = new SelectBox<>(selectStyle);
         timeIntervalSelectBox.setItems("1 dan", "7 dni", "1 mesec");
         timeIntervalSelectBox.setSelected("7 dni");
         timeIntervalSelectBox.setAlignment(Align.center);
+
         timeIntervalSelectBox.getList().setAlignment(Align.center);
-        timeIntervalSelectBox.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+        timeIntervalSelectBox.setWidth(195);
+        timeIntervalSelectBox.getScrollPane().setScrollingDisabled(true, false);
+
+        timeIntervalSelectBox.addListener(new ChangeListener() {
             @Override
-            public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
-                String selected = timeIntervalSelectBox.getSelected();
-                if (selected.equals("1 dan")) {
-                    simulationIntervalDays = 1;
-                } else if (selected.equals("7 dni")) {
-                    simulationIntervalDays = 7;
-                } else if (selected.equals("1 mesec")) {
-                    simulationIntervalDays = 30;
+            public void changed(ChangeEvent event, Actor actor) {
+                switch (timeIntervalSelectBox.getSelected()) {
+                    case "1 dan":   simulationIntervalDays = 1; break;
+                    case "7 dni":   simulationIntervalDays = 7; break;
+                    case "1 mesec": simulationIntervalDays = 30; break;
                 }
             }
         });
 
-        // Create time slider with purple/blue theme
-        com.badlogic.gdx.scenes.scene2d.ui.Slider.SliderStyle sliderStyle =
-            new com.badlogic.gdx.scenes.scene2d.ui.Slider.SliderStyle();
+        Slider.SliderStyle sliderStyle = new Slider.SliderStyle();
 
-        // Background track - subtle purple
-        Pixmap pixmap = new Pixmap(220, 4, Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.5f, 0.5f, 0.7f, 0.4f));
-        pixmap.fill();
-        sliderStyle.background = new TextureRegionDrawable(new Texture(pixmap));
-        pixmap.dispose();
+        Pixmap track = new Pixmap(220, 4, Pixmap.Format.RGBA8888);
+        track.setColor(new Color(0.6f, 0.45f, 0.75f, 1f));
+        track.fill();
+        sliderStyle.background = new TextureRegionDrawable(new Texture(track));
+        track.dispose();
 
-        // Knob - purple/blue circle
-        pixmap = new Pixmap(12, 12, Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.6f, 0.6f, 0.9f, 1f));
-        pixmap.fillCircle(6, 6, 6);
-        sliderStyle.knob = new TextureRegionDrawable(new Texture(pixmap));
-        pixmap.dispose();
+        Pixmap knob = new Pixmap(12, 12, Pixmap.Format.RGBA8888);
+        knob.setColor(new Color(0.45f, 0.32f, 0.62f, 1f));
+        knob.fillCircle(6, 6, 6);
+        sliderStyle.knob = new TextureRegionDrawable(new Texture(knob));
+        knob.dispose();
 
-        timeSlider = new com.badlogic.gdx.scenes.scene2d.ui.Slider(0, 100, 1, false, sliderStyle);
-        timeSlider.setValue(0);
+        timeSlider = new Slider(0, 100, 1, false, sliderStyle);
         timeSlider.setVisible(false);
 
-        // Create time label
-        Label.LabelStyle timeLabelStyle = new Label.LabelStyle(font, new Color(0.9f, 0.9f, 0.9f, 1f));
+        Label.LabelStyle timeLabelStyle =
+            new Label.LabelStyle(font, new Color(0.9f, 0.9f, 0.9f, 1f));
+
         timeLabel = new Label("", timeLabelStyle);
         timeLabel.setVisible(false);
 
-        // Layout - slider on top, then time label, then button and dropdown at bottom
-        Table mainSimTable = new Table();
 
-        // Slider at the top
-        mainSimTable.add(timeSlider).width(220).left();
-        mainSimTable.row();
+        Table sliderBlock = new Table();
+        sliderBlock.left();
 
-        // Time label below slider
-        mainSimTable.add(timeLabel).padTop(8).left();
-        mainSimTable.row();
+        sliderBlock.add(timeSlider)
+            .width(220)
+            .padLeft(12)
+            .left();
+
+        sliderBlock.row();
+
+        sliderBlock.add(timeLabel)
+            .padBottom(15)
+            .padLeft(12)
+            .padTop(6)
+            .left();
+
+
+        Table main = new Table();
 
         Table bottomRow = new Table();
-        bottomRow.add(btnContainer).padRight(12);
-        bottomRow.add(timeIntervalSelectBox).minWidth(70).maxWidth(140).height(45);
+        bottomRow.add(btnContainer).padRight(12).padLeft(10);
+        bottomRow.add(timeIntervalSelectBox).width(195).height(44);
 
-        mainSimTable.add(bottomRow).padTop(15).left();
+        bottomRow.add(sliderBlock).padLeft(4);
 
-        simulationControlsTable.add(mainSimTable);
+        main.add(bottomRow).padTop(12).left();
+
+        simulationControlsTable.add(main);
         uiStage.addActor(simulationControlsTable);
     }
 
@@ -2029,7 +2002,7 @@ public class MapScreen implements Screen {
             if (hoveredRegion != null) {
                 if (hoveredRegion == selectedRegion) {
                     selectedRegion = null;
-                    
+
                     if (isSimulationActive) {
                         initializePinAnimations();
                         rebuildNewsDotsForSimulation();
@@ -2264,7 +2237,7 @@ public class MapScreen implements Screen {
             this.scale = 0.3f;
             this.skipAnimation = false;
         }
-        
+
         NewsPin(Vector2 position, NewsItem newsItem, boolean skipAnimation) {
             this.position = position;
             this.newsItem = newsItem;
