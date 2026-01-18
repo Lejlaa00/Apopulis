@@ -142,6 +142,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
             binding.fabSimulation.visibility = View.GONE
             binding.fabSettings.visibility = View.GONE
             binding.zoomControlsContainer.visibility = View.GONE
+
+            binding.btnZoomIn.visibility = View.GONE
+            binding.btnZoomOut.visibility = View.GONE
         }
 
         setupViewModel()

@@ -83,7 +83,8 @@
         android:contentDescription="Settings"
         android:elevation="8dp"
         app:fabSize="normal"
-        app:srcCompat="@android:drawable/ic_menu_preferences" />
+        android:src="@drawable/ic_notify"
+        />
 
     <LinearLayout
         android:id="@+id/zoomControlsContainer"
