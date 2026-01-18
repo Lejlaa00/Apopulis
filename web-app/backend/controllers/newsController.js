@@ -9,6 +9,10 @@ const Category = require('../models/categoryModel');
 const Source = require('../models/sourceModel');
 const Location = require('../models/locationModel');
 const mongoose = require("mongoose");
+const cloudinary = require('../config/cloudinary');
+const fs = require('fs');
+const util = require('util');
+const unlinkFile = util.promisify(fs.unlink);
 
 
 // Cache for news summary
@@ -532,6 +536,53 @@ exports.getNewsByProvince = async (req, res) => {
 
 exports.updateNewsMetrics = updateNewsMetrics;
 
+// Check for viral news in the last specified time period
+exports.checkViralNews = async (req, res) => {
+    try {
+        const { threshold, since } = req.query;
+        
+        // Validate parameters
+        const viralThreshold = parseInt(threshold) || 5;
+        const sinceTime = parseInt(since) || (Date.now() - 900000); // Default 15 minutes ago
+        
+        const sinceDate = new Date(sinceTime);
+        
+        console.log('Checking viral news:', { viralThreshold, sinceDate });
+
+        // Find news items published since the given time with comments >= threshold
+        const viralNews = await NewsItem.find({
+            publishedAt: { $gte: sinceDate },
+            commentsCount: { $gte: viralThreshold }
+        })
+        .sort({ commentsCount: -1 })
+        .limit(10)
+        .select('_id title commentsCount publishedAt')
+        .lean();
+
+        const hasViralNews = viralNews.length > 0;
+        
+        console.log(`Found ${viralNews.length} viral news items`);
+
+        res.json({
+            hasViralNews,
+            count: viralNews.length,
+            viralNewsItems: viralNews.map(news => ({
+                _id: news._id,
+                title: news.title,
+                commentsCount: news.commentsCount,
+                publishedAt: news.publishedAt
+            }))
+        });
+        
+    } catch (err) {
+        console.error('Error checking viral news:', err);
+        res.status(500).json({ 
+            msg: 'Error checking viral news', 
+            error: err.message 
+        });
+    }
+};
+
 // Create news from mobile app with image upload and GPS location
 exports.createNewsFromMobile = async (req, res) => {
     try {
@@ -607,13 +658,37 @@ exports.createNewsFromMobile = async (req, res) => {
             }
         }
 
-        // Handle image URL
+        // Handle image upload to Cloudinary
         let imageUrl = null;
         if (req.file) {
-            // Generate URL for uploaded image
-            const baseUrl = process.env.BASE_URL || 'http://localhost:5001';
-            imageUrl = `${baseUrl}/images/${req.file.filename}`;
-            console.log('Image uploaded:', imageUrl);
+            try {
+                console.log('Uploading image to Cloudinary...');
+                
+                // Upload image to Cloudinary
+                const result = await cloudinary.uploader.upload(req.file.path, {
+                    folder: 'apopulis/user-posts', // Organize images in folders
+                    resource_type: 'image',
+                    transformation: [
+                        { width: 1200, height: 1200, crop: 'limit' }, // Limit max size
+                        { quality: 'auto' }, // Auto quality optimization
+                        { fetch_format: 'auto' } // Auto format selection (WebP when supported)
+                    ]
+                });
+                
+                imageUrl = result.secure_url;
+                console.log('Image uploaded to Cloudinary:', imageUrl);
+                
+                // Delete local file after successful upload to Cloudinary
+                await unlinkFile(req.file.path);
+                console.log('Local temp file deleted');
+                
+            } catch (cloudinaryError) {
+                console.error('Cloudinary upload error:', cloudinaryError);
+                // Fallback to local storage if Cloudinary fails
+                const baseUrl = process.env.BASE_URL || 'http://localhost:5001';
+                imageUrl = `${baseUrl}/images/${req.file.filename}`;
+                console.log('Fallback to local storage:', imageUrl);
+            }
         }
 
         // Create news item
@@ -643,6 +718,16 @@ exports.createNewsFromMobile = async (req, res) => {
         
     } catch (err) {
         console.error('Error creating news from mobile:', err);
+        
+        // Clean up local file if it exists and there was an error
+        if (req.file && req.file.path) {
+            try {
+                await unlinkFile(req.file.path);
+            } catch (unlinkError) {
+                console.error('Error deleting temp file:', unlinkError);
+            }
+        }
+        
         res.status(500).json({ msg: 'Error creating news item', error: err.message });
     }
 };

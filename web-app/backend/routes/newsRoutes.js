@@ -13,7 +13,8 @@ const {
     getPopularityScore,
     getSummary,
     getLocationNewsStats,
-    createNewsFromMobile
+    createNewsFromMobile,
+    checkViralNews
 } = require('../controllers/newsController');
 const NewsItem = require('../models/newsItemModel'); 
 const { getRecommendedNews } = require('../controllers/newsController');
@@ -83,6 +84,9 @@ router.get('/trending', async (req, res) => {
 
 // Get news summary
 router.get('/summary', getSummary);
+
+// Check for viral news
+router.get('/viral', checkViralNews);
 
 //Popularity score route for one newsItem
 router.get('/:id/popularity', getPopularityScore);
