@@ -14,7 +14,8 @@ const {
     getSummary,
     getLocationNewsStats,
     createNewsFromMobile,
-    checkViralNews
+    checkViralNews,
+    getBlockchainInfo
 } = require('../controllers/newsController');
 const NewsItem = require('../models/newsItemModel'); 
 const { getRecommendedNews } = require('../controllers/newsController');
@@ -102,6 +103,9 @@ router.get('/location/:locationId', getNewsByLocation);
 
 // Get location news statistics
 router.get('/location-stats', getLocationNewsStats);
+
+// Get blockchain information (for demonstration)
+router.get('/blockchain/info', getBlockchainInfo);
 
 // Get a single news item
 router.get('/:id', getNewsById);

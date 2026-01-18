@@ -13,6 +13,7 @@ const cloudinary = require('../config/cloudinary');
 const fs = require('fs');
 const util = require('util');
 const unlinkFile = util.promisify(fs.unlink);
+const blockchain = require('../utils/blockchain');
 
 
 // Cache for news summary
@@ -713,8 +714,38 @@ exports.createNewsFromMobile = async (req, res) => {
         await newsItem.populate('locationId', 'name latitude longitude');
         await newsItem.populate('categoryId', 'name');
 
+        // Add block to blockchain with news item data
+        let blockchainBlock = null;
+        try {
+            const blockData = JSON.stringify({
+                newsItemId: newsItem._id.toString(),
+                title: newsItem.title,
+                author: newsItem.author,
+                timestamp: newsItem.publishedAt.toISOString(),
+                imageUrl: imageUrl || null
+            });
+            
+            blockchainBlock = blockchain.addBlock(blockData);
+            console.log(`[Blockchain] News item ${newsItem._id} added to blockchain at block #${blockchainBlock.index}`);
+        } catch (blockchainError) {
+            console.error('[Blockchain] Error adding block to blockchain:', blockchainError.message);
+            // Don't fail the request if blockchain fails - news item is already saved
+        }
+
         console.log('News created successfully:', newsItem._id);
-        res.status(201).json(newsItem);
+        
+        // Include blockchain info in response
+        const response = newsItem.toObject();
+        if (blockchainBlock) {
+            response.blockchain = {
+                blockIndex: blockchainBlock.index,
+                blockHash: blockchainBlock.hash,
+                difficulty: blockchainBlock.difficulty,
+                nonce: blockchainBlock.nonce
+            };
+        }
+        
+        res.status(201).json(response);
         
     } catch (err) {
         console.error('Error creating news from mobile:', err);
@@ -729,5 +760,35 @@ exports.createNewsFromMobile = async (req, res) => {
         }
         
         res.status(500).json({ msg: 'Error creating news item', error: err.message });
+    }
+};
+
+// Get blockchain information for demonstration
+exports.getBlockchainInfo = async (req, res) => {
+    try {
+        const stats = blockchain.getStats();
+        const chainInfo = blockchain.chain.map(block => ({
+            index: block.index,
+            data: typeof block.data === 'string' ? (() => {
+                try {
+                    return JSON.parse(block.data);
+                } catch {
+                    return block.data;
+                }
+            })() : block.data,
+            hash: block.hash,
+            previousHash: block.previousHash,
+            difficulty: block.difficulty,
+            nonce: block.nonce,
+            timestamp: new Date(block.timestamp).toISOString()
+        }));
+
+        res.json({
+            ...stats,
+            chain: chainInfo
+        });
+    } catch (err) {
+        console.error('Error getting blockchain info:', err);
+        res.status(500).json({ msg: 'Error getting blockchain info', error: err.message });
     }
 };
