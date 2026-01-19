@@ -17,6 +17,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import com.example.apopulis.MainActivity
 import com.example.apopulis.databinding.FragmentCreatePostBinding
 import com.example.apopulis.network.RetrofitInstance
@@ -242,7 +243,6 @@ class CreatePostFragment : Fragment() {
     }
 
     private fun runAiCheckAndPublish() {
-        // Check if we have location
         if (currentLatitude == null || currentLongitude == null) {
             Toast.makeText(requireContext(), "Getting your location...", Toast.LENGTH_SHORT).show()
             getCurrentLocation()
@@ -257,20 +257,21 @@ class CreatePostFragment : Fragment() {
 
         uiScope.launch {
             try {
-                // If image exists, check it with AI first
+                var imageFile: File? = null
+
                 if (hasSelectedImage) {
-                    val imageFile = prepareImageFile()
+                    imageFile = prepareImageFile()
                     if (imageFile != null) {
                         val isFake = checkImageWithAI(imageFile)
 
                         if (isFake) {
                             binding.tvAiStatus.text = "⚠️ Potentially fake – review recommended"
-                            binding.tvAiStatus.setTextColor(resources.getColor(android.R.color.holo_orange_dark, null))
+                            binding.tvAiStatus.setTextColor(
+                                resources.getColor(android.R.color.holo_orange_dark, null)
+                            )
 
-                            // Show warning dialog
                             withContext(Dispatchers.Main) {
                                 showFakeImageWarningDialog {
-                                    // User chose to proceed anyway
                                     uiScope.launch {
                                         publishPost(imageFile)
                                     }
@@ -279,13 +280,15 @@ class CreatePostFragment : Fragment() {
                             return@launch
                         } else {
                             binding.tvAiStatus.text = "✅ Content verified"
-                            binding.tvAiStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+                            binding.tvAiStatus.setTextColor(
+                                resources.getColor(android.R.color.holo_green_dark, null)
+                            )
                         }
                     }
                 }
 
                 // Proceed with publishing
-                publishPost(if (hasSelectedImage) prepareImageFile() else null)
+                publishPost(imageFile)
 
             } catch (e: Exception) {
                 Log.e("CreatePost", "Error during AI check", e)
@@ -299,29 +302,30 @@ class CreatePostFragment : Fragment() {
     }
 
     private suspend fun checkImageWithAI(imageFile: File): Boolean {
-        return withContext(Dispatchers.IO) {
-            try {
+        return try {
+            val response = withContext(Dispatchers.IO) {
                 val requestBody = imageFile.asRequestBody("image/*".toMediaTypeOrNull())
                 val imagePart = MultipartBody.Part.createFormData("image", imageFile.name, requestBody)
-
-                val response = RetrofitInstance.mlApi.predictImage(imagePart)
-
-                if (response.isSuccessful) {
-                    val result = response.body()
-                    Log.d("CreatePost", "AI Result: ${result?.data?.prediction}, confidence: ${result?.data?.confidence}")
-                    result?.data?.is_fake ?: false
-                } else {
-                    Log.e("CreatePost", "AI check failed: ${response.code()}")
-                    // If AI check fails, allow posting (fail open)
-                    false
-                }
-            } catch (e: Exception) {
-                Log.e("CreatePost", "AI check error", e)
-                // If AI check fails, allow posting (fail open)
-                false
+                RetrofitInstance.mlApi.predictImage(imagePart)
             }
+
+            if (response.isSuccessful) {
+                val result = response.body()
+                val isFake = result?.data?.is_fake ?: false
+
+                Log.d("CreatePost", "AI Result: ${result?.data?.prediction}, confidence: ${result?.data?.confidence}")
+
+                isFake
+            } else {
+                Log.e("CreatePost", "AI check failed: ${response.code()}")
+                false // fail open
+            }
+        } catch (e: Exception) {
+            Log.e("CreatePost", "AI check error", e)
+            false // fail open
         }
     }
+
 
     private fun showFakeImageWarningDialog(onProceed: () -> Unit) {
         AlertDialog.Builder(requireContext())
@@ -383,9 +387,7 @@ class CreatePostFragment : Fragment() {
                         // Refresh news list in MapFragment immediately
                         mapViewModel?.loadNews()
 
-                        // Clear form after successful post
-                        delay(1500)
-                        clearForm()
+                        findNavController().navigateUp()
                     } else {
                         binding.tvAiStatus.text = "❌ Failed to publish: ${response.code()}"
                         binding.tvAiStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))

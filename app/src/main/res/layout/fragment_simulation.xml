@@ -95,7 +95,7 @@
             android:id="@+id/etBurstSpacing"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:hint="e.g. 800"
+            android:hint="800"
             android:inputType="number"
             app:layout_constraintTop_toBottomOf="@id/tvSpacingLabel"
             app:layout_constraintStart_toStartOf="parent"

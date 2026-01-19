@@ -71,7 +71,8 @@
         android:contentDescription="Simulation"
         android:elevation="8dp"
         app:fabSize="normal"
-        app:srcCompat="@android:drawable/ic_menu_manage" />
+        android:src="@drawable/ic_sim"
+        app:tint="@null"/>
         
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabSettings"

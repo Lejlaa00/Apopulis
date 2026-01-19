@@ -449,9 +449,19 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
     private fun updateFabVisibility(state: Int) {
         val fab = binding.fabCreatePost
+        val zoomControlsContainer = binding.zoomControlsContainer
+
         when (state) {
             BottomSheetBehavior.STATE_COLLAPSED -> {
                 fab.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(200)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .start()
+
+                zoomControlsContainer.animate()
                     .alpha(1f)
                     .scaleX(1f)
                     .scaleY(1f)
@@ -468,12 +478,21 @@ class MapFragment : Fragment(), OnMapReadyCallback {
                     .setDuration(200)
                     .setInterpolator(AccelerateDecelerateInterpolator())
                     .start()
+
+                zoomControlsContainer.animate()
+                    .alpha(0f)
+                    .scaleX(0.8f)
+                    .scaleY(0.8f)
+                    .setDuration(200)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .start()
             }
         }
     }
 
     private fun animateFabVisibility(slideOffset: Float) {
         val fab = binding.fabCreatePost
+        val zoomControlsContainer = binding.zoomControlsContainer
         val normalizedOffset = (slideOffset + 1f) / 2f
 
         val alpha = 1f - normalizedOffset.coerceIn(0f, 1f)
@@ -483,6 +502,10 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         fab.alpha = alpha
         fab.scaleX = scale
         fab.scaleY = scale
+
+        zoomControlsContainer.alpha = alpha
+        zoomControlsContainer.scaleX = scale
+        zoomControlsContainer.scaleY = scale
     }
 
     private fun updateBottomSheetNews() {
