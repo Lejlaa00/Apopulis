@@ -112,11 +112,33 @@ The frontend will be available at: http://localhost:3000
 
 The backend runs at: http://localhost:5001
 
-
 ### 4. Run the desktop application (Kotlin + Compose)
 - Open the desktop-app folder in IntelliJ IDEA (or another Kotlin-supported IDE)
 - Locate Main.kt
 - Run the application
+
+### 5. Run the mobile application (Android)
+The mobile application is developed using Android (Jetpack Compose) and can be run via Android Studio.
+
+Steps:
+- Open Android Studio
+- Select Open an existing project
+- Navigate to the mobile-app directory
+- Let Gradle sync complete
+- Run the application on an emulator or a physical Android device
+
+The mobile application communicates with the backend API and provides a personalized news experience optimized for mobile users.
+
+### 6. Run the region map visualization (LibGDX)
+The region-based news visualization is implemented using LibGDX.
+
+Steps:
+- Open the region-map project in IntelliJ IDEA (or another LibGDX-supported IDE)
+- Ensure Gradle dependencies are properly loaded
+- Locate the main launcher class
+- Run the DesktopLauncher configuration
+
+This module provides an interactive geographic visualization of news regions and communicates with the backend API.
 
 <br>
 
@@ -132,7 +154,7 @@ By registering, they gain access to additional features:
 
 <br>
 
-## 👥 Ekipa
+## 👥 Team
 - Lejla Gutić
 - Ivana Ilić
 - Kenan Kravić
