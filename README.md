@@ -6,60 +6,60 @@
 
 <br>
 
-**Apopulis** je pametna platforma za zbiranje, analizo in prikaz slovenskih novic z uporabo NLP in geolokacije.  
-Povezuje spletno in namizno aplikacijo, omogoča personalizacijo vsebin, interakcijo z novicami ter vizualizacijo podatkov na zemljevidu.  
-Projekt je bil razvit kot multidisciplinarna rešitev v okviru študija Računalništva in informatike na FERI.
+**Apopulis** is an intelligent platform for collecting, analyzing, and presenting Slovenian news using NLP and geolocation.
+It connects a web and desktop application, enables content personalization, interaction with news articles, and data visualization on a map.
+The project was developed as a multidisciplinary solution within the Computer Science and Information Technology studies at FERI.
 
 <br>
 
-## 🧠 Cilj projekta
+## 🧠 Project Goal
 
-Razviti pametno platformo za zbiranje, analizo in vizualizacijo slovenskih novic z uporabo naprednih tehnologij. Aplikacija omogoča:
+To develop an intelligent platform for collecting, analyzing, and visualizing Slovenian news using advanced technologies. The application enables:
 
-- Samodejno zajemanje novic iz več slovenskih virov  
-- Kategorizacijo vsebine z uporabo NLP in ekstrakcijo ključnih besed  
-- Prikaz novic na interaktivnem geografskem zemljevidu  
-- Filtriranje, všečkanje, komentiranje in shranjevanje novic  
-- Personalizirano izkušnjo glede na interese uporabnika  
-- Upravljanje in urejanje novic prek namizne aplikacije 
-
-<br>
-
-## ⚙️ Funkcionalnosti
-
-✅ Zajem in obdelava novic
-
-- Samodejni scraping novic iz več slovenskih spletnih virov  
-- Uporaba obdelave naravnega jezika (NLP) za kategorizacijo vsebin  
-- Ekstrakcija ključnih besed za učinkovitejše iskanje in razvrščanje  
-
-🗺️ Geolokacija in vizualizacija
-
-- Prikaz lokacij povezanih z novicami na interaktivnem zemljevidu  
-- Filtriranje po kategorijah in ključnih besedah
-- Povezovanje vsebine s prostorskim kontekstom  
-
-💬 Interakcija z vsebinami
-
-- Všečkanje, komentiranje in shranjevanje izbranih novic  
-- Personalizirana priporočila glede na uporabniške interese  
-- Ogled osebne statistike na profilu uporabnika  
-
-🖥️ Namizna aplikacija
-
-- Ustvarjanje, urejanje in brisanje novic v grafičnem vmesniku  
-- Uvoz novic
-- Razvrščanje po kategorijah in ključnih besedah  
-
-🔁 CI/CD in razvojna infrastruktura
-
-- Avtomatsko testiranje in nameščanje prek GitHub Actions  
-- Uporaba Docker okolja za razvoj, testiranje in produkcijo  
-- Webhook podpora za posodobitve v realnem času na Azure VM  
+- Automatic collection of news from multiple Slovenian sources
+- Content categorization using NLP and keyword extraction
+- Display of news on an interactive geographic map
+- Filtering, liking, commenting, and saving news
+- A personalized user experience based on user interests
+- News management and editing through a desktop application
 
 <br>
 
-## 🧩 Uporabljene tehnologije
+## ⚙️ Features
+
+✅ News collection and processing
+
+- Automatic scraping of news from multiple Slovenian online sources
+- Use of Natural Language Processing (NLP) for content categorization
+- Keyword extraction for more efficient searching and sorting
+
+🗺️ Geolocation and visualization
+
+- Display of locations related to news on an interactive map
+- Filtering by categories and keywords
+- Linking content with spatial context
+
+💬 Content interaction
+
+- Liking, commenting on, and saving selected news
+- Personalized recommendations based on user interests
+- Viewing personal statistics on the user profile
+
+🖥️ Desktop application
+
+- Creating, editing, and deleting news via a graphical interface
+- News import
+- Sorting by categories and keywords
+
+🔁 CI/CD and development infrastructure
+
+- Automated testing and deployment via GitHub Actions
+- Use of Docker environments for development, testing, and production
+- Webhook support for real-time updates on an Azure VM
+
+<br>
+
+## 🧩 Technologies Used
 
 | Sloj         | Tehnologija                          |
 |--------------|--------------------------------------|
@@ -86,49 +86,49 @@ Razviti pametno platformo za zbiranje, analizo in vizualizacijo slovenskih novic
 
 <br>
 
-## 🛠️ Namestitev 
+## 🛠️ Installation 
 
-### 1. Kloniraj repozitorij
+### 1. Clone the repository
 
 ```
 git clone https://github.com/Lejlaa00/Apopulis.git
 ```
 
-### 2. Zaženi backend (Node.js + Express)
+### 2. Run the backend (Node.js + Express)
 ```
 cd backend
 npm install
 npm start
 ```
 
-### 3. Zaženi frontend (React)
+### 3. Run the frontend (React)
 ```
 cd frontend
 npm install
 npm start
 ```
 
-Frontend bo dostopen na: http://localhost:3000
+The frontend will be available at: http://localhost:3000
 
-Backend teče na: http://localhost:5001
+The backend runs at: http://localhost:5001
 
 
-### 4. Zaženi desktop aplikacijo (Kotlin + Compose)
-- Odpri mapo desktop-app v IntelliJ IDEA (ali drugem Kotlin-podprtem IDE)
-- Poišči Main.kt
-- Zaženi aplikacijo
+### 4. Run the desktop application (Kotlin + Compose)
+- Open the desktop-app folder in IntelliJ IDEA (or another Kotlin-supported IDE)
+- Locate Main.kt
+- Run the application
 
 <br>
 
-## 🔐 Prijava in registracija
+## 🔐 Login and Registration
 
-Uporabniki lahko brez prijave berejo javne novice.
+Users can read public news without logging in.
 
-Če pa se registrirajo, dobijo dostop do dodatnih funkcij:
+By registering, they gain access to additional features:
 
-- Prilagojene novice
-- Statistika uporabe
-- Všečkanje, komentiranje in shranjevanje novic
+- Personalized news
+- Usage statistics
+- Liking, commenting, and saving news
 
 <br>
 
