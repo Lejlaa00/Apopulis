@@ -61,16 +61,16 @@ To develop an intelligent platform for collecting, analyzing, and visualizing Sl
 
 ## 🧩 Technologies Used
 
-| Sloj         | Tehnologija                          |
-|--------------|--------------------------------------|
-| Frontend     | React, JavaScript                    |
-| Backend      | Node.js, Express                     |
-| Baza podatkov| MongoDB, MongoDB Atlas               |
-| NLP analiza  | Natural, stopword, keyword-extractor |
-| Namizna app  | Kotlin, Jetpack Compose Desktop      |
-| CI/CD        | GitHub Actions, Docker, Webhook      |
-| Gostovanje   | Azure Virtual Machine                |
-| Avtentikacija| JSON Web Token (JWT)                 |
+| Sloj          | Tehnologija                          |
+|---------------|--------------------------------------|
+| Frontend      | React, JavaScript                    |
+| Backend       | Node.js, Express                     |
+| Database      | MongoDB, MongoDB Atlas               |
+| NLP Analysis  | Natural, stopword, keyword-extractor |
+| Desktop App   | Kotlin, Jetpack Compose Desktop      |
+| CI/CD         | GitHub Actions, Docker, Webhook      |
+| Hosting       | Azure Virtual Machine                |
+| Authentication| JSON Web Token (JWT)                 |
 
 
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
